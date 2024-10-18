@@ -72,16 +72,20 @@ for index, row in tqdm(ind_df.iterrows(), desc="Downloading Images", total=len(i
     image_url = row['thumbnail']
     
     # When we dont have any images
-    if image_url is None:
+    if type(image_url) is float:
         image_paths.append(None)
 
     # When we have images
     else:
         image_paths.append(f'data/images/{index}.jpg')
 
-        response = requests.get(image_url)
-        with open(image_paths[-1], 'wb') as f:
-            f.write(response.content)
+        try:
+            response = requests.get(image_url)
+            with open(image_paths[-1], 'wb') as f:
+                f.write(response.content)
+        except:
+            print('Lost one image due to request')
+            continue
 
 # Updating dataframe with image information
 ind_df['image_path'] = image_paths
