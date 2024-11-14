@@ -6,3 +6,6 @@ tqdm
 opencv-python
 matplotlib
 scipy
+torch
+torchvision
+transformers
