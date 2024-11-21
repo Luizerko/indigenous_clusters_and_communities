@@ -1,38 +1,23 @@
 # UvA 2024/2025 Master Thesis
 
-This repo contains two potential projects that I might develop for my master thesis thesis.
+This repo contained two potential projects that could have been developed for my master's thesis: the Indigenous Project and the Graffiti Project. In the end, however, the Indigenous Project was chosen and thus became the sole focus of this repository's development.
+
+For those curious, if you're interested in what the graffiti project could have been, you can still find a draft of its proposal in the comments of this README.md file.
 
 ## Initiative for Indigenous Cultural Preservation in Brazil: a Study of Clusters and Communities
 
-The modern world presents overwhelming challenges for most indigenous peoples, and Brazil is no exception. Urban development, often lacking in social responsibility, has led to the physical displacement of many indigenous people and a cultural erasure from the nation’s collective memory. Preserving their heritage has become a crucial task today. Technological advances now offer us new and creative ways to safeguard this history, helping us both honor our origins and resist the gradual disappearance of many communities. Incorporating innovative studies and visualizations related to objects and iconographies from these communities is one way of enabling faster progress by researchers in the field, as well as greater interaction by the general public with pieces from the communities, contributing to the cultural preservation initiative.
+The modern world presents overwhelming challenges for most indigenous peoples, and Brazil is no exception. Urban development, often lacking in social responsibility, has led to the physical displacement of many indigenous people and a cultural erasure from the nation’s collective memory. Preserving their heritage has become a crucial task today. The [Brazilian Indigenous Museum](https://tainacan.museudoindio.gov.br/), through the [Tainacan platform](https://tainacan.org/), makes an effort in that direction by offering an extensive collection of indigenous artifacts, yet the accessibility and usability of this data remain limited due to the lack of proper structuring and interaction. Using data science and machine learning, we can explore new ways of organizing, visualizing, and analyzing this rich cultural heritage. This project thus aims to create an end-to-end pipeline that bridges indigenous knowledge with modern computational tools, being a cultural preservation initiative that contributes both to academic research and public engagement.
 
 ### Project Goals
 
-The project aims to provide fresh insights into the connections between visual styles, cultural
-influences, and geographic trends within indigenous artifacts. These initiatives not only deepen our understanding of indigenous cultural heritage but also democratize access to it, allowing broader engagement with these cultural treasures in new and meaningful ways. To achieve this, we develop an end-to-end pipeline with several resulting products:
+The main challenge lies in extracting, organizing, and analyzing the data from the Tainacan platform, which is currently not readily usable for large-scale computational tasks. The metadata structuring is inconsistent, the images require preprocessing, there are almost no possibilities of exploring relationships between artifacts based on various dimensions such as visual similarity, geographic origin, or metadata attributes, and the interactivity with the collection is very limited. This project seeks to address these issues by building an end-to-end pipeline that starts with data extraction and normalization, followed by the application of clustering and projection techniques to explore connections within the dataset, and finally the development of a tool for globally visualizing the collection. The aim is not only to understand these clusters but to compare them against one another, established indigenous literature and geographic data, creating an exploratory application that can inform and engage the general public through an interactive platform, as well as become a useful research instrument for future cataloging.
 
-- An accessible, image-rich dataset complete with metadata representing a wide array of objects and
-symbols from diverse indigenous groups;
+<!-- ## Clustering Graffiti Around the World: a Visual Journey into Urban Art
 
-- A classification tool to facilitate the categorization of new archaeological and ethnological discoveries;
-
-- A collection of clusters coming from different models in different modalities (vision and language), together with a comparative study between them all;
-
-- An interactive visualization platform for researchers to compare the models’ predictions with existing literature and gain insight of potentially hidden relationships, and for the general population to visually explore connections and distinctions between different communities.
-
-## Clustering Graffiti Around the World: a Visual Journey into Urban Art
-
-Urban art, particularly graffiti, has long been a powerful form of self-expression and cultural
-commentary, transforming public spaces into dynamic canvases that challenge societal norms, celebrate diversity, and capture the spirit of urban life. As cities evolve, graffiti continues to thrive, reflecting the pulse of local communities and global movements alike. Its visual language transcends borders, resonating with the most different people. The intersection of technology and urban art opens up new possibilities for preserving, analyzing, and interacting with this ever-changing art form.
+Urban art, particularly graffiti, has long been a powerful form of self-expression and cultural commentary, transforming public spaces into dynamic canvases that challenge societal norms, celebrate diversity, and capture the spirit of urban life. The advent of technology and digital archiving, however, has changed the study and preservation of art, offering new ways to analyze and share cultural heritage. Graffiti, as a globally widespread art form, presents unique opportunities for digital exploration, greatly exemplified by the [Graffiti-Database](https://graffiti-database.com/). This project, therefore, lies at the intersection of artificial intelligence, digital cultural preservation, and visual arts, with a focus on clustering and visualization. Using machine learning techniques, we aim to analyze and interpret graffiti on a large scale, connecting visual patterns, artists’ styles, and geographic locations. This project addresses the need for an organized, accessible graffiti dataset with the possibility of exploring clusters based on artistic features, becoming an interactive tool that allows the general public to navigate and better engage with this form of art.
 
 ### Project Goals
 
-The project aims to offer fresh insights into the connections between visual styles, cultural influences, and geographic trends. These initiatives not only deepen our understanding of urban art but also democratize access to it, allowing more people to engage with graffiti in even more creative ways. For that, we develop an end-to-end pipeline with a few resulting products:
+The current challenge is to create a structured pipeline to analyze, and later visualize, graffiti images coming from two different online sources, [17K-Graffiti](http://visualdslab.com/papers/17KGraffiti/) and Graffiti-Database. This process starts with data collection through web scraping and image preprocessing, using a graffiti detection model to identify and isolate graffiti elements in each image. Once the dataset is created, we will explore various clustering methods based on visual features. To make these clusters easier to visualize, we’ll use embedding techniques to project high-dimensional data into lower-dimensional spaces.
 
-- An accessible, image-rich dataset complete with metadata representing a wide array of graffiti from all over the world together with their location and possibly artists;
-
-- Collections of clusters coming from different models, possibly in different modalities, together with a comparative study between them all;
-
-- A categorization tool that suggests clusters for new incoming art, facilitating research on connections and influences between artists and movements;
-
-- An interactive visualization platform for researchers to compare the models’ predictions with existing literature and gain insight of potentially hidden relationships, and for the general public to visually explore relationships between different artists.
+The clustering will allow us to examine visual similarities among graffiti, providing a basis for comparing the results coming from different models and also comparing our findings to established art literature. We also aim to understand potential geographic connections between clusters, as well as connections between different artists. Our ultimate goal, therefore, is to develop an interactive platform where users can explore graffiti by groupings, geographical location, and artist, enhancing public access and engagement with graffiti art. If time permits, we’d like to go a step further by incorporating a style extraction network that allows users to apply graffiti styles from different clusters to their own images, making the platform even more artistically rich. -->

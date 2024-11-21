@@ -2,10 +2,12 @@
 *.pdf
 *.ipynb_checkpoints/
 
-graffiti_project/17k_graffiti_collection/split
-graffiti_project/17k_graffiti_collection/17k_graffiti_fasterrcnn_resnet50_fpn.pth
-graffiti_project/17k_graffiti_collection/17kGraffiti.zip
+# graffiti_project/17k_graffiti_collection/split
+# graffiti_project/17k_graffiti_collection/17k_graffiti_fasterrcnn_resnet50_fpn.pth
+# graffiti_project/17k_graffiti_collection/17kGraffiti.zip
 
-graffiti_project/graffiti_database/chromedriver-linux64
+# graffiti_project/graffiti_database/chromedriver-linux64
+
+graffiti_project/
 
 indigenous_project/tainacan_collection/data
