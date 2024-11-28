@@ -62,3 +62,24 @@ For a deeper dive into this exploration, check out this [Jupyter Notebook](https
 Although many analyses were done while assembling the dataset, there’s still a lot of work needed to standardize the columns and prepare them for clustering. Several adjustments were made to deal with inconsistent formatting, missing data, and incorrect use of data structures (you can find more details once again in the [Jupyter Notebook](https://github.com/Luizerko/master_thesis/tree/main/indigenous_project/tainacan_collection/dataset_exploration.ipynb)). Here, however, we focus on the biggest and most important processing steps that are crucial for clustering later on.
 
 ### Image Background Removal
+
+The collection's metadata might have some formatting issues, but the images are generally high-quality and well-processed. Their neutral backgrounds make object extraction easier, though the background colors vary - some are white, others black, for example - depending on external factors like when the photo was taken. If we don’t remove these backgrounds, our models might group images based on the background instead of their content, leading to artificial clustering results.
+
+To solve this, we used an [open-source pipeline for background removal](https://huggingface.co/briaai/RMBG-2.0). This also helped preprocess the images, normalizing them and guaranteeing they have the same size. Here are some examples of the segmentation applied to our collection:
+
+<p align="center">
+  <img src="assets/vase_br.jpg" alt="Vase BR" width="25%" style="margin: 5px;" />
+  <img src="assets/vase_br_r.png" alt="Vase BR Result" width="25%" style="margin: 5px;" />
+</p>
+<p align="center">
+  <img src="assets/bracelet_br.jpg" alt="Bracelet BR" width="25%" style="margin: 5px;" />
+  <img src="assets/bracelet_br_r.png" alt="Bracelet BR Result" width="25%" style="margin: 5px;" />
+</p>
+<p align="center">
+  <img src="assets/fiber_br.jpg" alt="Vase BR" width="25%" style="margin: 5px;" />
+  <img src="assets/fiber_br_r.png" alt="Vase BR Result" width="25%" style="margin: 5px;" />
+</p>
+
+<p align="center">
+  <b>Figure 1:</b> In the upper row, we can a see a simple example with a vase, a single object and with very well-defined form. In the middle row, in turn, we can see an example with multiple objects. Finally, in the lower row, we can see an example with an object that doesn't have a well-defined form. These were selected to show both a bit of the variety of objects we can find in the collection and also to show how well the pipeline works.
+</p>
