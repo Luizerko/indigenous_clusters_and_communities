@@ -3,15 +3,18 @@ import re
 
 import pandas as pd
 
-# Normalize text to lower case, no accentuation, ascii and optionally change white spaces for underline
-def text_normalization(text, remove_spaces=True):
+# Normalizing text and making it lower case, but preserving accentuation and optionally changing white spaces to underline
+def text_normalization(text, is_title=False):
     text = text.lower()
-    text = unicodedata.normalize('NFKD', text)
-    text = text.encode('ascii', 'ignore').decode('utf-8')
     
-    if remove_spaces:
+    if is_title:
+        text = unicodedata.normalize('NFKD', text)
+        text = text.encode('ascii', 'ignore').decode('utf-8')
         text = re.sub(r'\s+', '_', text.strip())
-
+        
+    else:
+        text = unicodedata.normalize('NFKC', text)
+    
     return text
 
 

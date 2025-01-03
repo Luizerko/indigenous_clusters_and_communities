@@ -9,3 +9,7 @@ scipy
 torch
 torchvision
 transformers
+ipdb
+scikit-image
+timm
+kornia

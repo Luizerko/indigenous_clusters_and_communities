@@ -70,25 +70,26 @@ print(ind_df.info())
 image_paths = []
 for index, row in tqdm(ind_df.iterrows(), desc="Downloading Images", total=len(ind_df)):
     image_url = row['thumbnail']
-    
+
     # When we dont have any images
-    if type(image_url) is float:
+    if type(image_url) is float or image_url is None:
         image_paths.append(None)
 
     # When we have images
     else:
         image_paths.append(f'data/images/{index}.jpg')
 
-        try:
-            response = requests.get(image_url)
-            with open(image_paths[-1], 'wb') as f:
-                f.write(response.content)
-        except:
-            print('Lost one image due to request')
-            continue
+        # Uncomment to download the images (again) if needed
+        # try:
+        #     response = requests.get(image_url)
+        #     with open(image_paths[-1], 'wb') as f:
+        #         f.write(response.content)
+        # except:
+        #     print('Lost one image due to request')
+        #     continue
 
 # Updating dataframe with image information
 ind_df['image_path'] = image_paths
 
 # Saving data
-ind_df.to_csv('data/indigenous_collection.csv')
+ind_df.to_csv('data/indigenous_collection_unprocessed.csv')
