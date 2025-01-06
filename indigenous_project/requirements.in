@@ -13,3 +13,6 @@ ipdb
 scikit-image
 timm
 kornia
+plotly
+dash
+scikit-learn
