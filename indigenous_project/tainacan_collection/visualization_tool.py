@@ -1,13 +1,14 @@
 import plotly.express as px
 import plotly.graph_objects as go
-from dash import Dash, dcc, html, Input, Output, no_update
+from dash import Dash, dcc, html, Input, Output, State, no_update
 
 from PIL import Image
 import pandas as pd
 from sklearn.cluster import DBSCAN
+import numpy as np
 
 from sklearn.datasets import make_blobs
-X, y = make_blobs(n_samples=10000, centers=4, random_state=42)
+X, y = make_blobs(n_samples=100, centers=4, random_state=42)
 plot_df = pd.DataFrame({"x": X[:, 0], "y": X[:, 1], "cluster": y})
 
 
@@ -121,12 +122,12 @@ app.layout = html.Div(
                                 dcc.RadioItems(
                                     id='toggle-view',
                                     options=[
-                                        {'label': 'Markers', 'value': 'markers'},
-                                        {'label': 'Images', 'value': 'images'}
+                                        {'label': 'Pontos', 'value': 'markers'},
+                                        {'label': 'Imagens', 'value': 'images'}
                                     ],
                                     value='markers'
                                 ),
-                                html.P('MORE BUTTONS!')
+                                html.P('MAIS BOTÕES!')
                             ]
                         ),
                         html.Div(
@@ -177,7 +178,7 @@ def display_hover(hoverData):
 @app.callback(
     Output('cluster-plot', 'figure'),
     Input('toggle-view', 'value'),
-    Input('cluster-plot', 'relayoutData')
+    Input('cluster-plot', 'relayoutData'),
 )
 def update_scatter_plot(view_type, relayout_data):
     # Handling (potential) constant trigerring and app crashing
@@ -197,14 +198,14 @@ def update_scatter_plot(view_type, relayout_data):
     y_span = y_range[1] - y_range[0]
 
     # Dynamic epsilon based on zoom level
-    eps = max(0.1, 0.02 * min(x_span, y_span))
+    eps = 0.01 * min(x_span, y_span)
 
     # Computing collapses
     coords = plot_df[['x', 'y']].to_numpy()
     db = DBSCAN(eps=eps, min_samples=2).fit(coords)
     labels = db.labels_
 
-    # Splitting clusters and outliers for collapsing
+    # Splitting clusters (inliers) and outliers for collapsing
     collapse_df = pd.DataFrame(coords, columns=["x", "y"])
     collapse_df["cluster"] = labels
     
@@ -212,7 +213,10 @@ def update_scatter_plot(view_type, relayout_data):
     outliers['cluster'] = plot_df[collapse_df['cluster'] == -1]['cluster'].values
     outliers['image_path'] = plot_df[collapse_df['cluster'] == -1]['image_path'].values
 
-    print(outliers)
+    visible_outliers = outliers[
+        (outliers['x'] >= x_range[0]) & (outliers['x'] <= x_range[1]) &
+        (outliers['y'] >= y_range[0]) & (outliers['y'] <= y_range[1])
+    ]
 
     inliers = collapse_df[collapse_df['cluster'] != -1]
 
@@ -220,17 +224,20 @@ def update_scatter_plot(view_type, relayout_data):
     if view_type == 'markers':
         fig = plot_with_markers(outliers, x_range, y_range)
     else:
-        fig = plot_with_images(outliers, x_range, y_range)
+        fig = plot_with_images(visible_outliers, x_range, y_range)
     
     # Plotting collapsed points
     centroids_df = inliers.groupby('cluster').agg({'x': 'mean', 'y': 'mean'})
     centroids_df['count'] = inliers.groupby('cluster').size().values
+    centroids_df['marker_size'] = centroids_df['count'].apply(lambda c: min(150, max(25, 15*np.log(c))))
+
+    plot_df['image_path'] = plot_df['image_path'].apply(lambda path: 'data/br_images/'+path.split('/')[-1].split('.')[0]+'.png')
 
     fig.add_trace(go.Scatter(
         x=centroids_df['x'],
         y=centroids_df['y'],
         mode='markers+text',
-        marker=dict(color='#062a57', size=30, symbol='circle'),
+        marker=dict(color='#062a57', size=centroids_df['marker_size'], symbol='circle'),
         text=centroids_df['count'],
         textposition='middle center',
         textfont=dict(color='#ffffff', size=16)

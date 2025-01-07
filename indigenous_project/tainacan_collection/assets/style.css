@@ -18,6 +18,7 @@ body {
 .graph-title {
     text-align: center;
     color: #062a57;
+    /* border-bottom: 4px solid #9b3636; */
 }
 
 /* Div for the tool */
