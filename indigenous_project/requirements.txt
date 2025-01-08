@@ -4,6 +4,8 @@
 #
 #    pip-compile requirements.in
 #
+annoy==1.17.3
+    # via trimap
 asttokens==3.0.0
     # via stack-data
 blinker==1.9.0
@@ -85,6 +87,8 @@ kornia-rs==0.1.8
     # via kornia
 lazy-loader==0.4
     # via scikit-image
+llvmlite==0.34.0
+    # via numba
 markupsafe==3.0.2
     # via
     #   jinja2
@@ -101,12 +105,15 @@ networkx==3.4.2
     # via
     #   scikit-image
     #   torch
+numba==0.51.2
+    # via trimap
 numpy==2.1.2
     # via
     #   -r requirements.in
     #   contourpy
     #   imageio
     #   matplotlib
+    #   numba
     #   opencv-python
     #   pandas
     #   scikit-image
@@ -219,7 +226,9 @@ safetensors==0.4.5
 scikit-image==0.25.0
     # via -r requirements.in
 scikit-learn==1.6.0
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   trimap
 scipy==1.14.1
     # via
     #   -r requirements.in
@@ -268,6 +277,8 @@ traitlets==5.14.3
     #   ipython
     #   matplotlib-inline
 transformers==4.46.2
+    # via -r requirements.in
+trimap==1.1.4
     # via -r requirements.in
 triton==3.1.0
     # via torch
