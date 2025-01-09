@@ -17,3 +17,5 @@ plotly
 dash
 scikit-learn
 trimap
+kmodes
+umap

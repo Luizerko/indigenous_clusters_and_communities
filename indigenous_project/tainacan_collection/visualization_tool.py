@@ -18,6 +18,8 @@ ind_df = pd.read_csv('data/indigenous_collection_processed.csv', index_col='id')
 sampled_ind_df = ind_df[~ind_df['image_path'].isnull()].sample(len(plot_df))
 plot_df['image_path'] = sampled_ind_df['image_path'].values
 plot_df['image_path'] = plot_df['image_path'].apply(lambda path: 'data/br_images/'+path.split('/')[-1].split('.')[0]+'.png')
+plot_df['url'] = sampled_ind_df['url'].values
+plot_df['nome_do_item'] = sampled_ind_df['nome_do_item'].values
 plot_df['povo'] = sampled_ind_df['povo'].values
 
 # Dash app setup
@@ -133,6 +135,7 @@ app.layout = html.Div(
                         html.Div(
                             className='graph',
                             children=[
+                                dcc.Location(id='url', refresh=True),
                                 dcc.Graph(id='cluster-plot', config=config, figure=empty_figure(), clear_on_unhover=True),
                                 dcc.Tooltip(id='graph-tooltip')
                             ]
@@ -151,28 +154,48 @@ app.layout = html.Div(
     Output("graph-tooltip", "children"),
     Input("cluster-plot", "hoverData"),
 )
-def display_hover(hoverData):
-    if hoverData is None:
+def display_hover(hover_data):
+    if hover_data is None:
         return False, no_update, no_update
 
     # Extracting plotly dash information
-    pt = hoverData["points"][0]
+    pt = hover_data["points"][0]
     bbox = pt["bbox"]
     num = pt["pointNumber"]
     
     # Acessing the dataframe to get the data we actually want to display
     df_row = plot_df.iloc[num]
     img_src = df_row['image_path']
+    nome_do_item = df_row['nome_do_item']
     povo = df_row['povo']
 
     children = [
         html.Div([
             html.Img(src=Image.open(img_src), style={"width": "100%"}),
-            html.P(f'Povo {povo}', className='hover-box')
-        ], style={'width': '100%'})
+            html.P(f'{nome_do_item.title()}', className='hover-box'),
+            html.P(f'Povo {povo.title()}', className='hover-box')
+        ], style={'width': '100px'})
     ]
 
     return True, bbox, children
+
+# Callback for clicking
+@app.callback(
+    Output("url", "href"),
+    Input("cluster-plot", "clickData"),
+)
+def display_hover(click_data):
+    if click_data is None:
+        return no_update
+
+    # Extracting plotly dash information
+    num = click_data["points"][0]['pointIndex']
+    
+    # Acessing the dataframe to get the URL we want
+    df_row = plot_df.iloc[num]
+    url = df_row['url']
+
+    return url
 
 # Callback for collapsing points that are close together and to switch between points and images (because of duplicate ['cluster-plot', 'figure'] output)
 @app.callback(
