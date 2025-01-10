@@ -4,6 +4,8 @@
 #
 #    pip-compile ../requirements.in
 #
+annotated-types==0.7.0
+    # via pydantic
 annoy==1.17.3
     # via trimap
 asttokens==3.0.0
@@ -12,6 +14,8 @@ blinker==1.9.0
     # via flask
 build==1.2.2.post1
     # via pip-tools
+cachelib==0.9.0
+    # via flask-caching
 certifi==2024.8.30
     # via requests
 charset-normalizer==3.4.0
@@ -25,17 +29,25 @@ contourpy==1.3.1
 cycler==0.12.1
     # via matplotlib
 dash==2.18.2
-    # via -r ../requirements.in
+    # via
+    #   -r ../requirements.in
+    #   dash-extensions
 dash-core-components==2.0.0
     # via dash
+dash-extensions==1.0.19
+    # via -r ../requirements.in
 dash-html-components==2.0.0
     # via dash
 dash-table==5.0.0
     # via dash
+dataclass-wizard==0.30.1
+    # via dash-extensions
 decorator==5.1.1
     # via
     #   ipdb
     #   ipython
+editorconfig==0.17.0
+    # via jsbeautifier
 exceptiongroup==1.2.2
     # via ipython
 executing==2.1.0
@@ -47,7 +59,11 @@ filelock==3.16.1
     #   transformers
     #   triton
 flask==3.0.3
-    # via dash
+    # via
+    #   dash
+    #   flask-caching
+flask-caching==2.3.0
+    # via dash-extensions
 fonttools==4.54.1
     # via matplotlib
 fsspec==2024.10.0
@@ -81,6 +97,8 @@ joblib==1.4.2
     # via
     #   kmodes
     #   scikit-learn
+jsbeautifier==1.15.1
+    # via dash-extensions
 kiwisolver==1.4.7
     # via matplotlib
 kmodes==0.12.2
@@ -101,6 +119,8 @@ matplotlib==3.9.2
     # via -r ../requirements.in
 matplotlib-inline==0.1.7
     # via ipython
+more-itertools==10.5.0
+    # via dash-extensions
 mpmath==1.3.0
     # via sympy
 nest-asyncio==1.6.0
@@ -195,6 +215,10 @@ ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
+pydantic==2.10.5
+    # via dash-extensions
+pydantic-core==2.27.2
+    # via pydantic
 pygments==2.18.0
     # via ipython
 pyparsing==3.2.0
@@ -243,6 +267,7 @@ scipy==1.14.1
     #   scikit-learn
 six==1.16.0
     # via
+    #   jsbeautifier
     #   python-dateutil
     #   retrying
 stack-data==0.6.3
@@ -292,8 +317,11 @@ triton==3.1.0
 typing-extensions==4.12.2
     # via
     #   dash
+    #   dataclass-wizard
     #   huggingface-hub
     #   ipython
+    #   pydantic
+    #   pydantic-core
     #   torch
 tzdata==2024.2
     # via pandas
