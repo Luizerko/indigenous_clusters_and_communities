@@ -9,20 +9,29 @@ from sklearn.cluster import DBSCAN
 import numpy as np
 
 from sklearn.datasets import make_blobs
-X, y = make_blobs(n_samples=100, centers=4, random_state=42)
-plot_df = pd.DataFrame({"x": X[:, 0], "y": X[:, 1], "cluster": y})
+X, y = make_blobs(n_samples=100, centers=4, random_state=42, center_box=(-1,1))
+plot_df_2 = pd.DataFrame({"x": X[:, 0], "y": X[:, 1], "cluster": y})
 
+plot_df = pd.read_csv('data/clusters/categoria_materia_prima_kmodes_trimap_2d.csv', index_col='id')
 
 ######### DATA LOADING AND PROCESSING #########
 # Loading dataset
 ind_df = pd.read_csv('data/indigenous_collection_processed.csv', index_col='id')
 
-sampled_ind_df = ind_df[~ind_df['image_path'].isnull()].sample(len(plot_df))
-plot_df['image_path'] = sampled_ind_df['image_path'].values
-plot_df['image_path'] = plot_df['image_path'].apply(lambda path: 'data/br_images/'+path.split('/')[-1].split('.')[0]+'.png')
-plot_df['url'] = sampled_ind_df['url'].values
-plot_df['nome_do_item'] = sampled_ind_df['nome_do_item'].values
-plot_df['povo'] = sampled_ind_df['povo'].values
+sampled_ind_df = ind_df[~ind_df['image_path'].isnull()].sample(len(plot_df_2))
+plot_df_2['image_path'] = sampled_ind_df['image_path'].values
+plot_df_2['image_path'] = plot_df_2['image_path'].apply(lambda path: 'data/br_images/'+path.split('/')[-1].split('.')[0]+'.png')
+plot_df_2['url'] = sampled_ind_df['url'].values
+plot_df_2['nome_do_item'] = sampled_ind_df['nome_do_item'].values
+plot_df_2['povo'] = sampled_ind_df['povo'].values
+
+plot_df['image_path'] = ind_df['image_path']
+plot_df.loc[plot_df['image_path'].notna(), 'image_path'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")
+plot_df['image_path'].fillna('data/placeholder_square.png', inplace=True)
+
+plot_df['url'] = ind_df['url'].values
+plot_df['nome_do_item'] = ind_df['nome_do_item'].values
+plot_df['povo'] = ind_df['povo'].values
 
 # Brazilian states dataset
 brazil_states = pd.DataFrame({
@@ -38,7 +47,7 @@ app = DashProxy(prevent_initial_callbacks=True, transforms=[MultiplexerTransform
 
 ########## UTIL FUNCTIONS FOR FIGURE ##########
 # Updating layout for any given figure
-def fig_update_layout(fig, x_range=(-12,12), y_range=(-12,12)):
+def fig_update_layout(fig, x_range=(-1,1), y_range=(-1,1)):
     # Customizing layout
     fig.update_layout(
         # Adjusting style of the graph
@@ -57,7 +66,7 @@ def fig_update_layout(fig, x_range=(-12,12), y_range=(-12,12)):
 
         # Mouse default configuration (panning instead of zooming)
         dragmode='pan',
-        hoverdistance = 5
+        hoverdistance = 10
     )
 
     # Hide axes' labels and ticks
@@ -96,7 +105,7 @@ def brazil_figure():
     return fig
 
 # Create scatter plot with markers
-def plot_with_markers(df, x_range, y_range):
+def plot_with_markers(df, x_range=(-1,1), y_range=(-1,1)):
     # Creating Plotly figure
     fig = px.scatter(df, x='x', y='y', color='cluster', color_continuous_scale='rainbow', width=1030, height=500)
 
@@ -108,10 +117,11 @@ def plot_with_markers(df, x_range, y_range):
 
 # Create scatter plot with the images themselves
 def plot_with_images(df, x_range, y_range):
+    df = df.loc[df['image_path'] != 'data/placeholder_square.png']
     fig = go.Figure()
     for i, row in df.iterrows():
         fig.add_layout_image(
-            dict(source=Image.open(row['image_path']), x=row['x'], y=row['y'], xref="x", yref="y", sizex=1.0, sizey=1.0, xanchor="center",yanchor="middle")
+            dict(source=Image.open(row['image_path']), x=row['x'], y=row['y'], xref="x", yref="y", sizex=x_range[1]/4, sizey=y_range[1]/4, xanchor="center",yanchor="middle")
         )
     
     fig_update_layout(fig, x_range, y_range)
@@ -149,7 +159,16 @@ app.layout = html.Div(
                                             ],
                                             value='markers'
                                         ),
-                                        html.P('MAIS BOTÕES!')
+                                        html.Label('Opções de Agrupamento'),
+                                        dcc.Dropdown(
+                                            id='single-option-dropdown',
+                                            options=[
+                                                {'label': 'Base', 'value': 'cluster_1'},
+                                                {'label': 'Imagens', 'value': 'cluster_2'},
+                                            ],
+                                            multi=False,
+                                            placeholder='Selecione uma opção'
+                                        )
                                     ]
                                 ),
                                 html.Div(
@@ -269,8 +288,8 @@ def update_scatter_plot(view_type, relayout_data):
         return no_update
     
     # Default zoom range
-    x_range = (-12, 12)
-    y_range = (-12, 12)
+    x_range = (-1, 1)
+    y_range = (-1, 1)
 
     if relayout_data and 'xaxis.range[0]' in relayout_data:
         x_range = (relayout_data['xaxis.range[0]'], relayout_data['xaxis.range[1]'])
@@ -281,7 +300,7 @@ def update_scatter_plot(view_type, relayout_data):
     y_span = y_range[1] - y_range[0]
 
     # Dynamic epsilon based on zoom level
-    eps = 0.03 * min(x_span, y_span)
+    eps = 0.02 * min(x_span, y_span)
 
     # Computing collapses
     coords = plot_df[['x', 'y']].to_numpy()
@@ -289,7 +308,7 @@ def update_scatter_plot(view_type, relayout_data):
     labels = db.labels_
 
     # Splitting clusters (inliers) and outliers for collapsing
-    collapse_df = pd.DataFrame(coords, columns=["x", "y"])
+    collapse_df = pd.DataFrame(coords, columns=["x", "y"], index=plot_df.index)
     collapse_df["cluster"] = labels
     
     outliers = collapse_df[collapse_df['cluster'] == -1]
@@ -327,6 +346,17 @@ def update_scatter_plot(view_type, relayout_data):
     ))
 
     return fig
+
+# Callback for changing clustering option
+@app.callback(
+    Output('cluster-plot', 'figure'),
+    Input('single-option-dropdown', 'value')
+)
+def update_cluster(selected_option):
+    if selected_option == 'cluster_1':
+        return plot_with_markers(plot_df)
+    elif selected_option == 'cluster_2':
+        return plot_with_markers(plot_df_2)
 
 # Running app
 if __name__ == '__main__':
