@@ -9,29 +9,34 @@ from sklearn.cluster import DBSCAN
 import numpy as np
 
 from sklearn.datasets import make_blobs
-X, y = make_blobs(n_samples=100, centers=4, random_state=42, center_box=(-1,1))
-plot_df_2 = pd.DataFrame({"x": X[:, 0], "y": X[:, 1], "cluster": y})
-
-plot_df = pd.read_csv('data/clusters/categoria_materia_prima_kmodes_trimap_2d.csv', index_col='id')
+x, y = make_blobs(n_samples=14654, centers=10, random_state=42, center_box=(-12,12))
+plot_df = pd.DataFrame({"x": x[:, 0], "y": x[:, 1], "cluster": y})
 
 ######### DATA LOADING AND PROCESSING #########
 # Loading dataset
 ind_df = pd.read_csv('data/indigenous_collection_processed.csv', index_col='id')
 
-sampled_ind_df = ind_df[~ind_df['image_path'].isnull()].sample(len(plot_df_2))
-plot_df_2['image_path'] = sampled_ind_df['image_path'].values
-plot_df_2['image_path'] = plot_df_2['image_path'].apply(lambda path: 'data/br_images/'+path.split('/')[-1].split('.')[0]+'.png')
-plot_df_2['url'] = sampled_ind_df['url'].values
-plot_df_2['nome_do_item'] = sampled_ind_df['nome_do_item'].values
-plot_df_2['povo'] = sampled_ind_df['povo'].values
+tipo_materia_prima_baseline_df = pd.read_csv('data/clusters/tipo_materia_prima_baseline.csv', index_col='id')
 
-plot_df['image_path'] = ind_df['image_path']
-plot_df.loc[plot_df['image_path'].notna(), 'image_path'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")
+# sampled_ind_df = ind_df[~ind_df['image_path'].isnull()].sample(len(plot_df))
+sampled_ind_df = ind_df.sample(len(plot_df))
+
+plot_df['image_path'] = sampled_ind_df['image_path'].values
+plot_df['image_path_br'] = sampled_ind_df['image_path'].values
+plot_df.loc[plot_df['image_path_br'].notna(), 'image_path_br'] = plot_df.loc[plot_df['image_path_br'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")
 plot_df['image_path'].fillna('data/placeholder_square.png', inplace=True)
+plot_df['image_path_br'].fillna('data/placeholder_square.png', inplace=True)
 
-plot_df['url'] = ind_df['url'].values
-plot_df['nome_do_item'] = ind_df['nome_do_item'].values
-plot_df['povo'] = ind_df['povo'].values
+plot_df['url'] = sampled_ind_df['url'].values
+
+plot_df['nome_do_item'] = sampled_ind_df['nome_do_item'].values
+
+plot_df['povo'] = sampled_ind_df['povo'].values
+
+plot_df['ano_de_aquisicao'] = sampled_ind_df['ano_de_aquisicao'].values
+plot_df['ano_de_aquisicao'].fillna('----', inplace=True)
+
+plot_df['cluster_names'] = tipo_materia_prima_baseline_df['cluster_names']
 
 # Brazilian states dataset
 brazil_states = pd.DataFrame({
@@ -41,18 +46,21 @@ brazil_states = pd.DataFrame({
     'longitude': [-70.55, -36.82, -51.77, -61.66, -38.51, -39.53, -47.86, -40.34, -49.86, -44.30, -55.42, -54.54, -44.38, -52.49, -34.83, -51.55, -34.88, -42.28, -43.20, -36.59, -51.22, -62.80, -60.67, -49.44, -46.63, -37.06, -48.25]
 })
 
+# Normalizing factor for visualization range
+norm_factor = 12
+
 # Dash app setup. DashPRoxy used for multiple callbacks with the same output, but made the app a bit buggy (multiple triggers of the same callback in a row)
 # app = Dash(__name__)
 app = DashProxy(prevent_initial_callbacks=True, transforms=[MultiplexerTransform()])
 
 ########## UTIL FUNCTIONS FOR FIGURE ##########
 # Updating layout for any given figure
-def fig_update_layout(fig, x_range=(-1,1), y_range=(-1,1)):
+def fig_update_layout(fig, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
     # Customizing layout
     fig.update_layout(
         # Adjusting style of the graph
-        plot_bgcolor="#ffffff",
-        paper_bgcolor="#ffffff",
+        plot_bgcolor="#e6e6e6",
+        paper_bgcolor="#e6e6e6",
         
         font=dict(family="Roboto, sans-serif", size=16, color="black"),
         
@@ -105,23 +113,23 @@ def brazil_figure():
     return fig
 
 # Create scatter plot with markers
-def plot_with_markers(df, x_range=(-1,1), y_range=(-1,1)):
+def plot_with_markers(df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
     # Creating Plotly figure
-    fig = px.scatter(df, x='x', y='y', color='cluster', color_continuous_scale='rainbow', width=1030, height=500)
+    fig = px.scatter(df, x='x', y='y', color='cluster', color_continuous_scale='phase', custom_data=[df.index], width=1030, height=500)
 
     # Configuring default hovering
-    fig.update_traces(hoverinfo='none', hovertemplate=None, marker=dict(size=20, opacity=1), line=dict(width=0, color='rgb(255, 212, 110)'))
+    fig.update_traces(hoverinfo='none', hovertemplate=None, marker=dict(size=20, opacity=0.65), line=dict(width=0, color='rgb(255, 212, 110)'))
 
     fig_update_layout(fig, x_range, y_range)
     return fig
 
 # Create scatter plot with the images themselves
-def plot_with_images(df, x_range, y_range):
-    df = df.loc[df['image_path'] != 'data/placeholder_square.png']
+def plot_with_images(df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
+    df = df.loc[df['image_path_br'] != 'data/placeholder_square.png']
     fig = go.Figure()
     for i, row in df.iterrows():
         fig.add_layout_image(
-            dict(source=Image.open(row['image_path']), x=row['x'], y=row['y'], xref="x", yref="y", sizex=x_range[1]/4, sizey=y_range[1]/4, xanchor="center",yanchor="middle")
+            dict(source=Image.open(row['image_path_br']), x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/8, sizey=(y_range[1]-y_range[0])/8, xanchor="center",yanchor="middle")
         )
     
     fig_update_layout(fig, x_range, y_range)
@@ -163,12 +171,14 @@ app.layout = html.Div(
                                         dcc.Dropdown(
                                             id='single-option-dropdown',
                                             options=[
-                                                {'label': 'Base', 'value': 'cluster_1'},
-                                                {'label': 'Imagens', 'value': 'cluster_2'},
+                                                {'label': 'Visual', 'value': 'cluster_1'},
+                                                {'label': 'Tipo de Materia Prima', 'value': 'cluster_2'},
                                             ],
                                             multi=False,
-                                            placeholder='Selecione uma opção'
-                                        )
+                                            placeholder='Selecione uma opção',
+                                            value='cluster_1'
+                                        ),
+                                        dcc.Store(id='zoom-update')
                                     ]
                                 ),
                                 html.Div(
@@ -243,18 +253,36 @@ def display_hover(hover_data, fig):
     fig.data[0].marker.line.width = new_line_widths
 
     # Acessing the dataframe to get the data we actually want to display
-    df_row = plot_df.iloc[num]
+    df_row = plot_df.iloc[fig.data[0].customdata[num][0]]
     img_src = df_row['image_path']
     nome_do_item = df_row['nome_do_item']
     povo = df_row['povo']
+    try:
+        ano_de_aquisicao = int(df_row['ano_de_aquisicao'])
+    except:
+        ano_de_aquisicao = df_row['ano_de_aquisicao']
 
-    children = [
-        html.Div([
-            html.Img(src=Image.open(img_src), style={"width": "100%"}),
-            html.P(f'{nome_do_item.title()}', className='hover-box'),
-            html.P(f'Povo {povo.title()}', className='hover-box')
-        ], style={'width': '100px'})
+    # Hovering box with image only for points with image
+    if img_src == 'data/placeholder_square.png':
+        children = [
+        html.Div(
+            className='hover-box',
+            children=[
+                html.P(f'{nome_do_item.title()}', className='hover-box-text'),
+                html.P(f'{povo.title()}, {ano_de_aquisicao}', className='hover-box-text')
+            ], style={'width': '160px'})
     ]
+
+    else:
+        children = [
+            html.Div(
+                className='hover-box',
+                children=[
+                    html.Img(src=Image.open(img_src), className='hover-box-image'),
+                    html.P(f'{nome_do_item.title()}', className='hover-box-text'),
+                    html.P(f'{povo.title()}, {ano_de_aquisicao}', className='hover-box-text')
+                ], style={'width': '160px'})
+        ]
 
     return True, bbox, children, fig
 
@@ -281,15 +309,16 @@ def open_click(click_data):
     Output('cluster-plot', 'figure'),
     Input('toggle-view', 'value'),
     Input('cluster-plot', 'relayoutData'),
+    Input('zoom-update', 'data'),
 )
-def update_scatter_plot(view_type, relayout_data):
+def update_scatter_plot(view_type, relayout_data, zoom_update):
     # Handling (potential) constant trigerring and app crashing
     if relayout_data is None:
         return no_update
     
     # Default zoom range
-    x_range = (-1, 1)
-    y_range = (-1, 1)
+    x_range = (-12, 12)
+    y_range = (-12, 12)
 
     if relayout_data and 'xaxis.range[0]' in relayout_data:
         x_range = (relayout_data['xaxis.range[0]'], relayout_data['xaxis.range[1]'])
@@ -300,7 +329,7 @@ def update_scatter_plot(view_type, relayout_data):
     y_span = y_range[1] - y_range[0]
 
     # Dynamic epsilon based on zoom level
-    eps = 0.02 * min(x_span, y_span)
+    eps = 0.015 * min(x_span, y_span)
 
     # Computing collapses
     coords = plot_df[['x', 'y']].to_numpy()
@@ -313,7 +342,7 @@ def update_scatter_plot(view_type, relayout_data):
     
     outliers = collapse_df[collapse_df['cluster'] == -1]
     outliers['cluster'] = plot_df[collapse_df['cluster'] == -1]['cluster'].values
-    outliers['image_path'] = plot_df[collapse_df['cluster'] == -1]['image_path'].values
+    outliers['image_path_br'] = plot_df[collapse_df['cluster'] == -1]['image_path_br'].values
 
     visible_outliers = outliers[
         (outliers['x'] >= x_range[0]) & (outliers['x'] <= x_range[1]) &
@@ -349,14 +378,22 @@ def update_scatter_plot(view_type, relayout_data):
 
 # Callback for changing clustering option
 @app.callback(
-    Output('cluster-plot', 'figure'),
+    # Output('cluster-plot', 'figure'),
+    Output('zoom-update', 'data'),
     Input('single-option-dropdown', 'value')
 )
 def update_cluster(selected_option):
     if selected_option == 'cluster_1':
-        return plot_with_markers(plot_df)
+        plot_df["x"] = x[:, 0]
+        plot_df["y"] = x[:, 1]
+        plot_df["cluster"] = y
+    
     elif selected_option == 'cluster_2':
-        return plot_with_markers(plot_df_2)
+        plot_df["x"] = tipo_materia_prima_baseline_df['x'].values
+        plot_df["y"] = tipo_materia_prima_baseline_df['y'].values
+        plot_df["cluster"] = tipo_materia_prima_baseline_df['cluster'].values
+
+    return True
 
 # Running app
 if __name__ == '__main__':
