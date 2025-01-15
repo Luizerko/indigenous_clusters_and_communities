@@ -4,12 +4,15 @@ from dash import Dash, dcc, html, Input, Output, State, no_update
 from dash_extensions.enrich import DashProxy, MultiplexerTransform
 
 from PIL import Image
+# import base64
 import pandas as pd
 from sklearn.cluster import DBSCAN
 import numpy as np
 
+from utils import norm_factor, empty_figure, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map
+
 from sklearn.datasets import make_blobs
-x, y = make_blobs(n_samples=14654, centers=10, random_state=42, center_box=(-12,12))
+x, y = make_blobs(n_samples=14654, centers=10, random_state=42, center_box=(-norm_factor,norm_factor))
 plot_df = pd.DataFrame({"x": x[:, 0], "y": x[:, 1], "cluster": y})
 
 ######### DATA LOADING AND PROCESSING #########
@@ -18,9 +21,15 @@ ind_df = pd.read_csv('data/indigenous_collection_processed.csv', index_col='id')
 
 tipo_materia_prima_baseline_df = pd.read_csv('data/clusters/tipo_materia_prima_baseline.csv', index_col='id')
 
+# FORCING tipo_de_materia_prima BASELINE. REMEMBER TO REMOVE IT LATER ON
+plot_df["x"] = tipo_materia_prima_baseline_df['x'].values
+plot_df["y"] = tipo_materia_prima_baseline_df['y'].values
+plot_df["cluster"] = tipo_materia_prima_baseline_df['cluster'].values
+
 # sampled_ind_df = ind_df[~ind_df['image_path'].isnull()].sample(len(plot_df))
 sampled_ind_df = ind_df.sample(len(plot_df))
 
+# Extracting and processing information that will be used from dataframe
 plot_df['image_path'] = sampled_ind_df['image_path'].values
 plot_df['image_path_br'] = sampled_ind_df['image_path'].values
 plot_df.loc[plot_df['image_path_br'].notna(), 'image_path_br'] = plot_df.loc[plot_df['image_path_br'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")
@@ -36,104 +45,26 @@ plot_df['povo'] = sampled_ind_df['povo'].values
 plot_df['ano_de_aquisicao'] = sampled_ind_df['ano_de_aquisicao'].values
 plot_df['ano_de_aquisicao'].fillna('----', inplace=True)
 
-plot_df['cluster_names'] = tipo_materia_prima_baseline_df['cluster_names']
+plot_df['cluster_names'] = tipo_materia_prima_baseline_df['cluster_names'].values
 
-# Brazilian states dataset
-brazil_states = pd.DataFrame({
-    'state': ['Acre', 'Alagoas', 'Amapá', 'Amazonas', 'Bahia', 'Ceará', 'Distrito Federal', 'Espírito Santo', 'Goiás', 'Maranhão', 'Mato Grosso', 'Mato Grosso do Sul', 'Minas Gerais', 'Pará', 'Paraíba', 'Paraná', 'Pernambuco', 'Piauí', 'Rio de Janeiro', 'Rio Grande do Norte', 'Rio Grande do Sul', 'Rondônia', 'Roraima', 'Santa Catarina', 'São Paulo', 'Sergipe', 'Tocantins'],
+# Creating initial color map for clusters
+color_map = generate_color_map(y)
+plot_df['color'] = [color_map[label] for label in plot_df['cluster'].values]
 
-    'latitude': [-8.77, -9.62, 1.41, -3.07, -12.96, -5.20, -15.83, -19.19, -15.98, -4.96, -12.64, -20.51, -18.10, -3.79, -7.12, -24.89, -8.28, -6.60, -22.91, -5.81, -30.03, -10.90, 2.82, -27.33, -23.55, -10.57, -10.25],
-    'longitude': [-70.55, -36.82, -51.77, -61.66, -38.51, -39.53, -47.86, -40.34, -49.86, -44.30, -55.42, -54.54, -44.38, -52.49, -34.83, -51.55, -34.88, -42.28, -43.20, -36.59, -51.22, -62.80, -60.67, -49.44, -46.63, -37.06, -48.25]
-})
-
-# Normalizing factor for visualization range
-norm_factor = 12
+# # Creating image list to try and optimize image graph (memory issue?)
+# image_list = []
+# for index, row in plot_df.loc[plot_df['image_path_br'] != 'data/placeholder_square.png'].iterrows():
+#     try:
+#         with open(row['image_path_br'], "rb") as image_file:
+#             encoded_image = base64.b64encode(image_file.read()).decode()
+#             image_list.append(f"data:image/png;base64,{encoded_image}")
+#     except:
+#         image_list.append('corrupt_image')
+# image_list = np.array(image_list)
 
 # Dash app setup. DashPRoxy used for multiple callbacks with the same output, but made the app a bit buggy (multiple triggers of the same callback in a row)
 # app = Dash(__name__)
 app = DashProxy(prevent_initial_callbacks=True, transforms=[MultiplexerTransform()])
-
-########## UTIL FUNCTIONS FOR FIGURE ##########
-# Updating layout for any given figure
-def fig_update_layout(fig, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
-    # Customizing layout
-    fig.update_layout(
-        # Adjusting style of the graph
-        plot_bgcolor="#e6e6e6",
-        paper_bgcolor="#e6e6e6",
-        
-        font=dict(family="Roboto, sans-serif", size=16, color="black"),
-        
-        title_x=0.5,
-        margin=dict(l=0, r=0, t=10, b=0),
-        
-        showlegend=False,
-        xaxis_title=None,
-        yaxis_title=None,
-        coloraxis_showscale=False,
-
-        # Mouse default configuration (panning instead of zooming)
-        dragmode='pan',
-        hoverdistance = 10
-    )
-
-    # Hide axes' labels and ticks
-    fig.update_xaxes(
-        showgrid=False,
-        zeroline=False,
-        showticklabels=False,
-        range=x_range
-    )
-    fig.update_yaxes(
-        showgrid=False,
-        zeroline=False,
-        showticklabels=False,
-        range=y_range
-    )
-
-# Create empty figure for initialization
-def empty_figure():
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=[], y=[]))
-    fig_update_layout(fig)
-    return fig
-
-# Creating the map of Brazil and plotting markers on states
-def brazil_figure():
-    fig = px.scatter_mapbox(brazil_states, lat='latitude', lon='longitude', hover_name='state', zoom=3.5, center={'lat': -14.2350, 'lon': -51.9253}, width=1350, height=600)
-
-    fig.update_layout(
-        mapbox_style="carto-positron",  # options are 'open-street-map', 'stamen-terrain', 'carto-positron', etc.
-        margin={"r": 0, "t": 0, "l": 0, "b": 0},
-        title="Mapa do Brasil e suas Comunidades Indígenas"
-    )
-
-    fig.update_traces(marker=dict(size=20, color='#062a57'))
-
-    return fig
-
-# Create scatter plot with markers
-def plot_with_markers(df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
-    # Creating Plotly figure
-    fig = px.scatter(df, x='x', y='y', color='cluster', color_continuous_scale='phase', custom_data=[df.index], width=1030, height=500)
-
-    # Configuring default hovering
-    fig.update_traces(hoverinfo='none', hovertemplate=None, marker=dict(size=20, opacity=0.65), line=dict(width=0, color='rgb(255, 212, 110)'))
-
-    fig_update_layout(fig, x_range, y_range)
-    return fig
-
-# Create scatter plot with the images themselves
-def plot_with_images(df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
-    df = df.loc[df['image_path_br'] != 'data/placeholder_square.png']
-    fig = go.Figure()
-    for i, row in df.iterrows():
-        fig.add_layout_image(
-            dict(source=Image.open(row['image_path_br']), x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/8, sizey=(y_range[1]-y_range[0])/8, xanchor="center",yanchor="middle")
-        )
-    
-    fig_update_layout(fig, x_range, y_range)
-    return fig
 
 # Dash graph configurations
 config = {
@@ -176,7 +107,7 @@ app.layout = html.Div(
                                             ],
                                             multi=False,
                                             placeholder='Selecione uma opção',
-                                            value='cluster_1'
+                                            value='cluster_2'
                                         ),
                                         dcc.Store(id='zoom-update')
                                     ]
@@ -253,7 +184,7 @@ def display_hover(hover_data, fig):
     fig.data[0].marker.line.width = new_line_widths
 
     # Acessing the dataframe to get the data we actually want to display
-    df_row = plot_df.iloc[fig.data[0].customdata[num][0]]
+    df_row = plot_df.iloc[fig.data[0].customdata[num]]
     img_src = df_row['image_path']
     nome_do_item = df_row['nome_do_item']
     povo = df_row['povo']
@@ -317,33 +248,33 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
         return no_update
     
     # Default zoom range
-    x_range = (-12, 12)
-    y_range = (-12, 12)
+    x_range = (-norm_factor, norm_factor)
+    y_range = (-norm_factor, norm_factor)
 
     if relayout_data and 'xaxis.range[0]' in relayout_data:
         x_range = (relayout_data['xaxis.range[0]'], relayout_data['xaxis.range[1]'])
         y_range = (relayout_data['yaxis.range[0]'], relayout_data['yaxis.range[1]'])
 
-    # Calculating the visible "scale" to dynamically adjust sensitivity
-    x_span = x_range[1] - x_range[0]
-    y_span = y_range[1] - y_range[0]
-
-    # Dynamic epsilon based on zoom level
-    eps = 0.015 * min(x_span, y_span)
-
     # Computing collapses
     coords = plot_df[['x', 'y']].to_numpy()
-    db = DBSCAN(eps=eps, min_samples=2).fit(coords)
-    labels = db.labels_
+    labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.05)
 
     # Splitting clusters (inliers) and outliers for collapsing
     collapse_df = pd.DataFrame(coords, columns=["x", "y"], index=plot_df.index)
     collapse_df["cluster"] = labels
     
+    # Generating colormap to avoid cluster color reassignment with lazy plotting
+    color_map = generate_color_map(plot_df['cluster'].values)
+    collapse_df["color"] = [color_map[label] for label in plot_df['cluster'].values]
+
+    # Getting cluster names for legend
+    collapse_df["cluster_names"] = plot_df['cluster_names']
+
     outliers = collapse_df[collapse_df['cluster'] == -1]
     outliers['cluster'] = plot_df[collapse_df['cluster'] == -1]['cluster'].values
     outliers['image_path_br'] = plot_df[collapse_df['cluster'] == -1]['image_path_br'].values
 
+    # Lazy plotting for speed
     visible_outliers = outliers[
         (outliers['x'] >= x_range[0]) & (outliers['x'] <= x_range[1]) &
         (outliers['y'] >= y_range[0]) & (outliers['y'] <= y_range[1])
@@ -353,14 +284,14 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
 
     # Replotting outliers
     if view_type == 'markers':
-        fig = plot_with_markers(outliers, x_range, y_range)
+        fig = plot_with_markers(visible_outliers, x_range, y_range)
     else:
         fig = plot_with_images(visible_outliers, x_range, y_range)
     
     # Plotting collapsed points
     centroids_df = inliers.groupby('cluster').agg({'x': 'mean', 'y': 'mean'})
     centroids_df['count'] = inliers.groupby('cluster').size().values
-    centroids_df['marker_size'] = centroids_df['count'].apply(lambda c: min(200, max(30, 20*np.log(c))))
+    centroids_df['marker_size'] = centroids_df['count'].apply(lambda c: min(60, max(30, 15*np.log(c))))
 
     fig.add_trace(go.Scatter(
         x=centroids_df['x'],
@@ -371,7 +302,8 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
         textposition='middle center',
         textfont=dict(color='#ffffff', size=16),
         hoverinfo='skip',
-        hovertemplate=None
+        hovertemplate=None,
+        showlegend=False
     ))
 
     return fig
