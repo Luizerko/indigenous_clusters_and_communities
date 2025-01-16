@@ -25,9 +25,9 @@ Now that you have Miniconda, you just need to close and reopen your terminal to 
 conda create -n "ind_thesis" python=3.10
 ```
 
-Once you have your environment, you can start installing the appropriate libraries. In general, this can be done through the `requirements.txt` file, but you'll need to manually install two packages, `torch` and `torchvision`, due to appropriate compatibility with your CUDA version.
+Once you have your environment, you can start installing the appropriate libraries. In general, this can be done through the `requirements.txt` file, but you'll need to manually install two packages, `torch` and `torchvision`, due to compatibility with your CUDA version.
 
-Below you'll find the command I ran to install it locally, but you might have to change both the package version or the CUDA version to make it work on your own machine. If this is te case, look for a wheel compatible with your specs at the [torch wheel website](https://download.pytorch.org/whl/torch/) and at the [torchvision wheel website](https://download.pytorch.org/whl/torchvision/).
+Below you'll find the command I ran to install it locally, but you might have to change both the package version or the CUDA version to make it work on your own machine. If this is te case, look for a wheel compatible with your specs at the [torch wheel website](https://download.pytorch.org/whl/torch/) and at the [torchvision wheel website](https://download.pytorch.org/whl/torchvision/) (or build it yourself, although I highly disencourage that).
 
 ```
 # Installing torch and torchvision

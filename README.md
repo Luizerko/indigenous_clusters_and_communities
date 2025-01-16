@@ -1,6 +1,6 @@
 # UvA 2024/2025 Master Thesis
 
-This repo contained two potential projects that could have been developed for my master's thesis: the Indigenous Project and the Graffiti Project. In the end, however, the Indigenous Project was chosen and thus became the sole focus of this repository's development.
+This repo contained two potential projects that could have been developed for my master's thesis: the Indigenous Project and the Graffiti Project. In the end, however, the [Indigenous Project](https://github.com/Luizerko/master_thesis/tree/main/indigenous_project) was chosen and thus became the sole focus of this repository's development.
 
 For those curious, if you're interested in what the graffiti project could have been, you can still find a draft of its proposal in the comments of this README.md file.
 

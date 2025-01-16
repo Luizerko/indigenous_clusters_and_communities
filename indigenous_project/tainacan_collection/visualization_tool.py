@@ -33,8 +33,8 @@ sampled_ind_df = ind_df.sample(len(plot_df))
 plot_df['image_path'] = sampled_ind_df['image_path'].values
 plot_df['image_path_br'] = sampled_ind_df['image_path'].values
 plot_df.loc[plot_df['image_path_br'].notna(), 'image_path_br'] = plot_df.loc[plot_df['image_path_br'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")
-plot_df['image_path'].fillna('data/placeholder_square.png', inplace=True)
-plot_df['image_path_br'].fillna('data/placeholder_square.png', inplace=True)
+plot_df.fillna({'image_path': 'data/placeholder_square.png'}, inplace=True)
+plot_df.fillna({'image_path_br': 'data/placeholder_square.png'}, inplace=True)
 
 plot_df['url'] = sampled_ind_df['url'].values
 
@@ -43,7 +43,7 @@ plot_df['nome_do_item'] = sampled_ind_df['nome_do_item'].values
 plot_df['povo'] = sampled_ind_df['povo'].values
 
 plot_df['ano_de_aquisicao'] = sampled_ind_df['ano_de_aquisicao'].values
-plot_df['ano_de_aquisicao'].fillna('----', inplace=True)
+plot_df.fillna({'ano_de_aquisicao': '----'}, inplace=True)
 
 plot_df['cluster_names'] = tipo_materia_prima_baseline_df['cluster_names'].values
 
@@ -221,16 +221,19 @@ def display_hover(hover_data, fig):
 @app.callback(
     Output("url", "href"),
     Input("cluster-plot", "clickData"),
+    State('cluster-plot', 'figure')
 )
-def open_click(click_data):
+def open_click(click_data, fig):
     if click_data is None:
         return no_update
+
+    fig = go.Figure(fig)
 
     # Extracting plotly dash information
     num = click_data["points"][0]['pointIndex']
     
     # Acessing the dataframe to get the URL we want
-    df_row = plot_df.iloc[num]
+    df_row = plot_df.iloc[fig.data[0].customdata[num]]
     url = df_row['url']
 
     return url
@@ -271,8 +274,9 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
     collapse_df["cluster_names"] = plot_df['cluster_names']
 
     outliers = collapse_df[collapse_df['cluster'] == -1]
-    outliers['cluster'] = plot_df[collapse_df['cluster'] == -1]['cluster'].values
-    outliers['image_path_br'] = plot_df[collapse_df['cluster'] == -1]['image_path_br'].values
+    outliers = outliers.copy()
+    outliers.loc[:, 'cluster'] = plot_df.loc[collapse_df['cluster'] == -1, 'cluster'].values
+    outliers.loc[:, 'image_path_br'] = plot_df.loc[collapse_df['cluster'] == -1, 'image_path_br'].values
 
     # Lazy plotting for speed
     visible_outliers = outliers[
