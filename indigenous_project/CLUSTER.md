@@ -56,22 +56,32 @@ This time, while the representation of each datapoint remained sparse, the categ
     <br>
 </div>
 
-### Individual Taxonomy-Rich Features
+### Basic Feature-Based Clustering  
 
-Due to fails in the previous methods, we decided to go back to the basics even further and used as baselines just the very well-defined and easy to visualize features of our data. Below, we show the chosen features:
+Due to the failures of the previous methods, we decided to take an even more fundamental approach, using only the most well-defined and easily visualized features of our data as baselines. Below, we outline the chosen features:  
 
-- `tipo_de_materia_prima`: 3 meaningful categories (no datapoint has the forth category *sintetico*) and items are allowed to have multiple categories. We can represent the clusters in 2D with a triangle: each vertix is one category (*animal*, *vegetal* and *mineral*), and mid-points between clusters represent points that belong to both classes. If they belong to all classes, they are plotted in the middle of the triangle. Since all points would be placed on just one point in space for each category, we added a bit of a 2D gaussian noise to create a point-cloud and make the visualization better.
+- **`tipo_de_materia_prima`**: This feature contains three meaningful categories - *animal*, *vegetal*, and *mineral*. Although a fourth category (*sintetico*) exists, no data points fall into this group. Additionally, items can belong to multiple categories.  
 
-<div align="center">
-    <br>
-    <img src="assets/tipo_de_materia_prima_baseline.png", width="350">
-</div>
-<div align='center'>
-    <span>Plot showing clusters of <i>tipo_de_materia_prima</i>.</span>
-    <br>
-</div>
+    To represent clusters in 2D, we used a triangle representation:
 
-- `dimensoes`:
+    - Each vertex represents one category (*animal*, *vegetal*, or *mineral*).
+
+    - Midpoints between vertices represent items that belong to two categories.
+
+    - Items that belong to all three categories are placed in the center of the triangle.  
+
+    Since each category would otherwise be represented as a single point in space, making visualization difficult, we added 2D Gaussian noise to create a point-cloud effect.  
+
+    <div align="center">
+        <br>
+        <img src="assets/tipo_de_materia_prima_baseline.png", width="350">
+    </div>
+    <div align='center'>
+        <span>Plot showing clusters of <i>tipo_de_materia_prima</i>.</span>
+        <br>
+    </div>
+
+- **`dimensoes`**:
 
 ### Specialist Taxonomy
 
