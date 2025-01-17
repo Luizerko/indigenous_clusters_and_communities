@@ -23,11 +23,12 @@ To try and guarantee the distance property we were interested in, the two projec
 Despite these efforts, the results were still far from ideal. TriMap performed slightly better than MDS, but neither method produced the desired clustering structure.
 
 <div align="center">
-    <img src="https://github.com/Luizerko/master_thesis/tree/main/indigenous_project/assets/projections_orthonormal.png", width="550">
+    <br>
+    <img src="assets/projections_orthonormal.png", width="450">
 </div>
 <div align='center'>
     <span>Plot showing MDS and TriMap 2D projections from random orthonormal vectors for 2 features (14 dimensions).</span>
-    <br><br>
+    <br>
 </div>
 
 ### Categorical Clustering  
@@ -47,11 +48,12 @@ This time, while the representation of each datapoint remained sparse, the categ
 - **TriMap** performed better than the other two. On one hand, it managed to create more identifiable clusters, and on the other, it spread clusters of the same color across multiple areas of the plot. While splitting clusters might seem undesirable, it is actually necessary to maintain equidistance in 2D for more than 3 categories - some categories need to appear in multiple places so that their cloud points remain equally distant from others. However, despite this relatively better performance, the visualization was still unclear, and the method clearly struggled with the data.  
 
 <div align="center">
-    <img src="https://github.com/Luizerko/master_thesis/tree/main/indigenous_project/assets/projections_categorical.png", width="550">
+    <br>
+    <img src="assets/projections_categorical.png", width="550">
 </div>
 <div align='center'>
     <span>Plot showing t-SNE, UMAP and TriMap 2D projections from categorical vectors for 2 features (14 dimensions).</span>
-    <br><br>
+    <br>
 </div>
 
 ### Individual Taxonomy-Rich Features
@@ -61,11 +63,12 @@ Due to fails in the previous methods, we decided to go back to the basics even f
 - `tipo_de_materia_prima`: 3 meaningful categories (no datapoint has the forth category *sintetico*) and items are allowed to have multiple categories. We can represent the clusters in 2D with a triangle: each vertix is one category (*animal*, *vegetal* and *mineral*), and mid-points between clusters represent points that belong to both classes. If they belong to all classes, they are plotted in the middle of the triangle. Since all points would be placed on just one point in space for each category, we added a bit of a 2D gaussian noise to create a point-cloud and make the visualization better.
 
 <div align="center">
-    <img src="https://github.com/Luizerko/master_thesis/tree/main/indigenous_project/assets/tipo_de_materia_prima_baseline.png", width="350">
+    <br>
+    <img src="assets/tipo_de_materia_prima_baseline.png", width="350">
 </div>
 <div align='center'>
     <span>Plot showing clusters of <i>tipo_de_materia_prima</i>.</span>
-    <br><br>
+    <br>
 </div>
 
 - `dimensoes`:
