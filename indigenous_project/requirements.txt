@@ -109,6 +109,8 @@ kornia-rs==0.1.8
     # via kornia
 lazy-loader==0.4
     # via scikit-image
+lightning-utilities==0.11.9
+    # via torchmetrics
 llvmlite==0.34.0
     # via numba
 markupsafe==3.0.2
@@ -145,6 +147,7 @@ numpy==2.1.2
     #   scikit-learn
     #   scipy
     #   tifffile
+    #   torchmetrics
     #   torchvision
     #   transformers
 nvidia-cublas-cu12==12.4.5.8
@@ -187,9 +190,11 @@ packaging==24.1
     #   huggingface-hub
     #   kornia
     #   lazy-loader
+    #   lightning-utilities
     #   matplotlib
     #   plotly
     #   scikit-image
+    #   torchmetrics
     #   transformers
 pandas==2.2.3
     # via -r ../requirements.in
@@ -294,7 +299,10 @@ torch==2.5.1
     #   -r ../requirements.in
     #   kornia
     #   timm
+    #   torchmetrics
     #   torchvision
+torchmetrics==1.6.1
+    # via -r ../requirements.in
 torchvision==0.20.1
     # via
     #   -r ../requirements.in
@@ -320,6 +328,7 @@ typing-extensions==4.12.2
     #   dataclass-wizard
     #   huggingface-hub
     #   ipython
+    #   lightning-utilities
     #   pydantic
     #   pydantic-core
     #   torch

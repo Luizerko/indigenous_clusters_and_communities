@@ -20,3 +20,4 @@ trimap
 kmodes
 umap
 dash-extensions
+torchmetrics
