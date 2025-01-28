@@ -31,7 +31,10 @@ cycler==0.12.1
 dash==2.18.2
     # via
     #   -r ../requirements.in
+    #   dash-bootstrap-components
     #   dash-extensions
+dash-bootstrap-components==1.7.1
+    # via -r ../requirements.in
 dash-core-components==2.0.0
     # via dash
 dash-extensions==1.0.19

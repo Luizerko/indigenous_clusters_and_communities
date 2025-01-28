@@ -2,6 +2,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output, State, no_update
 from dash_extensions.enrich import DashProxy, MultiplexerTransform
+import dash_bootstrap_components as dbc
 
 from PIL import Image
 # import base64
@@ -9,7 +10,7 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 import numpy as np
 
-from utils import norm_factor, empty_figure, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map
+from utils import norm_factor, empty_figure, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map, brazil_states_dict
 
 from sklearn.datasets import make_blobs
 x, y = make_blobs(n_samples=14654, centers=10, random_state=42, center_box=(-norm_factor,norm_factor))
@@ -45,22 +46,13 @@ plot_df['povo'] = sampled_ind_df['povo'].values
 plot_df['ano_de_aquisicao'] = sampled_ind_df['ano_de_aquisicao'].values
 plot_df.fillna({'ano_de_aquisicao': '----'}, inplace=True)
 
+plot_df['estado_de_origem'] = sampled_ind_df['estado_de_origem'].values
+
 plot_df['cluster_names'] = tipo_materia_prima_baseline_df['cluster_names'].values
 
 # Creating initial color map for clusters
 color_map = generate_color_map(y)
 plot_df['color'] = [color_map[label] for label in plot_df['cluster'].values]
-
-# # Creating image list to try and optimize image graph (memory issue?)
-# image_list = []
-# for index, row in plot_df.loc[plot_df['image_path_br'] != 'data/placeholder_square.png'].iterrows():
-#     try:
-#         with open(row['image_path_br'], "rb") as image_file:
-#             encoded_image = base64.b64encode(image_file.read()).decode()
-#             image_list.append(f"data:image/png;base64,{encoded_image}")
-#     except:
-#         image_list.append('corrupt_image')
-# image_list = np.array(image_list)
 
 # Dash app setup. DashPRoxy used for multiple callbacks with the same output, but made the app a bit buggy (multiple triggers of the same callback in a row)
 # app = Dash(__name__)
@@ -133,7 +125,12 @@ app.layout = html.Div(
                 html.Div(
                     className='map-container',
                     children=[
-                            dcc.Graph(id='brazil-map', figure=brazil_figure())
+                            dcc.Graph(id='brazil-map', config=config, figure=brazil_figure()),
+                            dbc.Modal([
+                                dbc.ModalHeader('Itens Advindos do Estado'),
+                                dbc.ModalBody(id='state-items'),
+                                dbc.ModalFooter(dbc.Button("Fechar", id="close-modal", className="ml-auto", n_clicks=0))
+                            ], id='modal-items', is_open=False)
                     ]
                 )
             ]
@@ -330,6 +327,36 @@ def update_cluster(selected_option):
         plot_df["cluster"] = tipo_materia_prima_baseline_df['cluster'].values
 
     return True
+
+# Callback for map state-items modal
+@app.callback(
+    Output("modal-items", "is_open"),
+    Output("state-items", "children"),
+    Input("brazil-map", "clickData"),
+    Input("close-modal", "n_clicks"),
+    State("modal-items", "is_open")
+)
+def display_state_items(clickData, close_clicks, is_open):
+    if clickData and not close_clicks:
+        # Extracting clicked state and filtering items belonging to that state
+        state_name = clickData["points"][0]["hovertext"]
+        state_symb = brazil_states_dict[state_name]
+
+        state_items = plot_df[plot_df['estado_de_origem'].apply(lambda x: state_symb in x)]
+
+        # Create a list of items to display
+        items_list = html.Ul([
+            html.Li([
+                html.Img(src=item['image_path_br'], style={'width': '50px', 'height': '50px'}),
+                html.Span(f"{item['nome_do_item']} - {item['povo']} ({item['ano_de_aquisicao']})"),
+                html.A("Ver Mais", href=item['url'], target="_blank")
+            ])
+            for _, item in state_items.iterrows()
+        ])
+
+        return True, items_list
+
+    return False, no_update
 
 # Running app
 if __name__ == '__main__':
