@@ -10,10 +10,10 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 import numpy as np
 
-from utils import norm_factor, empty_figure, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map, brazil_states_dict
+from utils import brazil_states_dict, norm_factor, empty_figure, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map, get_dropdown_options
 
 from sklearn.datasets import make_blobs
-x, y = make_blobs(n_samples=14654, centers=10, random_state=42, center_box=(-norm_factor,norm_factor))
+x, y = make_blobs(n_samples=20965, centers=10, random_state=42, center_box=(-norm_factor,norm_factor))
 plot_df = pd.DataFrame({"x": x[:, 0], "y": x[:, 1], "cluster": y})
 
 ######### DATA LOADING AND PROCESSING #########
@@ -22,33 +22,38 @@ ind_df = pd.read_csv('data/indigenous_collection_processed.csv', index_col='id')
 
 tipo_materia_prima_baseline_df = pd.read_csv('data/clusters/tipo_materia_prima_baseline.csv', index_col='id')
 
-# FORCING tipo_de_materia_prima BASELINE. REMEMBER TO REMOVE IT LATER ON
-plot_df["x"] = tipo_materia_prima_baseline_df['x'].values
-plot_df["y"] = tipo_materia_prima_baseline_df['y'].values
-plot_df["cluster"] = tipo_materia_prima_baseline_df['cluster'].values
+# Creating artificial index to interact with our dataframe
+plot_df['ind_index'] = ind_df.index
 
-# sampled_ind_df = ind_df[~ind_df['image_path'].isnull()].sample(len(plot_df))
-sampled_ind_df = ind_df.sample(len(plot_df))
+# Setting point visibility
+plot_df['visibility'] = True
 
 # Extracting and processing information that will be used from dataframe
-plot_df['image_path'] = sampled_ind_df['image_path'].values
-plot_df['image_path_br'] = sampled_ind_df['image_path'].values
+plot_df['image_path'] = ind_df['image_path'].values
+plot_df['image_path_br'] = ind_df['image_path'].values
 plot_df.loc[plot_df['image_path_br'].notna(), 'image_path_br'] = plot_df.loc[plot_df['image_path_br'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")
 plot_df.fillna({'image_path': 'data/placeholder_square.png'}, inplace=True)
 plot_df.fillna({'image_path_br': 'data/placeholder_square.png'}, inplace=True)
 
-plot_df['url'] = sampled_ind_df['url'].values
+plot_df['url'] = ind_df['url'].values
 
-plot_df['nome_do_item'] = sampled_ind_df['nome_do_item'].values
+plot_df['nome_do_item'] = ind_df['nome_do_item'].values
 
-plot_df['povo'] = sampled_ind_df['povo'].values
+plot_df['povo'] = ind_df['povo'].values
 
-plot_df['ano_de_aquisicao'] = sampled_ind_df['ano_de_aquisicao'].values
+plot_df['categoria'] = ind_df['categoria'].values
+
+plot_df['ano_de_aquisicao'] = ind_df['ano_de_aquisicao'].values
 plot_df.fillna({'ano_de_aquisicao': '----'}, inplace=True)
 
-plot_df['estado_de_origem'] = sampled_ind_df['estado_de_origem'].values
+plot_df['estado_de_origem'] = ind_df['estado_de_origem'].values
 
-plot_df['cluster_names'] = tipo_materia_prima_baseline_df['cluster_names'].values
+plot_df['thumbnail'] = ind_df['thumbnail'].values
+
+plot_df['cluster_names'] = ''
+plot_df.set_index('ind_index', inplace=True)
+plot_df.loc[tipo_materia_prima_baseline_df.index, 'cluster_names'] = tipo_materia_prima_baseline_df['cluster_names'].values
+plot_df.reset_index(inplace=True)
 
 # Creating initial color map for clusters
 color_map = generate_color_map(y)
@@ -56,7 +61,7 @@ plot_df['color'] = [color_map[label] for label in plot_df['cluster'].values]
 
 # Dash app setup. DashPRoxy used for multiple callbacks with the same output, but made the app a bit buggy (multiple triggers of the same callback in a row)
 # app = Dash(__name__)
-app = DashProxy(prevent_initial_callbacks=True, transforms=[MultiplexerTransform()])
+app = DashProxy(prevent_initial_callbacks=True, transforms=[MultiplexerTransform()], external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 # Dash graph configurations
 config = {
@@ -67,7 +72,7 @@ config = {
 
 ################# APP LAYOUT #################
 # Dash layout
-app.layout = html.Div(
+app.layout = html.Div([
     dcc.Tabs([
         dcc.Tab(
             label='Agrupamentos do Acervo',
@@ -82,6 +87,7 @@ app.layout = html.Div(
                                 html.Div(
                                     className='sidebar',
                                     children=[
+                                        html.Label("Opções de Exibição", style={'fontWeight': 'bold'}),
                                         dcc.RadioItems(
                                             id='toggle-view',
                                             options=[
@@ -90,16 +96,58 @@ app.layout = html.Div(
                                             ],
                                             value='markers'
                                         ),
-                                        html.Label('Opções de Agrupamento'),
+
+                                        html.Label("Filtragem de Dados", style={'fontWeight': 'bold', 'marginTop': '20px'}),
+                                        html.Div(
+                                            className='filter-dropdown',
+                                            children=[
+                                                html.Label("Categoria:", style={'fontWeight': 'bold', 'fontSize': '16px'}),
+                                                dcc.Dropdown(
+                                                    id='categoria-filter',
+                                                    options=get_dropdown_options(ind_df, 'categoria'),
+                                                    multi=False,
+                                                    placeholder='Filtrar por Categoria',
+                                                    value='all',
+                                                ),
+                                            ]
+                                        ),
+                                        html.Div(
+                                            className='filter-dropdown',
+                                            children=[
+                                                html.Label("Povo:", style={'fontWeight': 'bold', 'fontSize': '16px'}),
+                                                dcc.Dropdown(
+                                                    id='povo-filter',
+                                                    options=get_dropdown_options(ind_df, 'povo'),
+                                                    multi=False,
+                                                    placeholder='Filtrar por Povo',
+                                                    value='all',
+                                                ),
+                                            ]
+                                        ),
+                                        html.Div(
+                                            className='filter-dropdown',
+                                            children=[
+                                                html.Label("Estado de Origem:", style={'fontWeight': 'bold', 'fontSize': '16px'}),
+                                                dcc.Dropdown(
+                                                    id='estado-filter',
+                                                    options=get_dropdown_options(ind_df, 'estado_de_origem'),
+                                                    multi=False,
+                                                    placeholder='Filtrar por Estado de Origem',
+                                                    value='all',
+                                                ),
+                                            ]
+                                        ),
+
+                                        html.Label('Opções de Agrupamento', style={'fontWeight': 'bold', 'marginTop': '20px'}),
                                         dcc.Dropdown(
                                             id='single-option-dropdown',
                                             options=[
-                                                {'label': 'Visual', 'value': 'cluster_1'},
+                                                {'label': 'Teste', 'value': 'cluster_1'},
                                                 {'label': 'Tipo de Materia Prima', 'value': 'cluster_2'},
                                             ],
                                             multi=False,
                                             placeholder='Selecione uma opção',
-                                            value='cluster_2'
+                                            value='cluster_1'
                                         ),
                                         dcc.Store(id='zoom-update')
                                     ]
@@ -125,19 +173,17 @@ app.layout = html.Div(
                 html.Div(
                     className='map-container',
                     children=[
-                            dcc.Graph(id='brazil-map', config=config, figure=brazil_figure()),
-                            dbc.Modal([
-                                dbc.ModalHeader('Itens Advindos do Estado'),
-                                dbc.ModalBody(id='state-items'),
-                                dbc.ModalFooter(dbc.Button("Fechar", id="close-modal", className="ml-auto", n_clicks=0))
-                            ], id='modal-items', is_open=False)
+                        dcc.Graph(id='brazil-map', config=config, figure=brazil_figure()),
                     ]
-                )
+                ),
             ]
         )
     ]),
-    className='base-background'
-)
+    dbc.Modal([
+        dbc.ModalHeader(dbc.ModalTitle('Itens Advindos do', style={'fontWeight': 'bold', 'color': '#062a57'}, id='state-header')),
+        dbc.ModalBody(id='state-items'),
+    ], id='modal-items', scrollable=True, is_open=False, backdrop=True)
+], className='base-background')
 
 ################## CALLBCAKS ##################
 # Callback for hovering
@@ -255,25 +301,28 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
         x_range = (relayout_data['xaxis.range[0]'], relayout_data['xaxis.range[1]'])
         y_range = (relayout_data['yaxis.range[0]'], relayout_data['yaxis.range[1]'])
 
+    # Getting filtered points only
+    filtered_plot_df = plot_df[plot_df['visibility'] == True]
+
     # Computing collapses
-    coords = plot_df[['x', 'y']].to_numpy()
+    coords = filtered_plot_df[['x', 'y']].to_numpy()
     labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.05)
 
     # Splitting clusters (inliers) and outliers for collapsing
-    collapse_df = pd.DataFrame(coords, columns=["x", "y"], index=plot_df.index)
+    collapse_df = pd.DataFrame(coords, columns=["x", "y"], index=filtered_plot_df.index)
     collapse_df["cluster"] = labels
     
     # Generating colormap to avoid cluster color reassignment with lazy plotting
-    color_map = generate_color_map(plot_df['cluster'].values)
-    collapse_df["color"] = [color_map[label] for label in plot_df['cluster'].values]
+    color_map = generate_color_map(filtered_plot_df['cluster'].values)
+    collapse_df["color"] = [color_map[label] for label in filtered_plot_df['cluster'].values]
 
     # Getting cluster names for legend
-    collapse_df["cluster_names"] = plot_df['cluster_names']
+    collapse_df["cluster_names"] = filtered_plot_df['cluster_names']
 
     outliers = collapse_df[collapse_df['cluster'] == -1]
     outliers = outliers.copy()
-    outliers.loc[:, 'cluster'] = plot_df.loc[collapse_df['cluster'] == -1, 'cluster'].values
-    outliers.loc[:, 'image_path_br'] = plot_df.loc[collapse_df['cluster'] == -1, 'image_path_br'].values
+    outliers.loc[:, 'cluster'] = filtered_plot_df.loc[collapse_df['cluster'] == -1, 'cluster'].values
+    outliers.loc[:, 'image_path_br'] = filtered_plot_df.loc[collapse_df['cluster'] == -1, 'image_path_br'].values
 
     # Lazy plotting for speed
     visible_outliers = outliers[
@@ -284,10 +333,13 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
     inliers = collapse_df[collapse_df['cluster'] != -1]
 
     # Replotting outliers
-    if view_type == 'markers':
-        fig = plot_with_markers(visible_outliers, x_range, y_range)
+    if len(visible_outliers) > 0:
+        if view_type == 'markers':
+            fig = plot_with_markers(visible_outliers, x_range, y_range)
+        else:
+            fig = plot_with_images(visible_outliers, x_range, y_range)
     else:
-        fig = plot_with_images(visible_outliers, x_range, y_range)
+        fig = empty_figure(x_range, y_range)
     
     # Plotting collapsed points
     centroids_df = inliers.groupby('cluster').agg({'x': 'mean', 'y': 'mean'})
@@ -311,20 +363,56 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
 
 # Callback for changing clustering option
 @app.callback(
-    # Output('cluster-plot', 'figure'),
     Output('zoom-update', 'data'),
     Input('single-option-dropdown', 'value')
 )
 def update_cluster(selected_option):
+    plot_df['visibility'] = False
+
     if selected_option == 'cluster_1':
+        plot_df['visibility'] = True
+        
         plot_df["x"] = x[:, 0]
         plot_df["y"] = x[:, 1]
         plot_df["cluster"] = y
     
     elif selected_option == 'cluster_2':
-        plot_df["x"] = tipo_materia_prima_baseline_df['x'].values
-        plot_df["y"] = tipo_materia_prima_baseline_df['y'].values
-        plot_df["cluster"] = tipo_materia_prima_baseline_df['cluster'].values
+        plot_df.set_index('ind_index', inplace=True)
+        
+        indices = tipo_materia_prima_baseline_df.index
+        plot_df.loc[indices, 'visibility'] = True
+
+        plot_df.loc[indices, "x"] = tipo_materia_prima_baseline_df['x'].values
+        plot_df.loc[indices, "y"] = tipo_materia_prima_baseline_df['y'].values
+        plot_df.loc[indices, "cluster"] = tipo_materia_prima_baseline_df['cluster'].values
+        plot_df.loc[indices, 'cluster_names'] = tipo_materia_prima_baseline_df['cluster_names'].values
+
+        plot_df.reset_index(inplace=True)
+
+    return True
+
+# Callback for filtering data
+@app.callback(
+    Output('zoom-update', 'data'),
+    Input('categoria-filter', 'value'),
+    Input('povo-filter', 'value'),
+    Input('estado-filter', 'value')
+)
+def filter_data(selected_categoria, selected_povo, selected_estado):
+    filtered_df = plot_df.copy()
+
+    # Applying filters if a selection is made
+    if selected_categoria != 'all':
+        filtered_df = filtered_df[filtered_df['categoria'] == selected_categoria]
+    
+    if selected_povo != 'all':
+        filtered_df = filtered_df[filtered_df['povo'] == selected_povo]
+        
+    if selected_estado != 'all':
+        filtered_df = filtered_df[filtered_df['estado_de_origem'] == selected_estado]
+
+    # Updating dataframe visibility
+    plot_df['visibility'] = plot_df.index.isin(filtered_df.index)
 
     return True
 
@@ -332,31 +420,29 @@ def update_cluster(selected_option):
 @app.callback(
     Output("modal-items", "is_open"),
     Output("state-items", "children"),
+    Output("state-header", "children"),
     Input("brazil-map", "clickData"),
-    Input("close-modal", "n_clicks"),
     State("modal-items", "is_open")
 )
-def display_state_items(clickData, close_clicks, is_open):
-    if clickData and not close_clicks:
-        # Extracting clicked state and filtering items belonging to that state
-        state_name = clickData["points"][0]["hovertext"]
-        state_symb = brazil_states_dict[state_name]
+def display_state_items(clickData, is_open):
+    # Extracting clicked state and filtering items belonging to that state
+    state_name = clickData["points"][0]["hovertext"]
+    state_symb = brazil_states_dict[state_name]
 
-        state_items = plot_df[plot_df['estado_de_origem'].apply(lambda x: state_symb in x)]
+    state_items = plot_df[plot_df['estado_de_origem'].apply(lambda x: state_symb in x if pd.notna(x) else False)]
 
-        # Create a list of items to display
-        items_list = html.Ul([
-            html.Li([
-                html.Img(src=item['image_path_br'], style={'width': '50px', 'height': '50px'}),
-                html.Span(f"{item['nome_do_item']} - {item['povo']} ({item['ano_de_aquisicao']})"),
-                html.A("Ver Mais", href=item['url'], target="_blank")
-            ])
-            for _, item in state_items.iterrows()
-        ])
+    # Create a list of items to display
+    items_list = html.Ul([
+        html.Li([
+            html.Img(src=row['thumbnail'], style={'width': '80px'}),
+            html.A(f"{row['nome_do_item'].title()} - {row['povo'].title()} - {row['ano_de_aquisicao']}", href=row['url'], target="_blank", style={'font-weight': 'bold', 'text-decoration': 'none', 'color': '#062a57', 'margin-left': '10px'})
+        ], style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '25px'})
+        for index, row in state_items.iterrows()
+    ], style={'list-style-type': 'none', 'padding': '0'})
 
-        return True, items_list
+    header_title = f'Itens Advindos do {state_name}'
 
-    return False, no_update
+    return not is_open, items_list, header_title
 
 # Running app
 if __name__ == '__main__':

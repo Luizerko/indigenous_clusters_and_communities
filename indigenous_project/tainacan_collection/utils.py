@@ -62,15 +62,15 @@ def fig_update_layout(fig, x_range=(-norm_factor,norm_factor), y_range=(-norm_fa
     )
 
 # Create empty figure for initialization
-def empty_figure():
+def empty_figure(x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=[], y=[]))
-    fig_update_layout(fig)
+    fig_update_layout(fig, x_range, y_range)
     return fig
 
 # Creating the map of Brazil and plotting markers on states
 def brazil_figure():
-    fig = px.scatter_mapbox(brazil_states, lat='latitude', lon='longitude', hover_name='state', zoom=3.5, center={'lat': -14.2350, 'lon': -51.9253}, width=1350, height=600)
+    fig = px.scatter_mapbox(brazil_states, lat='latitude', lon='longitude', hover_name='state', hover_data={'latitude': False, 'longitude': False}, zoom=3.5, center={'lat': -14.2350, 'lon': -51.9253}, width=1350, height=600)
 
     fig.update_layout(
         mapbox_style="carto-positron",  # options are 'open-street-map', 'stamen-terrain', 'carto-positron', etc.
@@ -103,6 +103,9 @@ def plot_with_markers(df, x_range=(-norm_factor,norm_factor), y_range=(-norm_fac
 
     # Plotting legend
     unique_clusters = df[['color', 'cluster_names']].drop_duplicates()
+    unique_clusters = unique_clusters.sort_values(by=['cluster_names'], ascending=True).sort_values(by='cluster_names', key=lambda x: x.str.len())
+    legend_order = unique_clusters['cluster_names'].tolist()
+
     color_dict = {}
     for _, row in unique_clusters.iterrows():
         color_dict[str(row['cluster_names'])] = row['color']
@@ -112,7 +115,8 @@ def plot_with_markers(df, x_range=(-norm_factor,norm_factor), y_range=(-norm_fac
         y=[None for i in range(len(df))],
         color='cluster_names',
         labels={'cluster_names': 'Cluster Names'},
-        color_discrete_map=color_dict
+        color_discrete_map=color_dict,
+        category_orders={'cluster_names': legend_order}
     )
     for trace in dummy_fig.data:
         trace.showlegend = True
@@ -193,3 +197,10 @@ def collapse_cluster_points(points, x_range=(-norm_factor,norm_factor), y_range=
     labels = [labels[i] for i in range(len(points))]
 
     return labels
+
+# Getting all the dropdown options for a given column
+def get_dropdown_options(df, column_name):
+    unique_values = df[column_name].dropna().unique().tolist()
+    options = [{'label': 'Sem Filtro', 'value': 'all'}] + [{'label': val, 'value': val} for val in sorted(unique_values)]
+    
+    return options
