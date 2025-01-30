@@ -23,7 +23,7 @@ norm_factor = 12
 
 ########## UTIL FUNCTIONS FOR FIGURE ##########
 # Updating layout for any given figure
-def fig_update_layout(fig, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
+def fig_update_layout(fig, df_len, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
     # Customizing layout
     fig.update_layout(
         # Adjusting style of the graph
@@ -36,7 +36,7 @@ def fig_update_layout(fig, x_range=(-norm_factor,norm_factor), y_range=(-norm_fa
         margin=dict(l=0, r=0, t=0, b=0),
         
         showlegend=True,
-        legend=dict(yanchor='top', y=0.98, xanchor='right', x=0.99, bgcolor='rgba(255, 255, 255, 0.8)', bordercolor='black', borderwidth=1, orientation='v', itemclick=False, itemdoubleclick=False),
+        legend=dict(yanchor='top', y=0.98, xanchor='right', x=0.99, bgcolor='rgba(255, 255, 255, 0.8)', bordercolor="#062a57", borderwidth=1, orientation='v', itemclick=False, itemdoubleclick=False),
 
         xaxis_title=None,
         yaxis_title=None,
@@ -61,11 +61,25 @@ def fig_update_layout(fig, x_range=(-norm_factor,norm_factor), y_range=(-norm_fa
         range=y_range
     )
 
+    # Number of items box
+    fig.add_annotation(
+        text=f"Número de Itens: {df_len}",
+        xref="paper", yref="paper",
+        x=0.99, y=0.02,
+        showarrow=False,
+        font=dict(size=14, color="#062a57"),
+        align="center",
+        bordercolor="#062a57",
+        borderwidth=1,
+        borderpad=8,
+        bgcolor='rgba(255, 255, 255, 0.8)',
+    )
+
 # Create empty figure for initialization
 def empty_figure(x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=[], y=[]))
-    fig_update_layout(fig, x_range, y_range)
+    fig_update_layout(fig, 0, x_range, y_range)
     return fig
 
 # Creating the map of Brazil and plotting markers on states
@@ -83,7 +97,7 @@ def brazil_figure():
     return fig
 
 # Create scatter plot with markers
-def plot_with_markers(df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
+def plot_with_markers(df, num_points, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
     # Creating Plotly figure
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -99,7 +113,7 @@ def plot_with_markers(df, x_range=(-norm_factor,norm_factor), y_range=(-norm_fac
     fig.update_traces(hoverinfo='none', hovertemplate=None, marker=dict(size=20, opacity=0.65), line=dict(width=0, color='rgb(255, 212, 110)'))
 
     # Updating layout for our standard design
-    fig_update_layout(fig, x_range, y_range)
+    fig_update_layout(fig, num_points, x_range, y_range)
 
     # Plotting legend
     unique_clusters = df[['color', 'cluster_names']].drop_duplicates()
@@ -126,7 +140,7 @@ def plot_with_markers(df, x_range=(-norm_factor,norm_factor), y_range=(-norm_fac
     return fig
 
 # Create scatter plot with the images themselves
-def plot_with_images(df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
+def plot_with_images(df, num_points, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
     df = df.loc[df['image_path_br'] != 'data/placeholder_square.png']
     fig = go.Figure()
     for index, row in df.iterrows():
@@ -134,7 +148,22 @@ def plot_with_images(df, x_range=(-norm_factor,norm_factor), y_range=(-norm_fact
             dict(source=Image.open(row['image_path_br']), x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/8, sizey=(y_range[1]-y_range[0])/8, xanchor="center",yanchor="middle")
         )
     
-    fig_update_layout(fig, x_range, y_range)
+    fig_update_layout(fig, num_points, x_range, y_range)
+
+    # Observation for image option
+    fig.add_annotation(
+        text="Apenas itens com imagens são exibidos nessa opção",
+        xref="paper", yref="paper",
+        x=0.01, y=0.02,
+        showarrow=False,
+        font=dict(size=14, color="#062a57"),
+        align="center",
+        bordercolor="#062a57",
+        borderwidth=1,
+        borderpad=8,
+        bgcolor='rgba(255, 255, 255, 0.8)',
+    )
+
     return fig
 
 # Generating a (fixed) color palette for cluster IDs to handle lazy plotting
@@ -202,5 +231,5 @@ def collapse_cluster_points(points, x_range=(-norm_factor,norm_factor), y_range=
 def get_dropdown_options(df, column_name):
     unique_values = df[column_name].dropna().unique().tolist()
     options = [{'label': 'Sem Filtro', 'value': 'all'}] + [{'label': val, 'value': val} for val in sorted(unique_values)]
-    
+
     return options

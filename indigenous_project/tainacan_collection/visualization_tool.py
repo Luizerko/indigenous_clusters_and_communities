@@ -38,8 +38,10 @@ plot_df.fillna({'image_path_br': 'data/placeholder_square.png'}, inplace=True)
 plot_df['url'] = ind_df['url'].values
 
 plot_df['nome_do_item'] = ind_df['nome_do_item'].values
+plot_df.fillna({'nome_do_item': '----'}, inplace=True)
 
 plot_df['povo'] = ind_df['povo'].values
+plot_df.fillna({'povo': '----'}, inplace=True)
 
 plot_df['categoria'] = ind_df['categoria'].values
 
@@ -49,6 +51,7 @@ plot_df.fillna({'ano_de_aquisicao': '----'}, inplace=True)
 plot_df['estado_de_origem'] = ind_df['estado_de_origem'].values
 
 plot_df['thumbnail'] = ind_df['thumbnail'].values
+plot_df.fillna({'thumbnail': 'https://tainacan.museudoindio.gov.br/wp-content/plugins/tainacan/assets/images/placeholder_square.png'}, inplace=True)
 
 plot_df['cluster_names'] = ''
 plot_df.set_index('ind_index', inplace=True)
@@ -60,7 +63,6 @@ color_map = generate_color_map(y)
 plot_df['color'] = [color_map[label] for label in plot_df['cluster'].values]
 
 # Dash app setup. DashPRoxy used for multiple callbacks with the same output, but made the app a bit buggy (multiple triggers of the same callback in a row)
-# app = Dash(__name__)
 app = DashProxy(prevent_initial_callbacks=True, transforms=[MultiplexerTransform()], external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 # Dash graph configurations
@@ -108,6 +110,7 @@ app.layout = html.Div([
                                                     multi=False,
                                                     placeholder='Filtrar por Categoria',
                                                     value='all',
+                                                    clearable=False
                                                 ),
                                             ]
                                         ),
@@ -121,6 +124,7 @@ app.layout = html.Div([
                                                     multi=False,
                                                     placeholder='Filtrar por Povo',
                                                     value='all',
+                                                    clearable=False
                                                 ),
                                             ]
                                         ),
@@ -134,6 +138,7 @@ app.layout = html.Div([
                                                     multi=False,
                                                     placeholder='Filtrar por Estado de Origem',
                                                     value='all',
+                                                    clearable=False
                                                 ),
                                             ]
                                         ),
@@ -147,8 +152,10 @@ app.layout = html.Div([
                                             ],
                                             multi=False,
                                             placeholder='Selecione uma opção',
-                                            value='cluster_1'
+                                            value='cluster_1',
+                                            clearable=False
                                         ),
+
                                         dcc.Store(id='zoom-update')
                                     ]
                                 ),
@@ -156,7 +163,6 @@ app.layout = html.Div([
                                     className='graph',
                                     children=[
                                         dcc.Location(id='url', refresh=True),
-                                        dcc.Store(id='trigger-url'),
                                         dcc.Graph(id='cluster-plot', config=config, figure=empty_figure(), clear_on_unhover=True),
                                         dcc.Tooltip(id='graph-tooltip')
                                     ]
@@ -335,9 +341,10 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
     # Replotting outliers
     if len(visible_outliers) > 0:
         if view_type == 'markers':
-            fig = plot_with_markers(visible_outliers, x_range, y_range)
+            fig = plot_with_markers(visible_outliers, len(collapse_df), x_range, y_range)
         else:
-            fig = plot_with_images(visible_outliers, x_range, y_range)
+            num_points = len(filtered_plot_df.loc[filtered_plot_df['image_path_br'] != 'data/placeholder_square.png'])
+            fig = plot_with_images(visible_outliers, num_points, x_range, y_range)
     else:
         fig = empty_figure(x_range, y_range)
     
@@ -364,6 +371,9 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
 # Callback for changing clustering option
 @app.callback(
     Output('zoom-update', 'data'),
+    Output('categoria-filter', 'value'),
+    Output('povo-filter', 'value'),
+    Output('estado-filter', 'value'),
     Input('single-option-dropdown', 'value')
 )
 def update_cluster(selected_option):
@@ -389,18 +399,23 @@ def update_cluster(selected_option):
 
         plot_df.reset_index(inplace=True)
 
-    return True
+    return True, 'all', 'all', 'all'
 
 # Callback for filtering data
 @app.callback(
     Output('zoom-update', 'data'),
     Input('categoria-filter', 'value'),
     Input('povo-filter', 'value'),
-    Input('estado-filter', 'value')
+    Input('estado-filter', 'value'),
+    State('single-option-dropdown', 'value')
 )
-def filter_data(selected_categoria, selected_povo, selected_estado):
-    filtered_df = plot_df.copy()
-
+def filter_data(selected_categoria, selected_povo, selected_estado, grouping):
+    # Preserving visibility indices
+    if grouping == 'cluster_1':
+        filtered_df = plot_df.copy()
+    elif grouping == 'cluster_2':
+        filtered_df = plot_df[plot_df['ind_index'].isin(tipo_materia_prima_baseline_df.index)].copy()
+    
     # Applying filters if a selection is made
     if selected_categoria != 'all':
         filtered_df = filtered_df[filtered_df['categoria'] == selected_categoria]
@@ -435,7 +450,7 @@ def display_state_items(clickData, is_open):
     items_list = html.Ul([
         html.Li([
             html.Img(src=row['thumbnail'], style={'width': '80px'}),
-            html.A(f"{row['nome_do_item'].title()} - {row['povo'].title()} - {row['ano_de_aquisicao']}", href=row['url'], target="_blank", style={'font-weight': 'bold', 'text-decoration': 'none', 'color': '#062a57', 'margin-left': '10px'})
+            html.A([row['nome_do_item'].title(), html.Br(), f"{row['povo'].title()},  {row['ano_de_aquisicao']}"], href=row['url'], target="_blank", style={'font-weight': 'bold', 'text-decoration': 'none', 'color': '#062a57', 'margin-left': '10px'})
         ], style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '25px'})
         for index, row in state_items.iterrows()
     ], style={'list-style-type': 'none', 'padding': '0'})
