@@ -31,17 +31,19 @@ def normalize(data, norm_factor=2):
 def preparing_image_labels(df, label_column='povo'):
     # label_column = 'povo', 'categoria', 'ano_de_aquisicao'
     name_to_num = {c: i for i, c in enumerate(df[label_column].unique())}
+    num_to_name = {c: i for i, c in name_to_num.items()}
     labels = {row['image_path_br']: name_to_num[row[label_column]] \
               for index, row in df.loc[df['image_path_br'].notna()].iterrows()}
-    return labels, name_to_num
+    return labels, name_to_num, num_to_name
 
 # Class for the ImageDataset and to avoid loading all the images simultaneously and run out of GPU memory
 class ImageDataset(Dataset):
-    def __init__(self, image_dir, labels, transform=None):
+    def __init__(self, image_dir, labels, transform=None, augment=False):
         self.image_dir = image_dir
         self.image_files = [f for f in os.listdir(image_dir) \
                             if f.endswith(('.png', '.jpg', '.jpeg'))]
         self.labels = labels
+        self.augment = augment
         self.transform = transform
 
     def __len__(self):
@@ -50,6 +52,15 @@ class ImageDataset(Dataset):
     def __getitem__(self, idx):
         image_path = os.path.join(self.image_dir, self.image_files[idx])
         image = Image.open(image_path).convert("RGB")
+
+        if self.augment:
+            augment_transform = transforms.Compose([
+                transforms.RandomHorizontalFlip(p=0.6),
+                transforms.RandomVerticalFlip(p=0.6),
+                transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 2.0), p=0.6)
+            ])
+            image = augment_transform(image)
+
         if self.transform:
             image = self.transform(image)
         label = self.labels.get(image_path, -1)
@@ -59,17 +70,15 @@ class ImageDataset(Dataset):
 
 
 # Function for getting traininig/validation split
-def get_train_val_split(dataset, train_size, batch_size=32):
-    val_size = len(dataset) - train_size
-    train_dataset, val_dataset = random_split(dataset, [train_size, val_size], \
-                                          generator=torch.Generator().manual_seed(42))
+def get_train_val_test_split(dataset, train_size, val_size, batch_size=32):
+    test_size = len(dataset) - train_size - val_size
+    train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size], generator=torch.Generator().manual_seed(42))
 
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, \
-                                  num_workers=0, pin_memory=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, \
-                                num_workers=0, pin_memory=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
+    test_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
     
-    return train_dataloader, val_dataloader
+    return train_dataloader, val_dataloader, test_dataloader
 
 # Function to iterating over data to get projections
 def get_vit_embeddings(model, dataloader, device, fine_tuned=False):
@@ -161,7 +170,7 @@ def train_loop(model, num_classes, train_dataloader, val_dataloader, device, cri
             val_rec = rec_metric(all_preds, all_labels).tolist()
 
         accuracies.append(torch.tensor(val_acc, dtype=torch.float16).item())
-        for i, prec, rec in enumerate(zip(val_prec, val_rec)):
+        for i, (prec, rec) in enumerate(zip(val_prec, val_rec)):
             class_precisions[i].append(torch.tensor(prec, dtype=torch.float16).item())
             class_recalls[i].append(torch.tensor(rec, dtype=torch.float16).item())
 
@@ -211,3 +220,34 @@ def plot_train_curves(losses, accuracies, model_name):
     
     plt.tight_layout()
     plt.show()
+
+# Function for evaluating the model on the test dataset
+def evaluate_model(model, model_name, num_classes, test_dataloader, device):
+    # Initializing evaluation metrics
+    acc_metric = Accuracy(task="multiclass", num_classes=num_classes).to(device)
+    prec_metric = Precision(task="multiclass", num_classes=num_classes, average=None).to(device)
+    rec_metric = Recall(task="multiclass", num_classes=num_classes, average=None).to(device)
+
+    # Loading best model, setting it to eval and forward passing
+    model.load_state_dict(torch.load('data/models_weights/' + model_name + '.pth', weights_only=True))
+    model.eval()
+    with torch.no_grad():
+        all_preds = []
+        all_labels = []
+
+        for batch_images, batch_labels, _ in test_dataloader:
+            batch_images, batch_labels = batch_images.to(device), batch_labels.to(device)
+            logits = model(batch_images)
+            preds = torch.argmax(logits, dim=1)
+            
+            all_preds.append(preds)
+            all_labels.append(batch_labels)
+        
+        all_preds = torch.cat(all_preds)
+        all_labels = torch.cat(all_labels)
+        
+        test_acc = acc_metric(all_preds, all_labels).item()
+        test_prec = prec_metric(all_preds, all_labels).tolist()
+        test_rec = rec_metric(all_preds, all_labels).tolist()
+
+    return test_acc, test_prec, test_rec
