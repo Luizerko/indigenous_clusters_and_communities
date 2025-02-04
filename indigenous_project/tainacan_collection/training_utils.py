@@ -38,10 +38,8 @@ def preparing_image_labels(df, label_column='povo'):
 
 # Class for the ImageDataset and to avoid loading all the images simultaneously and run out of GPU memory
 class ImageDataset(Dataset):
-    def __init__(self, image_dir, labels, transform=None, augment=False):
-        self.image_dir = image_dir
-        self.image_files = [f for f in os.listdir(image_dir) \
-                            if f.endswith(('.png', '.jpg', '.jpeg'))]
+    def __init__(self, labels, transform=None, augment=False):
+        self.image_files = list(labels.keys())
         self.labels = labels
         self.augment = augment
         self.transform = transform
@@ -50,14 +48,14 @@ class ImageDataset(Dataset):
         return len(self.image_files)
 
     def __getitem__(self, idx):
-        image_path = os.path.join(self.image_dir, self.image_files[idx])
+        image_path = self.image_files[idx]
         image = Image.open(image_path).convert("RGB")
 
         if self.augment:
             augment_transform = transforms.Compose([
                 transforms.RandomHorizontalFlip(p=0.6),
                 transforms.RandomVerticalFlip(p=0.6),
-                transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 2.0), p=0.6)
+                transforms.RandomApply([transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 2.0))], p=0.6)
             ])
             image = augment_transform(image)
 
