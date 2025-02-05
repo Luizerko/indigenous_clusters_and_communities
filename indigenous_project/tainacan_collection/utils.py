@@ -3,6 +3,8 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 
 from PIL import Image
+import ast
+
 import pandas as pd
 import numpy as np
 from scipy.spatial import KDTree
@@ -230,6 +232,16 @@ def collapse_cluster_points(points, x_range=(-norm_factor,norm_factor), y_range=
 # Getting all the dropdown options for a given column
 def get_dropdown_options(df, column_name):
     unique_values = df[column_name].dropna().unique().tolist()
-    options = [{'label': 'Sem Filtro', 'value': 'all'}] + [{'label': val, 'value': val} for val in sorted(unique_values)]
+    
+    # Handling special cases
+    if column_name == 'estado_de_origem':
+        # Items with multiple categories at the same time
+        unique_values_aux = set()
+        for state_list in unique_values:
+            for state in ast.literal_eval(state_list):
+                unique_values_aux.add(state)
+        unique_values = list(unique_values_aux)
+
+    options = [{'label': 'Sem Filtro', 'value': 'all'}] + [{'label': val[0].upper() + val[1:], 'value': val} for val in sorted(unique_values)]
 
     return options

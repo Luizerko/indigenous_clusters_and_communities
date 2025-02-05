@@ -424,7 +424,7 @@ def filter_data(selected_categoria, selected_povo, selected_estado, grouping):
         filtered_df = filtered_df[filtered_df['povo'] == selected_povo]
         
     if selected_estado != 'all':
-        filtered_df = filtered_df[filtered_df['estado_de_origem'] == selected_estado]
+        filtered_df = filtered_df[filtered_df['estado_de_origem'].str.contains(selected_estado, na=False)]
 
     # Updating dataframe visibility
     plot_df['visibility'] = plot_df.index.isin(filtered_df.index)
