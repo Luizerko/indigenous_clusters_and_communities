@@ -200,7 +200,7 @@ def get_train_val_test_split(dataset, train_size, val_size, batch_size=32):
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
-    test_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
     
     return train_dataloader, val_dataloader, test_dataloader
 
@@ -252,7 +252,7 @@ def train_loop(model, num_classes, train_dataloader, val_dataloader, device, cri
     best_val_acc = 0
     patience = max(3, int(0.1*epochs))
     patience_counter = 0
-    tolerance = 0.02
+    tolerance = 0.005
 
     acc_metric = Accuracy(task="multiclass", num_classes=num_classes).to(device)
     prec_metric = Precision(task="multiclass", num_classes=num_classes, \
@@ -328,7 +328,7 @@ def train_loop(model, num_classes, train_dataloader, val_dataloader, device, cri
     return losses, accuracies, class_precisions, class_recalls
 
 # Function for setting-up training, executing training and then running tests
-def execute_train_test(dataset, dataloader, device, batch_size, epochs, num_classes, model, criterion, opt, model_name, column_name='povo'):
+def execute_train_test(dataset, device, batch_size, epochs, num_classes, model, criterion, opt, model_name, column_name='povo'):
     # Creating training, validation and test datasets
     train_size = int(0.75*len(dataset))
     val_size = int(0.15*len(dataset))
@@ -338,15 +338,17 @@ def execute_train_test(dataset, dataloader, device, batch_size, epochs, num_clas
     # Training set-up and execution
     losses, accuracies, class_precisions, class_recalls = train_loop(model, num_classes, train_dataloader, val_dataloader, device, criterion, opt, model_name, epochs)
     plot_train_curves(losses, accuracies, f"ViT Fine-Tuned on '{column_name}'")
-    print(f'Per class precision: {class_precisions[-1]}')
-    print(f'Per class recall: {class_recalls[-1]}')
+    print(f'Per class precision: {[cp[-1] for cp in class_precisions]}\n')
+    print(f'Per class recall: {[cr[-1] for cr in class_recalls]}\n')
 
     # Evaluating model on test dataset
     test_acc, test_prec, test_rec = evaluate_model(model, model_name, num_classes, test_dataloader, device)
-    print(f'Test accuracy: {test_acc}')
-    print(f'Test per class precisions: {test_prec}')
-    print(f'Test per class recalls: {test_rec}')
+    print(f'Test accuracy: {test_acc}\n')
+    print(f'Test per class precisions: {test_prec}\n')
+    print(f'Test per class recalls: {test_rec}\n')
 
+# Computing embeddings for fine-tuned classifier
+def compute_classifier_embeddings(dataloader, model, device):
     # Computing image embeddings
     model.classifier = nn.Identity()
     image_embeddings, image_indices = get_vit_embeddings(model, dataloader, device, True)
@@ -357,6 +359,7 @@ def execute_train_test(dataset, dataloader, device, batch_size, epochs, num_clas
     trimap_proj, tsne_proj, umap_proj = data_projections(image_embeddings)
 
     return trimap_proj, tsne_proj, umap_proj, image_indices
+
 
 # Function for plotting loss and accuracy curves
 def plot_train_curves(losses, accuracies, model_name):
@@ -388,7 +391,8 @@ def evaluate_model(model, model_name, num_classes, test_dataloader, device):
     rec_metric = Recall(task="multiclass", num_classes=num_classes, average=None).to(device)
 
     # Loading best model, setting it to eval and forward passing
-    model.load_state_dict(torch.load('data/models_weights/' + model_name + '.pth', weights_only=True))
+    checkpoint = torch.load('data/models_weights/' + model_name + '.pth', map_location=device)
+    model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     with torch.no_grad():
         all_preds = []

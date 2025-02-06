@@ -164,6 +164,7 @@ app.layout = html.Div([
                                     children=[
                                         dcc.Location(id='url', refresh=True),
                                         dcc.Graph(id='cluster-plot', config=config, figure=empty_figure(), clear_on_unhover=True),
+                                        dcc.Interval(id='fade-in', interval=200, n_intervals=0, disabled=True),
                                         dcc.Tooltip(id='graph-tooltip')
                                     ]
                                 )
@@ -171,6 +172,17 @@ app.layout = html.Div([
                         )
                     ]
                 )
+            ]
+        ),
+        dcc.Tab(
+            label='Coleção no Tempo',
+            children=[
+                html.Div(
+                    className='timeline-container',
+                    children=[
+                        dcc.Graph(id='timeline', config=config, figure=empty_figure()),
+                    ]
+                ),
             ]
         ),
         dcc.Tab(
@@ -290,6 +302,8 @@ def open_click(click_data, fig):
 # Callback for collapsing points that are close together and to switch between points and images
 @app.callback(
     Output('cluster-plot', 'figure'),
+    Output('fade-in', 'disabled'),
+    Output('zoom-update', 'data'),
     Input('toggle-view', 'value'),
     Input('cluster-plot', 'relayoutData'),
     Input('zoom-update', 'data'),
@@ -297,7 +311,7 @@ def open_click(click_data, fig):
 def update_scatter_plot(view_type, relayout_data, zoom_update):
     # Handling (potential) constant trigerring and app crashing
     if relayout_data is None:
-        return no_update
+        return no_update, False, False
     
     # Default zoom range
     x_range = (-norm_factor, norm_factor)
@@ -363,10 +377,56 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
         textfont=dict(color='#ffffff', size=16),
         hoverinfo='skip',
         hovertemplate=None,
-        showlegend=False
+        showlegend=False,
+        name='collapse_trace'
     ))
 
-    return fig
+    # Fade-out effect for animation
+    fade_in = True
+    if zoom_update:
+        fig.update_traces(
+            selector=dict(name='marker_trace'),
+            marker=dict(opacity=0)
+        )
+        fig.update_traces(
+            selector=dict(name='collapse_trace'),
+            textfont=dict(size=1),
+            marker=dict(opacity=0)
+        )
+        fig.update_layout(
+            transition=dict(duration=100, easing='linear')
+        )
+        fade_in = False
+
+    return fig, fade_in, False
+
+# Callback for fade-in in animation effect
+@app.callback(
+    Output('cluster-plot', 'figure'),
+    Output('fade-in', 'disabled'),
+    Input('fade-in', 'n_intervals'),
+    State('cluster-plot', 'figure'),
+)
+def fade_in_update(n_intervals, fig):
+    print(n_intervals)
+    if n_intervals == 0:
+        return no_update, False
+
+    fig = go.Figure(fig)
+    fig.update_traces(
+        selector=dict(name='marker_trace'),
+        marker=dict(opacity=0.65),
+    )
+    fig.update_traces(
+        selector=dict(name='collapse_trace'),
+        textfont=dict(size=16),
+        marker=dict(opacity=0.7),
+    )
+    fig.update_layout(
+        transition=dict(duration=100, easing='linear')
+    )
+
+    return fig, True
 
 # Callback for changing clustering option
 @app.callback(
@@ -436,6 +496,7 @@ def filter_data(selected_categoria, selected_povo, selected_estado, grouping):
     Output("modal-items", "is_open"),
     Output("state-items", "children"),
     Output("state-header", "children"),
+    Output("brazil-map", "clickData"),
     Input("brazil-map", "clickData"),
     State("modal-items", "is_open")
 )
@@ -455,9 +516,9 @@ def display_state_items(clickData, is_open):
         for index, row in state_items.iterrows()
     ], style={'list-style-type': 'none', 'padding': '0'})
 
-    header_title = f'Itens Advindos do {state_name}'
+    header_title = f'{len(state_items)} Itens Advindos do {state_name}'
 
-    return not is_open, items_list, header_title
+    return not is_open, items_list, header_title, None
 
 # Running app
 if __name__ == '__main__':

@@ -46,7 +46,10 @@ def fig_update_layout(fig, df_len, x_range=(-norm_factor,norm_factor), y_range=(
 
         # Mouse default configuration (panning instead of zooming)
         dragmode='pan',
-        hoverdistance = 6
+        hoverdistance = 6,
+
+        # # Animating graphs
+        # transition=dict(duration=500, easing='sin-in-out')
     )
 
     # Hide axes' labels and ticks
@@ -84,6 +87,9 @@ def empty_figure(x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_
     fig_update_layout(fig, 0, x_range, y_range)
     return fig
 
+# Create timeline figure
+
+
 # Creating the map of Brazil and plotting markers on states
 def brazil_figure():
     fig = px.scatter_mapbox(brazil_states, lat='latitude', lon='longitude', hover_name='state', hover_data={'latitude': False, 'longitude': False}, zoom=3.5, center={'lat': -14.2350, 'lon': -51.9253}, width=1350, height=600)
@@ -108,7 +114,8 @@ def plot_with_markers(df, num_points, x_range=(-norm_factor,norm_factor), y_rang
         customdata=df.index,
         mode='markers',
         marker=dict(color=df['color']),
-        showlegend=False
+        showlegend=False,
+        name='marker_trace'
     ))
 
     # Configuring default hovering
