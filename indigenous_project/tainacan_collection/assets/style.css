@@ -1,3 +1,22 @@
+/* Normal tab */
+/* .tab-content {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+} */
+
+/* Fade-out tab */
+/* .tab-content.fade-out {
+    opacity: 0;
+    transform: translateX(-20px);
+} */
+
+/* Fade-in tab */
+/* .tab-content.fade-in {
+    opacity: 1;
+    transform: translateX(0);
+} */ */
+
 /* Adjusting some default behavior from Dash */
 body {
     margin: 0;
@@ -116,17 +135,6 @@ body {
     height: 100%;
 }
 
-/* Div for the tool */
-.map-container {
-    width: 90%;
-    height: 90%;
-    background-color: #f2f2f2;
-    border-radius: 10px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
 /* Hover box */
 #graph-tooltip {
     margin: 0;
@@ -149,4 +157,26 @@ body {
     font-size: 10px;
     text-align: center;
     white-space: normal;
+}
+
+/* Div for the timeline */
+.timeline-container {
+    width: 90%;
+    height: 90%;
+    background-color: #f2f2f2;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Div for the map */
+.map-container {
+    width: 90%;
+    height: 90%;
+    background-color: #f2f2f2;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }

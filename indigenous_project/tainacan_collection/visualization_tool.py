@@ -164,7 +164,9 @@ app.layout = html.Div([
                                     children=[
                                         dcc.Location(id='url', refresh=True),
                                         dcc.Graph(id='cluster-plot', config=config, figure=empty_figure(), clear_on_unhover=True),
-                                        dcc.Interval(id='fade-in', interval=200, n_intervals=0, disabled=True),
+
+                                        dcc.Interval(id='fade-in', interval=100, n_intervals=0, disabled=True),
+                                        
                                         dcc.Tooltip(id='graph-tooltip')
                                     ]
                                 )
@@ -172,7 +174,9 @@ app.layout = html.Div([
                         )
                     ]
                 )
-            ]
+            ],
+            # value='tab-1',
+            # className='tab-content'
         ),
         dcc.Tab(
             label='Coleção no Tempo',
@@ -183,7 +187,9 @@ app.layout = html.Div([
                         dcc.Graph(id='timeline', config=config, figure=empty_figure()),
                     ]
                 ),
-            ]
+            ],
+            # value='tab-2',
+            # className='tab-content'
         ),
         dcc.Tab(
             label='Coleção no Brasil',
@@ -194,7 +200,9 @@ app.layout = html.Div([
                         dcc.Graph(id='brazil-map', config=config, figure=brazil_figure()),
                     ]
                 ),
-            ]
+            ],
+            # value='tab-3',
+            # className='tab-content'
         )
     ]),
     dbc.Modal([
@@ -204,6 +212,20 @@ app.layout = html.Div([
 ], className='base-background')
 
 ################## CALLBCAKS ##################
+# # Callback for sliding effect on tabs
+# @app.callback(
+#     Output("tab-content", "children"),
+#     Input("tabs", "value")
+# )
+# def update_tab(selected_tab):
+#     print(selected_tab)
+#     if selected_tab == "tab-1":
+#         return html.Div("This is Tab 1 content", className="tab-content fade-in")
+#     elif selected_tab == "tab-2":
+#         return html.Div("This is Tab 2 content", className="tab-content fade-in")
+#     elif selected_tab == "tab-3":
+#         return html.Div("This is Tab 3 content", className="tab-content fade-in")
+
 # Callback for hovering
 @app.callback(
     Output("graph-tooltip", "show"),
@@ -216,6 +238,11 @@ app.layout = html.Div([
 )
 def display_hover(hover_data, fig):
     fig = go.Figure(fig)
+
+    # Remove transition from hover callback (should we do that?)
+    fig.update_layout(
+        transition=dict(duration=50)
+    )
 
     if hover_data is None:
         # Resetting markers on hover-out
@@ -234,7 +261,7 @@ def display_hover(hover_data, fig):
     
     # Adding hovering effects
     new_sizes = np.full((len(fig.data[0].x)), 20)
-    new_sizes[num] = 35
+    new_sizes[num] = 40
     new_sizes = list(new_sizes)
 
     new_line_widths = np.full((len(fig.data[0].x)), 0)
@@ -394,25 +421,26 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
             marker=dict(opacity=0)
         )
         fig.update_layout(
-            transition=dict(duration=100, easing='linear')
+            transition=dict(duration=0, easing='linear')
         )
         fade_in = False
 
     return fig, fade_in, False
 
-# Callback for fade-in in animation effect
+# Callback for fade-in animation effect on graph
 @app.callback(
     Output('cluster-plot', 'figure'),
-    Output('fade-in', 'disabled'),
-    Input('fade-in', 'n_intervals'),
+    Input('fade-in', 'disabled'),
     State('cluster-plot', 'figure'),
 )
-def fade_in_update(n_intervals, fig):
-    print(n_intervals)
-    if n_intervals == 0:
-        return no_update, False
-
+def fade_in_update(fade_in, fig):
     fig = go.Figure(fig)
+    
+    # No selection, just panning or zooming
+    if fade_in:
+        return no_update
+
+    # Making particles fade-in after replotting them on update_scatter_plot callback
     fig.update_traces(
         selector=dict(name='marker_trace'),
         marker=dict(opacity=0.65),
@@ -423,10 +451,10 @@ def fade_in_update(n_intervals, fig):
         marker=dict(opacity=0.7),
     )
     fig.update_layout(
-        transition=dict(duration=100, easing='linear')
+        transition=dict(duration=300, easing='linear')
     )
 
-    return fig, True
+    return fig
 
 # Callback for changing clustering option
 @app.callback(

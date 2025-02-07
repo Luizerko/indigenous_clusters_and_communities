@@ -38,7 +38,7 @@ def fig_update_layout(fig, df_len, x_range=(-norm_factor,norm_factor), y_range=(
         margin=dict(l=0, r=0, t=0, b=0),
         
         showlegend=True,
-        legend=dict(yanchor='top', y=0.98, xanchor='right', x=0.99, bgcolor='rgba(255, 255, 255, 0.8)', bordercolor="#062a57", borderwidth=1, orientation='v', itemclick=False, itemdoubleclick=False),
+        legend=dict(yanchor='top', y=0.98, xanchor='right', x=0.99, bgcolor='rgba(255, 255, 255, 0.8)', bordercolor="#062a57", borderwidth=1, orientation='v', itemclick='toggle', itemdoubleclick='toggleothers'),
 
         xaxis_title=None,
         yaxis_title=None,
@@ -46,7 +46,7 @@ def fig_update_layout(fig, df_len, x_range=(-norm_factor,norm_factor), y_range=(
 
         # Mouse default configuration (panning instead of zooming)
         dragmode='pan',
-        hoverdistance = 6,
+        hoverdistance = 5,
 
         # # Animating graphs
         # transition=dict(duration=500, easing='sin-in-out')
@@ -134,8 +134,8 @@ def plot_with_markers(df, num_points, x_range=(-norm_factor,norm_factor), y_rang
         color_dict[str(row['cluster_names'])] = row['color']
     dummy_fig = px.scatter(
         df,
-        x=[None for i in range(len(df))],
-        y=[None for i in range(len(df))],
+        x=[-100 for i in range(len(df))],
+        y=[-100 for i in range(len(df))],
         color='cluster_names',
         labels={'cluster_names': 'Cluster Names'},
         color_discrete_map=color_dict,

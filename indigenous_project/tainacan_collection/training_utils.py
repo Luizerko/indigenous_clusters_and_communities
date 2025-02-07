@@ -3,8 +3,10 @@ from tqdm import tqdm
 from PIL import Image
 from math import ceil
 
+import pandas as pd
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
+
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split, ConcatDataset
@@ -360,7 +362,6 @@ def compute_classifier_embeddings(dataloader, model, device):
 
     return trimap_proj, tsne_proj, umap_proj, image_indices
 
-
 # Function for plotting loss and accuracy curves
 def plot_train_curves(losses, accuracies, model_name):
     plt.figure(figsize=(8,4))
@@ -414,3 +415,61 @@ def evaluate_model(model, model_name, num_classes, test_dataloader, device):
         test_rec = rec_metric(all_preds, all_labels).tolist()
 
     return test_acc, test_prec, test_rec
+
+# Function to visualize clusters
+def visualizing_clusters(df, projections, image_indices, column_name='povo', projection_name='UMAP'):
+    # Building colormap for cluster visualization
+    unique_values = df[column_name].unique()
+    colors = plt.cm.gnuplot(np.linspace(0, 1, len(unique_values)))
+    color_dict = {cluster: colors[i] for i, cluster in enumerate(unique_values)}
+
+    # Reordering projections to match the original dataframe order
+    projections_sorted = projections[np.argsort(image_indices)]
+
+    # Plotting projections with clusters
+    plt.figure(figsize=(10,4))
+
+    for cluster in unique_values:
+        mask = df.index[df[column_name] == cluster].tolist()
+        sequential_indices = np.array([df.index.get_loc(idx) for idx in mask])
+        plt.scatter(projections_sorted[sequential_indices, 0], \
+                    projections_sorted[sequential_indices, 1], 
+                    color=color_dict[cluster], label=f"{cluster.title()}", alpha=0.7)
+
+    plt.title(f"Visualizing Clusters for {column_name} on {projection_name} Projection")
+    plt.xlabel("")
+    plt.ylabel("")
+    plt.xticks([])
+    plt.yticks([])
+    plt.legend(title="Clusters", bbox_to_anchor=(1.05, 1), loc="upper left", \
+            fontsize=8, frameon=True)
+
+    plt.tight_layout()
+    plt.show()
+
+# Function to safe outputs for visualization tool
+def saving_outputs(df, labels, projections, image_indices, column_name='povo', save_file='povo_vit.csv'):
+    # Getting unique cluster values
+    unique_values = df[column_name].unique()
+    cluster_dict = {c: i for i, c in enumerate(unique_values)}
+
+    # Computing indices and reordering projections to match the original dataframe order
+    indices = []
+    for index in np.array(list(labels.keys()))[image_indices]:
+        indices.append(int(index.split('/')[-1].split('.')[0]))
+    pos_xy = projections[np.argsort(image_indices)]
+
+    # Computing clusters and cluster_names columns
+    clusters = np.full(len(pos_xy), -1)
+    cluster_names = np.full(len(pos_xy), '')
+
+    for cluster, cluster_num in cluster_dict.items():
+        mask = df.index[df[column_name] == cluster].tolist()
+        sequential_indices = np.array([df.index.get_loc(idx) for idx in mask])
+        
+        clusters[sequential_indices] = cluster_num
+        cluster_names[sequential_indices] = cluster
+        
+    visualization_df = pd.DataFrame(index=indices, data={'x': pos_xy[:, 0], 'y': pos_xy[:, 1], 'cluster': clusters, 'cluster_names': cluster_names})
+    visualization_df.index.name='id'
+    visualization_df.to_csv('data/clusters/' + save_file)
