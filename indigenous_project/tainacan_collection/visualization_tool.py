@@ -5,7 +5,7 @@ from dash_extensions.enrich import DashProxy, MultiplexerTransform
 import dash_bootstrap_components as dbc
 
 from PIL import Image
-# import base64
+import ast
 import pandas as pd
 from sklearn.cluster import DBSCAN
 import numpy as np
@@ -13,20 +13,22 @@ import numpy as np
 from utils import brazil_states_dict, norm_factor, empty_figure, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map, get_dropdown_options
 
 from sklearn.datasets import make_blobs
-x, y = make_blobs(n_samples=20965, centers=10, random_state=42, center_box=(-norm_factor,norm_factor))
-plot_df = pd.DataFrame({"x": x[:, 0], "y": x[:, 1], "cluster": y})
 
 ######### DATA LOADING AND PROCESSING #########
-# Loading dataset
+# Loading dataset and initializing plot grpah
 ind_df = pd.read_csv('data/indigenous_collection_processed.csv', index_col='id')
+x, y = make_blobs(n_samples=len(ind_df), centers=10, random_state=42, center_box=(-norm_factor,norm_factor))
+plot_df = pd.DataFrame({"x": x[:, 0], "y": x[:, 1], "cluster": y})
 
+# Loading clusters
 tipo_materia_prima_baseline_df = pd.read_csv('data/clusters/tipo_materia_prima_baseline.csv', index_col='id')
+tipo_materia_prima_baseline_df['cluster_names'] = tipo_materia_prima_baseline_df['cluster_names'].apply(lambda x: ', '.join(ast.literal_eval(x)))
+
+povo_vit_df = pd.read_csv('data/clusters/povo_vit.csv', index_col='id')
+categoria_vit_df = pd.read_csv('data/clusters/categoria_vit.csv', index_col='id')
 
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index
-
-# Setting point visibility
-plot_df['visibility'] = True
 
 # Extracting and processing information that will be used from dataframe
 plot_df['image_path'] = ind_df['image_path'].values
@@ -53,14 +55,25 @@ plot_df['estado_de_origem'] = ind_df['estado_de_origem'].values
 plot_df['thumbnail'] = ind_df['thumbnail'].values
 plot_df.fillna({'thumbnail': 'https://tainacan.museudoindio.gov.br/wp-content/plugins/tainacan/assets/images/placeholder_square.png'}, inplace=True)
 
-plot_df['cluster_names'] = ''
-plot_df.set_index('ind_index', inplace=True)
-plot_df.loc[tipo_materia_prima_baseline_df.index, 'cluster_names'] = tipo_materia_prima_baseline_df['cluster_names'].values
-plot_df.reset_index(inplace=True)
+# Setting point visibility and initializing first plot
+plot_df['visibility'] = False
+plot_df.set_index('ind_index', inplace=True)  
+indices = povo_vit_df.index
+plot_df.loc[indices, 'visibility'] = True
+plot_df.loc[indices, "x"] = povo_vit_df['x'].values
+plot_df.loc[indices, "y"] = povo_vit_df['y'].values
+plot_df.loc[indices, "cluster"] = povo_vit_df['cluster'].values
+plot_df.loc[indices, 'cluster_names'] = povo_vit_df['cluster_names'].values
 
-# Creating initial color map for clusters
-color_map = generate_color_map(y)
-plot_df['color'] = [color_map[label] for label in plot_df['cluster'].values]
+# Getting first cluster names and creating initial color map
+plot_df['cluster_names'] = ''
+plot_df.loc[indices, 'cluster_names'] = povo_vit_df['cluster_names'].values
+
+plot_df['color'] = 'rgba(255, 255, 255, 1)'
+color_map = generate_color_map(plot_df.loc[indices, 'cluster'].values)
+plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indices, 'cluster'].values]
+
+plot_df.reset_index(inplace=True)
 
 # Dash app setup. DashPRoxy used for multiple callbacks with the same output, but made the app a bit buggy (multiple triggers of the same callback in a row)
 app = DashProxy(prevent_initial_callbacks=True, transforms=[MultiplexerTransform()], external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -147,8 +160,9 @@ app.layout = html.Div([
                                         dcc.Dropdown(
                                             id='single-option-dropdown',
                                             options=[
-                                                {'label': 'Teste', 'value': 'cluster_1'},
-                                                {'label': 'Tipo de Materia Prima', 'value': 'cluster_2'},
+                                                {'label': 'Povo ViT', 'value': 'cluster_1'},
+                                                {'label': 'Categoria ViT', 'value': 'cluster_2'},
+                                                {'label': 'Tipo de Materia Prima', 'value': 'cluster_3'},
                                             ],
                                             multi=False,
                                             placeholder='Selecione uma opção',
@@ -175,8 +189,6 @@ app.layout = html.Div([
                     ]
                 )
             ],
-            # value='tab-1',
-            # className='tab-content'
         ),
         dcc.Tab(
             label='Coleção no Tempo',
@@ -188,8 +200,6 @@ app.layout = html.Div([
                     ]
                 ),
             ],
-            # value='tab-2',
-            # className='tab-content'
         ),
         dcc.Tab(
             label='Coleção no Brasil',
@@ -201,8 +211,6 @@ app.layout = html.Div([
                     ]
                 ),
             ],
-            # value='tab-3',
-            # className='tab-content'
         )
     ]),
     dbc.Modal([
@@ -212,20 +220,6 @@ app.layout = html.Div([
 ], className='base-background')
 
 ################## CALLBCAKS ##################
-# # Callback for sliding effect on tabs
-# @app.callback(
-#     Output("tab-content", "children"),
-#     Input("tabs", "value")
-# )
-# def update_tab(selected_tab):
-#     print(selected_tab)
-#     if selected_tab == "tab-1":
-#         return html.Div("This is Tab 1 content", className="tab-content fade-in")
-#     elif selected_tab == "tab-2":
-#         return html.Div("This is Tab 2 content", className="tab-content fade-in")
-#     elif selected_tab == "tab-3":
-#         return html.Div("This is Tab 3 content", className="tab-content fade-in")
-
 # Callback for hovering
 @app.callback(
     Output("graph-tooltip", "show"),
@@ -241,12 +235,12 @@ def display_hover(hover_data, fig):
 
     # Remove transition from hover callback (should we do that?)
     fig.update_layout(
-        transition=dict(duration=50)
+        transition=dict(duration=25)
     )
 
     if hover_data is None:
         # Resetting markers on hover-out
-        old_sizes = list(np.full((len(fig.data[0].x)), 20))
+        old_sizes = list(np.full((len(fig.data[0].x)), 15))
         old_line_widths = list(np.full((len(fig.data[0].x)), 0))
 
         fig.data[0].marker.size = old_sizes
@@ -260,12 +254,12 @@ def display_hover(hover_data, fig):
     num = pt["pointNumber"]
     
     # Adding hovering effects
-    new_sizes = np.full((len(fig.data[0].x)), 20)
-    new_sizes[num] = 40
+    new_sizes = np.full((len(fig.data[0].x)), 15)
+    new_sizes[num] = 25
     new_sizes = list(new_sizes)
 
     new_line_widths = np.full((len(fig.data[0].x)), 0)
-    new_line_widths[num] = 6
+    new_line_widths[num] = 5
     new_line_widths = list(new_line_widths)
 
     fig.data[0].marker.size = new_sizes
@@ -353,18 +347,20 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
 
     # Computing collapses
     coords = filtered_plot_df[['x', 'y']].to_numpy()
-    labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.05)
+    labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.04)
 
     # Splitting clusters (inliers) and outliers for collapsing
     collapse_df = pd.DataFrame(coords, columns=["x", "y"], index=filtered_plot_df.index)
     collapse_df["cluster"] = labels
     
-    # Generating colormap to avoid cluster color reassignment with lazy plotting
-    color_map = generate_color_map(filtered_plot_df['cluster'].values)
-    collapse_df["color"] = [color_map[label] for label in filtered_plot_df['cluster'].values]
+    # Getting cluster colors for later painting the collapses
+    collapse_df["color"] = filtered_plot_df['color']
 
     # Getting cluster names for legend
     collapse_df["cluster_names"] = filtered_plot_df['cluster_names']
+
+    # Getting URLs for lazy image loading
+    collapse_df["thumbnail"] = filtered_plot_df['thumbnail']
 
     outliers = collapse_df[collapse_df['cluster'] == -1]
     outliers = outliers.copy()
@@ -377,28 +373,44 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
         (outliers['y'] >= y_range[0]) & (outliers['y'] <= y_range[1])
     ]
 
+    # Computing collapses
     inliers = collapse_df[collapse_df['cluster'] != -1]
-
-    # Replotting outliers
-    if len(visible_outliers) > 0:
-        if view_type == 'markers':
-            fig = plot_with_markers(visible_outliers, len(collapse_df), x_range, y_range)
-        else:
-            num_points = len(filtered_plot_df.loc[filtered_plot_df['image_path_br'] != 'data/placeholder_square.png'])
-            fig = plot_with_images(visible_outliers, num_points, x_range, y_range)
-    else:
-        fig = empty_figure(x_range, y_range)
-    
-    # Plotting collapsed points
     centroids_df = inliers.groupby('cluster').agg({'x': 'mean', 'y': 'mean'})
     centroids_df['count'] = inliers.groupby('cluster').size().values
     centroids_df['marker_size'] = centroids_df['count'].apply(lambda c: min(60, max(30, 15*np.log(c))))
 
+    # Computing dominant collapse clusters and colors
+    centroids_cluster_names = inliers.groupby('cluster')['cluster_names'].first()
+    centroids_df['cluster_names'] = centroids_cluster_names
+    dominant_colors = inliers.groupby('cluster')['color'].agg(lambda x: x.mode()[0])
+    centroids_df['color'] = dominant_colors
+
+    # Extracting (cluster_names, color) pairs for outliers
+    outliers_color_df = outliers[['cluster_names', 'color']].drop_duplicates()
+
+    # Combining both into color_df
+    # color_df = pd.concat([outliers_color_df, centroids_color_df]).drop_duplicates()
+
+    print(centroids_df)
+    # print(centroids_color_df)
+    # print(color_df)
+
+    # Replotting outliers
+    if len(visible_outliers) > 0:
+        if view_type == 'markers':
+            fig = plot_with_markers(visible_outliers, len(collapse_df), color_df, x_range, y_range)
+        else:
+            num_points = len(filtered_plot_df.loc[filtered_plot_df['image_path_br'] != 'data/placeholder_square.png'])
+            fig = plot_with_images(visible_outliers, num_points, x_range, y_range)
+    else:
+        fig = empty_figure(x_range, y_range, len(collapse_df))
+
+    # Plotting collapsed points
     fig.add_trace(go.Scatter(
         x=centroids_df['x'],
         y=centroids_df['y'],
         mode='markers+text',
-        marker=dict(color='#062a57', size=centroids_df['marker_size'], symbol='circle'),
+        marker=dict(color=centroids_df['color'], size=centroids_df['marker_size'], symbol='circle'),
         text=centroids_df['count'],
         textposition='middle center',
         textfont=dict(color='#ffffff', size=16),
@@ -465,16 +477,43 @@ def fade_in_update(fade_in, fig):
     Input('single-option-dropdown', 'value')
 )
 def update_cluster(selected_option):
+    # Reseting visibility
     plot_df['visibility'] = False
 
+    # Updating cluster values, positions and colors depending on the chosen clustering option 
     if selected_option == 'cluster_1':
-        plot_df['visibility'] = True
+        plot_df.set_index('ind_index', inplace=True)
         
-        plot_df["x"] = x[:, 0]
-        plot_df["y"] = x[:, 1]
-        plot_df["cluster"] = y
+        indices = povo_vit_df.index
+        plot_df.loc[indices, 'visibility'] = True
+
+        plot_df.loc[indices, "x"] = povo_vit_df['x'].values
+        plot_df.loc[indices, "y"] = povo_vit_df['y'].values
+        plot_df.loc[indices, "cluster"] = povo_vit_df['cluster'].values
+        plot_df.loc[indices, 'cluster_names'] = povo_vit_df['cluster_names'].values
+
+        color_map = generate_color_map(plot_df.loc[indices, 'cluster'].values)
+        plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indices, 'cluster'].values]
+
+        plot_df.reset_index(inplace=True)
     
     elif selected_option == 'cluster_2':
+        plot_df.set_index('ind_index', inplace=True)
+        
+        indices = categoria_vit_df.index
+        plot_df.loc[indices, 'visibility'] = True
+
+        plot_df.loc[indices, "x"] = categoria_vit_df['x'].values
+        plot_df.loc[indices, "y"] = categoria_vit_df['y'].values
+        plot_df.loc[indices, "cluster"] = categoria_vit_df['cluster'].values
+        plot_df.loc[indices, 'cluster_names'] = categoria_vit_df['cluster_names'].values
+
+        color_map = generate_color_map(plot_df.loc[indices, 'cluster'].values)
+        plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indices, 'cluster'].values]
+
+        plot_df.reset_index(inplace=True)
+
+    elif selected_option == 'cluster_3':
         plot_df.set_index('ind_index', inplace=True)
         
         indices = tipo_materia_prima_baseline_df.index
@@ -484,6 +523,9 @@ def update_cluster(selected_option):
         plot_df.loc[indices, "y"] = tipo_materia_prima_baseline_df['y'].values
         plot_df.loc[indices, "cluster"] = tipo_materia_prima_baseline_df['cluster'].values
         plot_df.loc[indices, 'cluster_names'] = tipo_materia_prima_baseline_df['cluster_names'].values
+
+        color_map = generate_color_map(plot_df.loc[indices, 'cluster'].values)
+        plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indices, 'cluster'].values]
 
         plot_df.reset_index(inplace=True)
 
@@ -500,10 +542,12 @@ def update_cluster(selected_option):
 def filter_data(selected_categoria, selected_povo, selected_estado, grouping):
     # Preserving visibility indices
     if grouping == 'cluster_1':
-        filtered_df = plot_df.copy()
+        filtered_df = plot_df[plot_df['ind_index'].isin(povo_vit_df.index)].copy()
     elif grouping == 'cluster_2':
+        filtered_df = plot_df[plot_df['ind_index'].isin(categoria_vit_df.index)].copy()
+    elif grouping == 'cluster_3':
         filtered_df = plot_df[plot_df['ind_index'].isin(tipo_materia_prima_baseline_df.index)].copy()
-    
+
     # Applying filters if a selection is made
     if selected_categoria != 'all':
         filtered_df = filtered_df[filtered_df['categoria'] == selected_categoria]

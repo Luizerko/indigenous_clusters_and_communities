@@ -419,7 +419,7 @@ def evaluate_model(model, model_name, num_classes, test_dataloader, device):
 # Function to visualize clusters
 def visualizing_clusters(df, projections, image_indices, column_name='povo', projection_name='UMAP'):
     # Building colormap for cluster visualization
-    unique_values = df[column_name].unique()
+    unique_values = df[df[column_name].notna()][column_name].unique()
     colors = plt.cm.gnuplot(np.linspace(0, 1, len(unique_values)))
     color_dict = {cluster: colors[i] for i, cluster in enumerate(unique_values)}
 
@@ -436,7 +436,7 @@ def visualizing_clusters(df, projections, image_indices, column_name='povo', pro
                     projections_sorted[sequential_indices, 1], 
                     color=color_dict[cluster], label=f"{cluster.title()}", alpha=0.7)
 
-    plt.title(f"Visualizing Clusters for {column_name} on {projection_name} Projection")
+    plt.title(f"Visualizing Clusters for '{column_name}' on {projection_name} Projection")
     plt.xlabel("")
     plt.ylabel("")
     plt.xticks([])
@@ -450,18 +450,18 @@ def visualizing_clusters(df, projections, image_indices, column_name='povo', pro
 # Function to safe outputs for visualization tool
 def saving_outputs(df, labels, projections, image_indices, column_name='povo', save_file='povo_vit.csv'):
     # Getting unique cluster values
-    unique_values = df[column_name].unique()
+    unique_values = df[df[column_name].notna()][column_name].unique()
     cluster_dict = {c: i for i, c in enumerate(unique_values)}
 
     # Computing indices and reordering projections to match the original dataframe order
     indices = []
-    for index in np.array(list(labels.keys()))[image_indices]:
+    for index in np.array(list(labels.keys())):
         indices.append(int(index.split('/')[-1].split('.')[0]))
     pos_xy = projections[np.argsort(image_indices)]
 
     # Computing clusters and cluster_names columns
     clusters = np.full(len(pos_xy), -1)
-    cluster_names = np.full(len(pos_xy), '')
+    cluster_names = np.full(len(pos_xy), '', dtype=object)
 
     for cluster, cluster_num in cluster_dict.items():
         mask = df.index[df[column_name] == cluster].tolist()
@@ -469,7 +469,9 @@ def saving_outputs(df, labels, projections, image_indices, column_name='povo', s
         
         clusters[sequential_indices] = cluster_num
         cluster_names[sequential_indices] = cluster
-        
+
     visualization_df = pd.DataFrame(index=indices, data={'x': pos_xy[:, 0], 'y': pos_xy[:, 1], 'cluster': clusters, 'cluster_names': cluster_names})
     visualization_df.index.name='id'
     visualization_df.to_csv('data/clusters/' + save_file)
+
+    return visualization_df

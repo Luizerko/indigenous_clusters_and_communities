@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 from PIL import Image
 import ast
+import requests
 
 import pandas as pd
 import numpy as np
@@ -32,13 +33,13 @@ def fig_update_layout(fig, df_len, x_range=(-norm_factor,norm_factor), y_range=(
         plot_bgcolor="#e6e6e6",
         paper_bgcolor="#e6e6e6",
         
-        font=dict(family="Roboto, sans-serif", size=16, color="black"),
+        font=dict(family="Roboto, sans-serif", size=14, color="black"),
         
         title_x=0.5,
         margin=dict(l=0, r=0, t=0, b=0),
         
         showlegend=True,
-        legend=dict(yanchor='top', y=0.98, xanchor='right', x=0.99, bgcolor='rgba(255, 255, 255, 0.8)', bordercolor="#062a57", borderwidth=1, orientation='v', itemclick='toggle', itemdoubleclick='toggleothers'),
+        legend=dict(yanchor='top', y=0.98, xanchor='right', x=0.99, bgcolor='rgba(255, 255, 255, 0.8)', bordercolor="#062a57", borderwidth=1, orientation='v', itemclick=False, itemdoubleclick=False),
 
         xaxis_title=None,
         yaxis_title=None,
@@ -81,10 +82,10 @@ def fig_update_layout(fig, df_len, x_range=(-norm_factor,norm_factor), y_range=(
     )
 
 # Create empty figure for initialization
-def empty_figure(x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
+def empty_figure(x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor), num_points=0):
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=[], y=[]))
-    fig_update_layout(fig, 0, x_range, y_range)
+    fig_update_layout(fig, num_points, x_range, y_range)
     return fig
 
 # Create timeline figure
@@ -105,7 +106,7 @@ def brazil_figure():
     return fig
 
 # Create scatter plot with markers
-def plot_with_markers(df, num_points, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
+def plot_with_markers(df, num_points, color_df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
     # Creating Plotly figure
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -119,23 +120,26 @@ def plot_with_markers(df, num_points, x_range=(-norm_factor,norm_factor), y_rang
     ))
 
     # Configuring default hovering
-    fig.update_traces(hoverinfo='none', hovertemplate=None, marker=dict(size=20, opacity=0.65), line=dict(width=0, color='rgb(255, 212, 110)'))
+    fig.update_traces(hoverinfo='none', hovertemplate=None, marker=dict(size=15, opacity=0.65), line=dict(width=0, color='rgb(255, 212, 110)'))
 
     # Updating layout for our standard design
     fig_update_layout(fig, num_points, x_range, y_range)
 
     # Plotting legend
-    unique_clusters = df[['color', 'cluster_names']].drop_duplicates()
+    df_copy = color_df.copy()
+    df_copy['cluster_names'] = df_copy['cluster_names'].apply(lambda x: x.capitalize() if isinstance(x, str) else x)
+    unique_clusters = df_copy[['color', 'cluster_names']].drop_duplicates()
     unique_clusters = unique_clusters.sort_values(by=['cluster_names'], ascending=True).sort_values(by='cluster_names', key=lambda x: x.str.len())
+    print(unique_clusters)
     legend_order = unique_clusters['cluster_names'].tolist()
-
+    
     color_dict = {}
     for _, row in unique_clusters.iterrows():
         color_dict[str(row['cluster_names'])] = row['color']
     dummy_fig = px.scatter(
-        df,
-        x=[-100 for i in range(len(df))],
-        y=[-100 for i in range(len(df))],
+        df_copy,
+        x=[-100 for i in range(len(df_copy))],
+        y=[-100 for i in range(len(df_copy))],
         color='cluster_names',
         labels={'cluster_names': 'Cluster Names'},
         color_discrete_map=color_dict,
@@ -155,6 +159,7 @@ def plot_with_images(df, num_points, x_range=(-norm_factor,norm_factor), y_range
     for index, row in df.iterrows():
         fig.add_layout_image(
             dict(source=Image.open(row['image_path_br']), x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/8, sizey=(y_range[1]-y_range[0])/8, xanchor="center",yanchor="middle")
+            # dict(source='https://c8.alamy.com/comp/CE5JRA/wikipedia-the-online-encyclopedia-screenshot-CE5JRA.jpg', x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/8, sizey=(y_range[1]-y_range[0])/8, xanchor="center",yanchor="middle")
         )
     
     fig_update_layout(fig, num_points, x_range, y_range)
@@ -178,7 +183,7 @@ def plot_with_images(df, num_points, x_range=(-norm_factor,norm_factor), y_range
 # Generating a (fixed) color palette for cluster IDs to handle lazy plotting
 def generate_color_map(clusters):
     ids = np.unique(clusters)
-    cmap = plt.cm.get_cmap('tab10', len(ids))
+    cmap = plt.cm.get_cmap('gnuplot2', len(ids))
     color_map = {cluster_id: f'rgba({cmap(i)[0]*255}, {cmap(i)[1]*255}, {cmap(i)[2]*255}, 1)' for i, cluster_id in enumerate(ids)}
 
     return color_map
@@ -226,7 +231,7 @@ def collapse_cluster_points(points, x_range=(-norm_factor,norm_factor), y_range=
     # Extracting labels for each point from clusters
     labels = {}
     for i, (cluster, min_distance) in enumerate(zip(clusters, min_distances)):
-        if len(cluster) < 10 and min_distance > threshold/8:
+        if len(cluster) < 5 and min_distance > threshold/8:
             for point_index in cluster:
                 labels[point_index] = -1
         else:
