@@ -1,22 +1,3 @@
-/* Normal tab */
-/* .tab-content {
-    opacity: 1;
-    transform: translateX(0);
-    transition: opacity 0.5s ease, transform 0.5s ease;
-} */
-
-/* Fade-out tab */
-/* .tab-content.fade-out {
-    opacity: 0;
-    transform: translateX(-20px);
-} */
-
-/* Fade-in tab */
-/* .tab-content.fade-in {
-    opacity: 1;
-    transform: translateX(0);
-} */ */
-
 /* Adjusting some default behavior from Dash */
 body {
     margin: 0;
@@ -32,6 +13,14 @@ body {
     height: 100vh;
     width: 100%;
     background-color: #9b3636;
+}
+
+/* Tab option stylying */
+.tab-option {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    height: 8vh;
 }
 
 /* Class of all the tabs */
@@ -111,7 +100,17 @@ body {
     margin-top: 10px;
     margin-bottom: 10px;
     padding-left: 10px;
+}
 
+/* Stylying filter label+slider */
+.filter-slider {
+    display: flex;
+    flex-direction: column;
+    width: 90%;
+    align-items: left;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding-left: 10px;
 }
 
 /* Stylying dropdowns */
@@ -128,6 +127,7 @@ body {
 /* Div for the graph */
 .graph {
     width: 80%;
+    height: 70vh;
 }
 
 /* Graph, but from the Dash perspective */
@@ -179,4 +179,10 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+/* Map, but from the Dash perspective */
+#brazil-map {
+    width: 97%;
+    height: 95%;
 }

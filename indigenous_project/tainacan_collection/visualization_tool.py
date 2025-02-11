@@ -22,10 +22,9 @@ plot_df = pd.DataFrame({"x": x[:, 0], "y": x[:, 1], "cluster": y})
 
 # Loading clusters
 tipo_materia_prima_baseline_df = pd.read_csv('data/clusters/tipo_materia_prima_baseline.csv', index_col='id')
-tipo_materia_prima_baseline_df['cluster_names'] = tipo_materia_prima_baseline_df['cluster_names'].apply(lambda x: ', '.join(ast.literal_eval(x)))
 
-povo_vit_df = pd.read_csv('data/clusters/povo_vit.csv', index_col='id')
 categoria_vit_df = pd.read_csv('data/clusters/categoria_vit.csv', index_col='id')
+povo_vit_df = pd.read_csv('data/clusters/povo_vit.csv', index_col='id')
 
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index
@@ -55,19 +54,48 @@ plot_df['estado_de_origem'] = ind_df['estado_de_origem'].values
 plot_df['thumbnail'] = ind_df['thumbnail'].values
 plot_df.fillna({'thumbnail': 'https://tainacan.museudoindio.gov.br/wp-content/plugins/tainacan/assets/images/placeholder_square.png'}, inplace=True)
 
+# Creating extra filters
+plot_df.set_index('ind_index', inplace=True)
+
+plot_df['tipo_materia_prima'] = pd.NA
+indices = tipo_materia_prima_baseline_df.index
+plot_df.loc[indices, 'tipo_materia_prima'] = tipo_materia_prima_baseline_df['cluster_names'].values
+
+plot_df['comprimento'] = 0.1
+plot_df['largura'] = 0.1
+plot_df['altura'] = 0.1
+plot_df['diamtero'] = 0.1
+dimensoes = {0 : [], 1: [], 2: [], 3: []}
+noise_threshold = 1000
+for row in ind_df['dimensoes'].dropna():
+    for i, d in enumerate(ast.literal_eval(row)):
+        if d > 0 and d < noise_threshold:
+            dimensoes[i].append(d)
+        else:
+            dimensoes[i].append(0.1)
+plot_df.loc[ind_df['dimensoes'].notna(), 'comprimento'] = dimensoes[0]
+plot_df.loc[ind_df['dimensoes'].notna(), 'largura'] = dimensoes[1]
+plot_df.loc[ind_df['dimensoes'].notna(), 'altura'] = dimensoes[2]
+plot_df.loc[ind_df['dimensoes'].notna(), 'diametro'] = dimensoes[3]
+
+# Fixing cluster names for tipo_materia_prima, but only after giving proper data structure (list) so plot_df can process dropdown options
+tipo_materia_prima_baseline_df['cluster_names'] = tipo_materia_prima_baseline_df['cluster_names'].apply(lambda x: ', '.join(ast.literal_eval(x)))
+
+plot_df.reset_index(inplace=True)
+
 # Setting point visibility and initializing first plot
 plot_df['visibility'] = False
-plot_df.set_index('ind_index', inplace=True)  
-indices = povo_vit_df.index
+plot_df.set_index('ind_index', inplace=True)
+indices = categoria_vit_df.index
 plot_df.loc[indices, 'visibility'] = True
-plot_df.loc[indices, "x"] = povo_vit_df['x'].values
-plot_df.loc[indices, "y"] = povo_vit_df['y'].values
-plot_df.loc[indices, "cluster"] = povo_vit_df['cluster'].values
-plot_df.loc[indices, 'cluster_names'] = povo_vit_df['cluster_names'].values
+plot_df.loc[indices, "x"] = categoria_vit_df['x'].values
+plot_df.loc[indices, "y"] = categoria_vit_df['y'].values
+plot_df.loc[indices, "cluster"] = categoria_vit_df['cluster'].values
+plot_df.loc[indices, 'cluster_names'] = categoria_vit_df['cluster_names'].values
 
 # Getting first cluster names and creating initial color map
 plot_df['cluster_names'] = ''
-plot_df.loc[indices, 'cluster_names'] = povo_vit_df['cluster_names'].values
+plot_df.loc[indices, 'cluster_names'] = categoria_vit_df['cluster_names'].values
 plot_df.fillna({'cluster_names': ''}, inplace=True)
 
 plot_df['color'] = 'rgba(255, 255, 255, 1)'
@@ -92,6 +120,7 @@ app.layout = html.Div([
     dcc.Tabs([
         dcc.Tab(
             label='Agrupamentos do Acervo',
+            className='tab-option',
             children=[
                 html.Div(
                     className='tool-container',
@@ -122,7 +151,7 @@ app.layout = html.Div([
                                                     id='categoria-filter',
                                                     options=get_dropdown_options(ind_df, 'categoria'),
                                                     multi=False,
-                                                    placeholder='Filtrar por Categoria',
+                                                    placeholder='Filtrar por categoria',
                                                     value='all',
                                                     clearable=False
                                                 ),
@@ -136,7 +165,7 @@ app.layout = html.Div([
                                                     id='povo-filter',
                                                     options=get_dropdown_options(ind_df, 'povo'),
                                                     multi=False,
-                                                    placeholder='Filtrar por Povo',
+                                                    placeholder='Filtrar por povo',
                                                     value='all',
                                                     clearable=False
                                                 ),
@@ -150,9 +179,43 @@ app.layout = html.Div([
                                                     id='estado-filter',
                                                     options=get_dropdown_options(ind_df, 'estado_de_origem'),
                                                     multi=False,
-                                                    placeholder='Filtrar por Estado de Origem',
+                                                    placeholder='Filtrar por estado de origem',
                                                     value='all',
                                                     clearable=False
+                                                ),
+                                            ]
+                                        ),
+                                        html.Div(
+                                            className='filter-dropdown',
+                                            children=[
+                                                html.Label("Tipo de Matéria Prima:", style={'fontWeight': 'bold', 'fontSize': '16px'}),
+                                                dcc.Dropdown(
+                                                    id='materia-filter',
+                                                    options=get_dropdown_options(plot_df, 'tipo_materia_prima'),
+                                                    multi=False,
+                                                    placeholder='Filtrar por tipo de matéria prima',
+                                                    value='all',
+                                                    clearable=False
+                                                ),
+                                            ]
+                                        ),
+                                        html.Div(
+                                            className='filter-slider',
+                                            children=[
+                                                dcc.Checklist(
+                                                    id='enable-dimensoes',
+                                                    options=[{'label': 'Ativar filtros de dimensão', 'value': 'enabled'}],
+                                                    value=[]
+                                                ),
+                                                html.Label("Comprimento (cm):", style={'fontWeight': 'bold', 'fontSize': '16px'}),
+                                                dcc.RangeSlider(
+                                                    id='comprimento-slider',
+                                                    min=plot_df['comprimento'].min(),
+                                                    max=np.quantile(plot_df['comprimento'], 0.85),
+                                                    step=5,
+                                                    marks=None,
+                                                    value=[plot_df['comprimento'].min(), np.quantile(plot_df['comprimento'], 0.85)],
+                                                    tooltip={"placement": "bottom", "always_visible": True}
                                                 ),
                                             ]
                                         ),
@@ -161,12 +224,12 @@ app.layout = html.Div([
                                         dcc.Dropdown(
                                             id='single-option-dropdown',
                                             options=[
-                                                {'label': 'Povo ViT', 'value': 'cluster_1'},
-                                                {'label': 'Categoria ViT', 'value': 'cluster_2'},
+                                                {'label': 'Categoria ViT', 'value': 'cluster_1'},
+                                                {'label': 'Povo ViT', 'value': 'cluster_2'},
                                                 {'label': 'Tipo de Materia Prima', 'value': 'cluster_3'},
                                             ],
                                             multi=False,
-                                            placeholder='Selecione uma opção',
+                                            placeholder='Selecione uma opção de agrupamento',
                                             value='cluster_1',
                                             clearable=False
                                         ),
@@ -193,6 +256,7 @@ app.layout = html.Div([
         ),
         dcc.Tab(
             label='Coleção no Tempo',
+            className='tab-option',
             children=[
                 html.Div(
                     className='timeline-container',
@@ -204,6 +268,7 @@ app.layout = html.Div([
         ),
         dcc.Tab(
             label='Coleção no Brasil',
+            className='tab-option',
             children=[
                 html.Div(
                     className='map-container',
@@ -217,7 +282,7 @@ app.layout = html.Div([
     dbc.Modal([
         dbc.ModalHeader(dbc.ModalTitle('Itens Advindos do', style={'fontWeight': 'bold', 'color': '#062a57'}, id='state-header')),
         dbc.ModalBody(id='state-items'),
-    ], id='modal-items', scrollable=True, is_open=False, backdrop=True)
+    ], id='modal-items', scrollable=True, is_open=False, backdrop=True, size='lg')
 ], className='base-background')
 
 ################## CALLBCAKS ##################
@@ -486,6 +551,8 @@ def fade_in_update(fade_in, fig):
     Output('categoria-filter', 'value'),
     Output('povo-filter', 'value'),
     Output('estado-filter', 'value'),
+    Output('materia-filter', 'value'),
+    Output('comprimento-slider', 'value'),
     Input('single-option-dropdown', 'value')
 )
 def update_cluster(selected_option):
@@ -494,15 +561,15 @@ def update_cluster(selected_option):
 
     # Updating cluster values, positions and colors depending on the chosen clustering option 
     if selected_option == 'cluster_1':
-        update_cluster_selection(plot_df, povo_vit_df)
+        update_cluster_selection(plot_df, categoria_vit_df)
 
     elif selected_option == 'cluster_2':
-        update_cluster_selection(plot_df, categoria_vit_df)
+        update_cluster_selection(plot_df, povo_vit_df)
 
     elif selected_option == 'cluster_3':
         update_cluster_selection(plot_df, tipo_materia_prima_baseline_df)
 
-    return True, 'all', 'all', 'all'
+    return True, 'all', 'all', 'all', 'all', [plot_df['comprimento'].min(), np.quantile(plot_df['comprimento'], 0.85)]
 
 # Callback for filtering data
 @app.callback(
@@ -510,9 +577,12 @@ def update_cluster(selected_option):
     Input('categoria-filter', 'value'),
     Input('povo-filter', 'value'),
     Input('estado-filter', 'value'),
+    Input('materia-filter', 'value'),
+    Input('enable-dimensoes', 'value'),
+    Input('comprimento-slider', 'value'),
     State('single-option-dropdown', 'value')
 )
-def filter_data(selected_categoria, selected_povo, selected_estado, grouping):
+def filter_data(selected_categoria, selected_povo, selected_estado, selected_materia, enable_dimensoes, range_comprimento, grouping):
     # Preserving visibility indices
     if grouping == 'cluster_1':
         filtered_df = plot_df[plot_df['ind_index'].isin(povo_vit_df.index)].copy()
@@ -530,6 +600,12 @@ def filter_data(selected_categoria, selected_povo, selected_estado, grouping):
         
     if selected_estado != 'all':
         filtered_df = filtered_df[filtered_df['estado_de_origem'].str.contains(selected_estado, na=False)]
+
+    if selected_materia != 'all':
+        filtered_df = filtered_df[filtered_df['tipo_materia_prima'].str.contains(selected_materia, na=False)]
+
+    if len(enable_dimensoes) > 0:
+        filtered_df = filtered_df[(filtered_df['comprimento'] >= range_comprimento[0]) & (filtered_df['comprimento'] <= range_comprimento[1])]
 
     # Updating dataframe visibility
     plot_df['visibility'] = plot_df.index.isin(filtered_df.index)

@@ -48,7 +48,7 @@ def fig_update_layout(fig, df_len, x_range=(-norm_factor,norm_factor), y_range=(
 
         # Mouse default configuration (panning instead of zooming)
         dragmode='pan',
-        hoverdistance = 5,
+        hoverdistance = 6,
 
         # # Animating graphs
         # transition=dict(duration=500, easing='sin-in-out')
@@ -100,7 +100,6 @@ def empty_figure_legend(color_df, x_range=(-norm_factor,norm_factor), y_range=(-
     df_copy['cluster_names'] = df_copy['cluster_names'].apply(lambda x: x.capitalize() if isinstance(x, str) else x)
     unique_clusters = df_copy[['color', 'cluster_names']].drop_duplicates()
     unique_clusters = unique_clusters.sort_values(by=['cluster_names'], ascending=True).sort_values(by='cluster_names', key=lambda x: x.str.len())
-    print(unique_clusters)
     legend_order = unique_clusters['cluster_names'].tolist()
     
     color_dict = {}
@@ -127,7 +126,7 @@ def empty_figure_legend(color_df, x_range=(-norm_factor,norm_factor), y_range=(-
 
 # Creating the map of Brazil and plotting markers on states
 def brazil_figure():
-    fig = px.scatter_mapbox(brazil_states, lat='latitude', lon='longitude', hover_name='state', hover_data={'latitude': False, 'longitude': False}, zoom=3.5, center={'lat': -14.2350, 'lon': -51.9253}, width=1350, height=600)
+    fig = px.scatter_mapbox(brazil_states, lat='latitude', lon='longitude', hover_name='state', hover_data={'latitude': False, 'longitude': False}, zoom=3.5, center={'lat': -14.2350, 'lon': -51.9253})
 
     fig.update_layout(
         mapbox_style="carto-positron",  # options are 'open-street-map', 'stamen-terrain', 'carto-positron', etc.
@@ -294,18 +293,23 @@ def update_cluster_selection(plot_df, selected_df):
 
     plot_df.reset_index(inplace=True)
 
+# Function to get unique values of columns with multiple categories at the same time
+def get_multi_column(unique_values):
+    unique_values_aux = set()
+    for item_list in unique_values:
+        for item in ast.literal_eval(item_list):
+            unique_values_aux.add(item)
+    unique_values = list(unique_values_aux)
+
+    return unique_values
+
 # Getting all the dropdown options for a given column
 def get_dropdown_options(df, column_name):
     unique_values = df[column_name].dropna().unique().tolist()
     
     # Handling special cases
-    if column_name == 'estado_de_origem':
-        # Items with multiple categories at the same time
-        unique_values_aux = set()
-        for state_list in unique_values:
-            for state in ast.literal_eval(state_list):
-                unique_values_aux.add(state)
-        unique_values = list(unique_values_aux)
+    if column_name == 'estado_de_origem' or column_name == 'tipo_materia_prima':
+        unique_values = get_multi_column(unique_values)
 
     options = [{'label': 'Sem Filtro', 'value': 'all'}] + [{'label': val[0].upper() + val[1:], 'value': val} for val in sorted(unique_values)]
 
