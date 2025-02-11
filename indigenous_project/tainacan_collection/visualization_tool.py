@@ -10,7 +10,7 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 import numpy as np
 
-from utils import brazil_states_dict, norm_factor, empty_figure, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map, get_dropdown_options
+from utils import brazil_states_dict, norm_factor, empty_figure, empty_figure_legend, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map, update_cluster_selection, get_dropdown_options
 
 from sklearn.datasets import make_blobs
 
@@ -68,10 +68,11 @@ plot_df.loc[indices, 'cluster_names'] = povo_vit_df['cluster_names'].values
 # Getting first cluster names and creating initial color map
 plot_df['cluster_names'] = ''
 plot_df.loc[indices, 'cluster_names'] = povo_vit_df['cluster_names'].values
+plot_df.fillna({'cluster_names': ''}, inplace=True)
 
 plot_df['color'] = 'rgba(255, 255, 255, 1)'
-color_map = generate_color_map(plot_df.loc[indices, 'cluster'].values)
-plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indices, 'cluster'].values]
+color_map = generate_color_map(plot_df.loc[indices, 'cluster_names'].values)
+plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indices, 'cluster_names'].values]
 
 plot_df.reset_index(inplace=True)
 
@@ -253,19 +254,26 @@ def display_hover(hover_data, fig):
     bbox = pt["bbox"]
     num = pt["pointNumber"]
     
+    # Acessing the dataframe to get the data we actually want to display
+    df_row = plot_df.iloc[fig.data[0].customdata[num]]
+
     # Adding hovering effects
     new_sizes = np.full((len(fig.data[0].x)), 15)
     new_sizes[num] = 25
     new_sizes = list(new_sizes)
 
     new_line_widths = np.full((len(fig.data[0].x)), 0)
-    new_line_widths[num] = 5
+    new_line_widths[num] = 10
     new_line_widths = list(new_line_widths)
+
+    color = df_row['color']
+    color = color.replace('1)', '0.5)')
 
     fig.data[0].marker.size = new_sizes
     fig.data[0].marker.line.width = new_line_widths
+    fig.data[0].marker.line.color = color
 
-    # Acessing the dataframe to get the data we actually want to display
+    # Getting hovering information for box display
     df_row = plot_df.iloc[fig.data[0].customdata[num]]
     img_src = df_row['image_path']
     nome_do_item = df_row['nome_do_item']
@@ -367,7 +375,7 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
     outliers.loc[:, 'cluster'] = filtered_plot_df.loc[collapse_df['cluster'] == -1, 'cluster'].values
     outliers.loc[:, 'image_path_br'] = filtered_plot_df.loc[collapse_df['cluster'] == -1, 'image_path_br'].values
 
-    # Lazy plotting for speed
+    # Lazy plotting outliers for speed
     visible_outliers = outliers[
         (outliers['x'] >= x_range[0]) & (outliers['x'] <= x_range[1]) &
         (outliers['y'] >= y_range[0]) & (outliers['y'] <= y_range[1])
@@ -380,20 +388,21 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
     centroids_df['marker_size'] = centroids_df['count'].apply(lambda c: min(60, max(30, 15*np.log(c))))
 
     # Computing dominant collapse clusters and colors
-    centroids_cluster_names = inliers.groupby('cluster')['cluster_names'].first()
+    centroids_cluster_names = inliers.groupby('cluster')['cluster_names'].agg(lambda x: x.mode()[0])
     centroids_df['cluster_names'] = centroids_cluster_names
     dominant_colors = inliers.groupby('cluster')['color'].agg(lambda x: x.mode()[0])
     centroids_df['color'] = dominant_colors
 
-    # Extracting (cluster_names, color) pairs for outliers
-    outliers_color_df = outliers[['cluster_names', 'color']].drop_duplicates()
+    # Lazy plotting collapses for speed
+    visible_centroids = centroids_df[
+        (centroids_df['x'] >= x_range[0]) & (centroids_df['x'] <= x_range[1]) &
+        (centroids_df['y'] >= y_range[0]) & (centroids_df['y'] <= y_range[1])
+    ]
 
-    # Combining both into color_df
-    # color_df = pd.concat([outliers_color_df, centroids_color_df]).drop_duplicates()
-
-    print(centroids_df)
-    # print(centroids_color_df)
-    # print(color_df)
+    # Extracting (cluster_names, color) for plotting legend later
+    visible_outliers_color_df = visible_outliers[['cluster_names', 'color']].drop_duplicates()
+    visible_centroids_color_df = visible_centroids[['cluster_names', 'color']].drop_duplicates()
+    color_df = pd.concat([visible_outliers_color_df, visible_centroids_color_df]).drop_duplicates()
 
     # Replotting outliers
     if len(visible_outliers) > 0:
@@ -403,15 +412,18 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
             num_points = len(filtered_plot_df.loc[filtered_plot_df['image_path_br'] != 'data/placeholder_square.png'])
             fig = plot_with_images(visible_outliers, num_points, x_range, y_range)
     else:
-        fig = empty_figure(x_range, y_range, len(collapse_df))
+        if len(color_df) > 0:
+            fig = empty_figure_legend(color_df, x_range, y_range, len(collapse_df))
+        else:
+            fig = empty_figure(x_range, y_range, len(collapse_df))
 
     # Plotting collapsed points
     fig.add_trace(go.Scatter(
-        x=centroids_df['x'],
-        y=centroids_df['y'],
+        x=visible_centroids['x'],
+        y=visible_centroids['y'],
         mode='markers+text',
-        marker=dict(color=centroids_df['color'], size=centroids_df['marker_size'], symbol='circle'),
-        text=centroids_df['count'],
+        marker=dict(color=visible_centroids['color'], size=visible_centroids['marker_size'], symbol='circle'),
+        text=visible_centroids['count'],
         textposition='middle center',
         textfont=dict(color='#ffffff', size=16),
         hoverinfo='skip',
@@ -482,52 +494,13 @@ def update_cluster(selected_option):
 
     # Updating cluster values, positions and colors depending on the chosen clustering option 
     if selected_option == 'cluster_1':
-        plot_df.set_index('ind_index', inplace=True)
-        
-        indices = povo_vit_df.index
-        plot_df.loc[indices, 'visibility'] = True
+        update_cluster_selection(plot_df, povo_vit_df)
 
-        plot_df.loc[indices, "x"] = povo_vit_df['x'].values
-        plot_df.loc[indices, "y"] = povo_vit_df['y'].values
-        plot_df.loc[indices, "cluster"] = povo_vit_df['cluster'].values
-        plot_df.loc[indices, 'cluster_names'] = povo_vit_df['cluster_names'].values
-
-        color_map = generate_color_map(plot_df.loc[indices, 'cluster'].values)
-        plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indices, 'cluster'].values]
-
-        plot_df.reset_index(inplace=True)
-    
     elif selected_option == 'cluster_2':
-        plot_df.set_index('ind_index', inplace=True)
-        
-        indices = categoria_vit_df.index
-        plot_df.loc[indices, 'visibility'] = True
-
-        plot_df.loc[indices, "x"] = categoria_vit_df['x'].values
-        plot_df.loc[indices, "y"] = categoria_vit_df['y'].values
-        plot_df.loc[indices, "cluster"] = categoria_vit_df['cluster'].values
-        plot_df.loc[indices, 'cluster_names'] = categoria_vit_df['cluster_names'].values
-
-        color_map = generate_color_map(plot_df.loc[indices, 'cluster'].values)
-        plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indices, 'cluster'].values]
-
-        plot_df.reset_index(inplace=True)
+        update_cluster_selection(plot_df, categoria_vit_df)
 
     elif selected_option == 'cluster_3':
-        plot_df.set_index('ind_index', inplace=True)
-        
-        indices = tipo_materia_prima_baseline_df.index
-        plot_df.loc[indices, 'visibility'] = True
-
-        plot_df.loc[indices, "x"] = tipo_materia_prima_baseline_df['x'].values
-        plot_df.loc[indices, "y"] = tipo_materia_prima_baseline_df['y'].values
-        plot_df.loc[indices, "cluster"] = tipo_materia_prima_baseline_df['cluster'].values
-        plot_df.loc[indices, 'cluster_names'] = tipo_materia_prima_baseline_df['cluster_names'].values
-
-        color_map = generate_color_map(plot_df.loc[indices, 'cluster'].values)
-        plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indices, 'cluster'].values]
-
-        plot_df.reset_index(inplace=True)
+        update_cluster_selection(plot_df, tipo_materia_prima_baseline_df)
 
     return True, 'all', 'all', 'all'
 

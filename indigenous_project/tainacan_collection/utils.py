@@ -1,6 +1,7 @@
 import plotly.express as px
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 
 from PIL import Image
 import ast
@@ -71,7 +72,7 @@ def fig_update_layout(fig, df_len, x_range=(-norm_factor,norm_factor), y_range=(
     fig.add_annotation(
         text=f"Número de Itens: {df_len}",
         xref="paper", yref="paper",
-        x=0.99, y=0.02,
+        x=0.01, y=0.98,
         showarrow=False,
         font=dict(size=14, color="#062a57"),
         align="center",
@@ -86,6 +87,39 @@ def empty_figure(x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=[], y=[]))
     fig_update_layout(fig, num_points, x_range, y_range)
+    return fig
+
+# Create empty figure with legend to keep legend even when we only have collapses
+def empty_figure_legend(color_df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor), num_points=0):
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=[], y=[]))
+    fig_update_layout(fig, num_points, x_range, y_range)
+
+    # Plotting legend
+    df_copy = color_df.copy()
+    df_copy['cluster_names'] = df_copy['cluster_names'].apply(lambda x: x.capitalize() if isinstance(x, str) else x)
+    unique_clusters = df_copy[['color', 'cluster_names']].drop_duplicates()
+    unique_clusters = unique_clusters.sort_values(by=['cluster_names'], ascending=True).sort_values(by='cluster_names', key=lambda x: x.str.len())
+    print(unique_clusters)
+    legend_order = unique_clusters['cluster_names'].tolist()
+    
+    color_dict = {}
+    for _, row in unique_clusters.iterrows():
+        color_dict[str(row['cluster_names'])] = row['color']
+    dummy_fig = px.scatter(
+        df_copy,
+        x=[-100 for i in range(len(df_copy))],
+        y=[-100 for i in range(len(df_copy))],
+        color='cluster_names',
+        labels={'cluster_names': 'Cluster Names'},
+        color_discrete_map=color_dict,
+        category_orders={'cluster_names': legend_order}
+    )
+    for trace in dummy_fig.data:
+        trace.showlegend = True
+        trace.marker.size = 15
+        fig.add_trace(trace)
+
     return fig
 
 # Create timeline figure
@@ -120,7 +154,7 @@ def plot_with_markers(df, num_points, color_df, x_range=(-norm_factor,norm_facto
     ))
 
     # Configuring default hovering
-    fig.update_traces(hoverinfo='none', hovertemplate=None, marker=dict(size=15, opacity=0.65), line=dict(width=0, color='rgb(255, 212, 110)'))
+    fig.update_traces(hoverinfo='none', hovertemplate=None, marker=dict(size=15, opacity=0.65), line=dict(width=0, color='rgba(255, 212, 110, 0.5)'))
 
     # Updating layout for our standard design
     fig_update_layout(fig, num_points, x_range, y_range)
@@ -130,7 +164,6 @@ def plot_with_markers(df, num_points, color_df, x_range=(-norm_factor,norm_facto
     df_copy['cluster_names'] = df_copy['cluster_names'].apply(lambda x: x.capitalize() if isinstance(x, str) else x)
     unique_clusters = df_copy[['color', 'cluster_names']].drop_duplicates()
     unique_clusters = unique_clusters.sort_values(by=['cluster_names'], ascending=True).sort_values(by='cluster_names', key=lambda x: x.str.len())
-    print(unique_clusters)
     legend_order = unique_clusters['cluster_names'].tolist()
     
     color_dict = {}
@@ -179,15 +212,6 @@ def plot_with_images(df, num_points, x_range=(-norm_factor,norm_factor), y_range
     )
 
     return fig
-
-# Generating a (fixed) color palette for cluster IDs to handle lazy plotting
-def generate_color_map(clusters):
-    ids = np.unique(clusters)
-    cmap = plt.cm.get_cmap('gnuplot2', len(ids))
-    color_map = {cluster_id: f'rgba({cmap(i)[0]*255}, {cmap(i)[1]*255}, {cmap(i)[2]*255}, 1)' for i, cluster_id in enumerate(ids)}
-
-    return color_map
-
 
 ########## GENERAL PURPOSE UTIL FUNCTIONS ##########
 # Normalize points based on zoom level
@@ -240,6 +264,35 @@ def collapse_cluster_points(points, x_range=(-norm_factor,norm_factor), y_range=
     labels = [labels[i] for i in range(len(points))]
 
     return labels
+
+# Generating a (fixed) color palette for cluster IDs to handle lazy plotting
+def generate_color_map(clusters):
+    ids = np.unique(clusters)
+    sorted_ids = sorted(ids, key=lambda x: (len(str(x)), str(x).lower()))
+    
+    cmap = LinearSegmentedColormap.from_list('truncated_cmap', plt.cm.hot(np.linspace(0.0, 0.6, len(sorted_ids))))
+    
+    color_map = {cluster_id: f'rgba({cmap(i/(len(sorted_ids)-1))[0]*255}, {cmap(i/(len(sorted_ids)-1))[1]*255}, {cmap(i/(len(sorted_ids)-1))[2]*255}, 1)' for i, cluster_id in enumerate(sorted_ids)}
+
+    return color_map
+
+# Function to generically update dataframe when we select a clustering option
+def update_cluster_selection(plot_df, selected_df):
+    plot_df.set_index('ind_index', inplace=True)
+        
+    indices = selected_df.index
+    plot_df.loc[indices, 'visibility'] = True
+
+    plot_df.loc[indices, "x"] = selected_df['x'].values
+    plot_df.loc[indices, "y"] = selected_df['y'].values
+    plot_df.loc[indices, "cluster"] = selected_df['cluster'].values
+    plot_df.loc[indices, 'cluster_names'] = selected_df['cluster_names'].values
+    plot_df.fillna({'cluster_names': ''}, inplace=True)
+
+    color_map = generate_color_map(plot_df.loc[indices, 'cluster_names'].values)
+    plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indices, 'cluster_names'].values]
+
+    plot_df.reset_index(inplace=True)
 
 # Getting all the dropdown options for a given column
 def get_dropdown_options(df, column_name):
