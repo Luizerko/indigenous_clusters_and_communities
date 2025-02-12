@@ -750,18 +750,37 @@ def display_state_items(clickData, is_open):
 
     state_items = plot_df[plot_df['estado_de_origem'].apply(lambda x: state_symb in x if pd.notna(x) else False)]
 
-    # Create a list of items to display
-    items_list = html.Ul([
-        html.Li([
-            html.Img(src=row['thumbnail'], style={'width': '80px'}),
-            html.A([row['nome_do_item'].title(), html.Br(), f"{row['povo'].title()},  {row['ano_de_aquisicao']}"], href=row['url'], target="_blank", style={'font-weight': 'bold', 'text-decoration': 'none', 'color': '#062a57', 'margin-left': '10px'})
-        ], style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '25px'})
-        for index, row in state_items.iterrows()
-    ], style={'list-style-type': 'none', 'padding': '0'})
+    items_grid = html.Div([
+        html.Div([
+            html.Img(src=row['thumbnail'], style={'width': '45%', 'margin-bottom': '8px'}),
+            html.A([
+                row['nome_do_item'].title(), html.Br(),
+                f"{row['povo'].title()}, {int(row['ano_de_aquisicao'])}"
+            ], href=row['url'], target="_blank", 
+                style={'font-weight': 'bold', 'text-decoration': 'none', 'color': '#062a57', 'text-align': 'center', 'font-size': '16px'})
+        ], style={
+            'display': 'flex', 
+            'flex-direction': 'column', 
+            'align-items': 'center',
+            'justify-content': 'center',
+            'margin-bottom': '20px',
+            'border': '1px solid #ddd', 
+            'padding': '10px', 
+            'border-radius': '8px', 
+            'background-color': '#f9f9f9'
+        })
+        for _, row in state_items.iterrows()
+    ], style={
+        'display': 'grid',
+        'grid-template-columns': 'repeat(3, 1fr)',
+        'gap': '10px',
+        'list-style-type': 'none', 
+        'padding': '0'
+    })
 
     header_title = f'{len(state_items)} Itens Advindos do {state_name}'
 
-    return not is_open, items_list, header_title, None
+    return not is_open, items_grid, header_title, None
 
 # Running app
 if __name__ == '__main__':

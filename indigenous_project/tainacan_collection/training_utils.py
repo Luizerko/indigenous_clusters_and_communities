@@ -2,6 +2,7 @@ import os
 from tqdm import tqdm
 from PIL import Image
 from math import ceil
+import random
 
 import pandas as pd
 import numpy as np
@@ -135,12 +136,20 @@ def filter_image_data_distribution(df, filtered_categories_names, transform, thr
     # Creating augmented dataset for training
     labels_minority, minority_name_to_num, _ = preparing_image_labels(minority_ind_df, column_name)
     labels_majority, majority_name_to_num, _ = preparing_image_labels(undersampled_majority_ind_df, column_name, len(minority_classes))
+    
+    # Create test dataset
+    test_minority = random.sample(list(labels_minority), int(0.1*len(labels_minority)))
+    test_majority = random.sample(list(labels_majority), int(0.1*len(labels_majority)))
+    test_labels = {}
+    for key in test_minority:
+        test_labels[key] = labels_minority[key]
+        del labels_minority[key]
+    for key in test_majority:
+        test_labels[key] = labels_majority[key]
+        del labels_majority[key]
+    test_dataset = ImageDataset(test_labels, transform=transform, augment=False)
 
-    # print("New 'name_to_num':\n")
-    # print(f'Minority classes: {minority_name_to_num}')
-    # print()
-    # print(f'Majority classes: {majority_name_to_num}')
-
+    # Update this code to use only
     minority_datasets = [ImageDataset(labels_minority, transform=transform, augment=True) for i in range(ceil(threshold_multiplier))]
     minority_datasets.append(ImageDataset(labels_minority, transform=transform, augment=False))
 
@@ -149,7 +158,7 @@ def filter_image_data_distribution(df, filtered_categories_names, transform, thr
 
     augmented_dataset = ConcatDataset(minority_datasets + majority_datasets)
 
-    return minority_classes, majority_classes, labels_minority, labels_majority, augmented_dataset
+    return minority_classes, majority_classes, labels_minority, labels_majority, test_labels, augmented_dataset, test_dataset
 
 # Plotting old and new class distributions
 def plot_class_distributions(categories, filtered_categories, labels_minority, labels_majority, threshold_multiplier=2, column_name='povo'):
@@ -196,15 +205,14 @@ def compute_class_weights(filtered_categories, labels_minority, labels_majority,
     return class_weights
 
 # Function for getting traininig/validation split
-def get_train_val_test_split(dataset, train_size, val_size, batch_size=32):
-    test_size = len(dataset) - train_size - val_size
-    train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size], generator=torch.Generator().manual_seed(42))
+def get_train_val_split(dataset, train_size, batch_size=32):
+    val_size = len(dataset) - train_size
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=torch.Generator().manual_seed(42))
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
     
-    return train_dataloader, val_dataloader, test_dataloader
+    return train_dataloader, val_dataloader
 
 # Function to iterating over data to get projections
 def get_vit_embeddings(model, dataloader, device, fine_tuned=False):
@@ -330,12 +338,11 @@ def train_loop(model, num_classes, train_dataloader, val_dataloader, device, cri
     return losses, accuracies, class_precisions, class_recalls
 
 # Function for setting-up training, executing training and then running tests
-def execute_train_test(dataset, device, batch_size, epochs, num_classes, model, criterion, opt, model_name, column_name='povo'):
+def execute_train_test(dataset, test_dataset, device, batch_size, epochs, num_classes, model, criterion, opt, model_name, column_name='povo'):
     # Creating training, validation and test datasets
-    train_size = int(0.75*len(dataset))
-    val_size = int(0.15*len(dataset))
-    train_dataloader, val_dataloader, \
-    test_dataloader = get_train_val_test_split(dataset, train_size, val_size, batch_size)
+    train_size = int(0.85*len(dataset))
+    train_dataloader, val_dataloader = get_train_val_split(dataset, train_size, batch_size)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
     # Training set-up and execution
     losses, accuracies, class_precisions, class_recalls = train_loop(model, num_classes, train_dataloader, val_dataloader, device, criterion, opt, model_name, epochs)
