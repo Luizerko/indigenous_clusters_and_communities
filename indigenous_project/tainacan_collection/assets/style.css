@@ -91,8 +91,31 @@ body {
     width: 100%;
 }
 
+/* Add spacing between radio buttons and labels */
+input[type="radio"] {
+    margin-right: 5px;
+}
+
 /* Stylying filter label+dropdown */
 .filter-dropdown {
+    display: flex;
+    flex-direction: column;
+    width: 90%;
+    align-items: left;
+    margin-top: 2px;
+    margin-bottom: 10px;
+    padding-left: 10px;
+}
+
+/* Removing spinners from filter input */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+
+/* Stylying dimensoes filter */
+.filter-dimensoes {
     display: flex;
     flex-direction: column;
     width: 90%;
@@ -102,15 +125,10 @@ body {
     padding-left: 10px;
 }
 
-/* Stylying filter label+slider */
-.filter-slider {
+/* Stylying dimensoes input */
+.filter-input {
     display: flex;
-    flex-direction: column;
-    width: 90%;
-    align-items: left;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    padding-left: 10px;
+    align-items: center;
 }
 
 /* Stylying dropdowns */
@@ -122,6 +140,19 @@ body {
 .VirtualizedSelectOption {
     font-size: .8em;
     white-space: nowrap;
+}
+
+/* Making dropdown a dropup for agrupamentos */
+.cluster-dropup .Select-menu-outer {
+    top: 0;
+    -webkit-transform: translateY(3px) translateY(-100%);
+    transform: translateY(3px) translateY(-100%);
+    border-top-right-radius: 4px;
+    border-top-left-radius: 4px;
+    border-bottom-right-radius: 0px;
+    border-bottom-left-radius: 0px;
+    border: 1px solid #ccc;
+    border-bottom: none;
 }
 
 /* Div for the graph */

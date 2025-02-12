@@ -61,18 +61,18 @@ plot_df['tipo_materia_prima'] = pd.NA
 indices = tipo_materia_prima_baseline_df.index
 plot_df.loc[indices, 'tipo_materia_prima'] = tipo_materia_prima_baseline_df['cluster_names'].values
 
-plot_df['comprimento'] = 0.1
-plot_df['largura'] = 0.1
-plot_df['altura'] = 0.1
-plot_df['diamtero'] = 0.1
+plot_df['comprimento'] = 0.0
+plot_df['largura'] = 0.0
+plot_df['altura'] = 0.0
+plot_df['diametro'] = 0.0
 dimensoes = {0 : [], 1: [], 2: [], 3: []}
 noise_threshold = 1000
 for row in ind_df['dimensoes'].dropna():
     for i, d in enumerate(ast.literal_eval(row)):
         if d > 0 and d < noise_threshold:
-            dimensoes[i].append(d)
+            dimensoes[i].append(round(d, 1))
         else:
-            dimensoes[i].append(0.1)
+            dimensoes[i].append(0.0)
 plot_df.loc[ind_df['dimensoes'].notna(), 'comprimento'] = dimensoes[0]
 plot_df.loc[ind_df['dimensoes'].notna(), 'largura'] = dimensoes[1]
 plot_df.loc[ind_df['dimensoes'].notna(), 'altura'] = dimensoes[2]
@@ -139,7 +139,7 @@ app.layout = html.Div([
                                                 {'label': 'Pontos', 'value': 'markers'},
                                                 {'label': 'Imagens', 'value': 'images'}
                                             ],
-                                            value='markers'
+                                            value='markers',
                                         ),
 
                                         html.Label("Filtragem de Dados", style={'fontWeight': 'bold', 'marginTop': '20px'}),
@@ -200,29 +200,125 @@ app.layout = html.Div([
                                             ]
                                         ),
                                         html.Div(
-                                            className='filter-slider',
+                                            className='filter-dimensoes',
                                             children=[
-                                                dcc.Checklist(
-                                                    id='enable-dimensoes',
-                                                    options=[{'label': 'Ativar filtros de dimensão', 'value': 'enabled'}],
-                                                    value=[]
-                                                ),
                                                 html.Label("Comprimento (cm):", style={'fontWeight': 'bold', 'fontSize': '16px'}),
-                                                dcc.RangeSlider(
-                                                    id='comprimento-slider',
-                                                    min=plot_df['comprimento'].min(),
-                                                    max=np.quantile(plot_df['comprimento'], 0.85),
-                                                    step=5,
-                                                    marks=None,
-                                                    value=[plot_df['comprimento'].min(), np.quantile(plot_df['comprimento'], 0.85)],
-                                                    tooltip={"placement": "bottom", "always_visible": True}
+                                                html.Div(
+                                                    className='input-container',
+                                                    children=[
+                                                        html.Label("Min", style={'fontSize': '14px', 'marginRight': '5px'}),
+                                                        dcc.Input(
+                                                            id='comprimento-min',
+                                                            type='number',
+                                                            placeholder=f"{plot_df['comprimento'].min():.1f}",
+                                                            value=round(plot_df['comprimento'].min(), 1),
+                                                            step="any",
+                                                            style={'width': '80px'}
+                                                        ),
+                                                        html.Label("Max:", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
+                                                        dcc.Input(
+                                                            id='comprimento-max',
+                                                            type='number',
+                                                            placeholder=f"{plot_df['comprimento'].max():.1f}",
+                                                            value=round(plot_df['comprimento'].max(), 1),
+                                                            step="any",
+                                                            style={'width': '80px'}
+                                                        ),
+                                                    ],
+                                                ),
+                                            ]
+                                        ),
+                                        html.Div(
+                                            className='filter-dimensoes',
+                                            children=[
+                                                html.Label("Largura (cm):", style={'fontWeight': 'bold', 'fontSize': '16px'}),
+                                                html.Div(
+                                                    className='input-container',
+                                                    children=[
+                                                        html.Label("Min", style={'fontSize': '14px', 'marginRight': '5px'}),
+                                                        dcc.Input(
+                                                            id='largura-min',
+                                                            type='number',
+                                                            placeholder=f"{plot_df['largura'].min():.1f}",
+                                                            value=round(plot_df['largura'].min(), 1),
+                                                            step="any",
+                                                            style={'width': '80px'}
+                                                        ),
+                                                        html.Label("Max:", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
+                                                        dcc.Input(
+                                                            id='largura-max',
+                                                            type='number',
+                                                            placeholder=f"{plot_df['largura'].max():.1f}",
+                                                            value=round(plot_df['largura'].max(), 1),
+                                                            step="any",
+                                                            style={'width': '80px'}
+                                                        ),
+                                                    ],
+                                                ),
+                                            ]
+                                        ),
+                                        html.Div(
+                                            className='filter-dimensoes',
+                                            children=[
+                                                html.Label("Altura (cm):", style={'fontWeight': 'bold', 'fontSize': '16px'}),
+                                                html.Div(
+                                                    className='input-container',
+                                                    children=[
+                                                        html.Label("Min", style={'fontSize': '14px', 'marginRight': '5px'}),
+                                                        dcc.Input(
+                                                            id='altura-min',
+                                                            type='number',
+                                                            placeholder=f"{plot_df['altura'].min():.1f}",
+                                                            value=round(plot_df['altura'].min(), 1),
+                                                            step="any",
+                                                            style={'width': '80px'}
+                                                        ),
+                                                        html.Label("Max:", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
+                                                        dcc.Input(
+                                                            id='altura-max',
+                                                            type='number',
+                                                            placeholder=f"{plot_df['altura'].max():.1f}",
+                                                            value=round(plot_df['altura'].max(), 1),
+                                                            step="any",
+                                                            style={'width': '80px'}
+                                                        ),
+                                                    ],
+                                                ),
+                                            ]
+                                        ),
+                                        html.Div(
+                                            className='filter-dimensoes',
+                                            children=[
+                                                html.Label("Diâmetro (cm):", style={'fontWeight': 'bold', 'fontSize': '16px'}),
+                                                html.Div(
+                                                    className='input-container',
+                                                    children=[
+                                                        html.Label("Min", style={'fontSize': '14px', 'marginRight': '5px'}),
+                                                        dcc.Input(
+                                                            id='diametro-min',
+                                                            type='number',
+                                                            placeholder=f"{plot_df['diametro'].min():.1f}",
+                                                            value=round(plot_df['diametro'].min(), 1),
+                                                            step="any",
+                                                            style={'width': '80px'}
+                                                        ),
+                                                        html.Label("Max:", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
+                                                        dcc.Input(
+                                                            id='diametro-max',
+                                                            type='number',
+                                                            placeholder=f"{plot_df['diametro'].max():.1f}",
+                                                            value=round(plot_df['diametro'].max(), 1),
+                                                            step="any",
+                                                            style={'width': '80px'}
+                                                        ),
+                                                    ],
                                                 ),
                                             ]
                                         ),
 
                                         html.Label('Opções de Agrupamento', style={'fontWeight': 'bold', 'marginTop': '20px'}),
                                         dcc.Dropdown(
-                                            id='single-option-dropdown',
+                                            id='cluster-options',
                                             options=[
                                                 {'label': 'Categoria ViT', 'value': 'cluster_1'},
                                                 {'label': 'Povo ViT', 'value': 'cluster_2'},
@@ -231,7 +327,8 @@ app.layout = html.Div([
                                             multi=False,
                                             placeholder='Selecione uma opção de agrupamento',
                                             value='cluster_1',
-                                            clearable=False
+                                            clearable=False,
+                                            className='cluster-dropup'
                                         ),
 
                                         dcc.Store(id='zoom-update')
@@ -552,8 +649,15 @@ def fade_in_update(fade_in, fig):
     Output('povo-filter', 'value'),
     Output('estado-filter', 'value'),
     Output('materia-filter', 'value'),
-    Output('comprimento-slider', 'value'),
-    Input('single-option-dropdown', 'value')
+    Output('comprimento-min', 'value'),
+    Output('comprimento-max', 'value'),
+    Output('largura-min', 'value'),
+    Output('largura-max', 'value'),
+    Output('altura-min', 'value'),
+    Output('altura-max', 'value'),
+    Output('diametro-min', 'value'),
+    Output('diametro-max', 'value'),
+    Input('cluster-options', 'value')
 )
 def update_cluster(selected_option):
     # Reseting visibility
@@ -569,7 +673,7 @@ def update_cluster(selected_option):
     elif selected_option == 'cluster_3':
         update_cluster_selection(plot_df, tipo_materia_prima_baseline_df)
 
-    return True, 'all', 'all', 'all', 'all', [plot_df['comprimento'].min(), np.quantile(plot_df['comprimento'], 0.85)]
+    return True, 'all', 'all', 'all', 'all', plot_df['comprimento'].min(), plot_df['comprimento'].max(), plot_df['largura'].min(), plot_df['largura'].max(), plot_df['altura'].min(), plot_df['altura'].max(), plot_df['diametro'].min(), plot_df['diametro'].max()
 
 # Callback for filtering data
 @app.callback(
@@ -578,11 +682,17 @@ def update_cluster(selected_option):
     Input('povo-filter', 'value'),
     Input('estado-filter', 'value'),
     Input('materia-filter', 'value'),
-    Input('enable-dimensoes', 'value'),
-    Input('comprimento-slider', 'value'),
-    State('single-option-dropdown', 'value')
+    Input('comprimento-min', 'value'),
+    Input('comprimento-max', 'value'),
+    Input('largura-min', 'value'),
+    Input('largura-max', 'value'),
+    Input('altura-min', 'value'),
+    Input('altura-max', 'value'),
+    Input('diametro-min', 'value'),
+    Input('diametro-max', 'value'),
+    State('cluster-options', 'value')
 )
-def filter_data(selected_categoria, selected_povo, selected_estado, selected_materia, enable_dimensoes, range_comprimento, grouping):
+def filter_data(selected_categoria, selected_povo, selected_estado, selected_materia, comprimento_min, comprimento_max, largura_min, largura_max, altura_min, altura_max, diametro_min, diametro_max, grouping):
     # Preserving visibility indices
     if grouping == 'cluster_1':
         filtered_df = plot_df[plot_df['ind_index'].isin(povo_vit_df.index)].copy()
@@ -604,8 +714,20 @@ def filter_data(selected_categoria, selected_povo, selected_estado, selected_mat
     if selected_materia != 'all':
         filtered_df = filtered_df[filtered_df['tipo_materia_prima'].str.contains(selected_materia, na=False)]
 
-    if len(enable_dimensoes) > 0:
-        filtered_df = filtered_df[(filtered_df['comprimento'] >= range_comprimento[0]) & (filtered_df['comprimento'] <= range_comprimento[1])]
+    # Filtering by dimensions
+    comprimento_min = round(comprimento_min, 1) if comprimento_min is not None else 0.0
+    comprimento_max = round(comprimento_max, 1) if comprimento_max is not None else 0.0
+    largura_min = round(largura_min, 1) if largura_min is not None else 0.0
+    largura_max = round(largura_max, 1) if largura_max is not None else 0.0
+    altura_min = round(altura_min, 1) if altura_min is not None else 0.0
+    altura_max = round(altura_max, 1) if altura_max is not None else 0.0
+    diametro_min = round(diametro_min, 1) if diametro_min is not None else 0.0
+    diametro_max = round(diametro_max, 1) if diametro_max is not None else 0.0
+    
+    filtered_df = filtered_df[(filtered_df['comprimento'] >= comprimento_min) & (filtered_df['comprimento'] <= comprimento_max)]
+    filtered_df = filtered_df[(filtered_df['largura'] >= largura_min) & (filtered_df['largura'] <= largura_max)]
+    filtered_df = filtered_df[(filtered_df['altura'] >= altura_min) & (filtered_df['altura'] <= altura_max)]
+    filtered_df = filtered_df[(filtered_df['diametro'] >= diametro_min) & (filtered_df['diametro'] <= diametro_max)]
 
     # Updating dataframe visibility
     plot_df['visibility'] = plot_df.index.isin(filtered_df.index)
