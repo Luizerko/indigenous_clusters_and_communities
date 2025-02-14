@@ -10,7 +10,7 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 import numpy as np
 
-from utils import brazil_states_dict, norm_factor, empty_figure, empty_figure_legend, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map, update_cluster_selection, get_dropdown_options
+from utils import brazil_states_dict, norm_factor, empty_figure, empty_figure_legend, timeline_figure, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map, update_cluster_selection, get_dropdown_options
 
 from sklearn.datasets import make_blobs
 
@@ -125,7 +125,7 @@ app.layout = html.Div([
                 html.Div(
                     className='tool-container',
                     children=[
-                        html.H1("Agrupamentos do Acervo", className='graph-title'),
+                        # html.H1("Agrupamentos do Acervo", className='graph-title'),
                         html.Div(
                             className='sidebar-graph',
                             children=[
@@ -213,16 +213,14 @@ app.layout = html.Div([
                                                             placeholder=f"{plot_df['comprimento'].min():.1f}",
                                                             value=round(plot_df['comprimento'].min(), 1),
                                                             step="any",
-                                                            style={'width': '80px'}
                                                         ),
-                                                        html.Label("Max:", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
+                                                        html.Label("Max", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
                                                         dcc.Input(
                                                             id='comprimento-max',
                                                             type='number',
                                                             placeholder=f"{plot_df['comprimento'].max():.1f}",
                                                             value=round(plot_df['comprimento'].max(), 1),
                                                             step="any",
-                                                            style={'width': '80px'}
                                                         ),
                                                     ],
                                                 ),
@@ -242,16 +240,14 @@ app.layout = html.Div([
                                                             placeholder=f"{plot_df['largura'].min():.1f}",
                                                             value=round(plot_df['largura'].min(), 1),
                                                             step="any",
-                                                            style={'width': '80px'}
                                                         ),
-                                                        html.Label("Max:", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
+                                                        html.Label("Max", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
                                                         dcc.Input(
                                                             id='largura-max',
                                                             type='number',
                                                             placeholder=f"{plot_df['largura'].max():.1f}",
                                                             value=round(plot_df['largura'].max(), 1),
                                                             step="any",
-                                                            style={'width': '80px'}
                                                         ),
                                                     ],
                                                 ),
@@ -271,16 +267,14 @@ app.layout = html.Div([
                                                             placeholder=f"{plot_df['altura'].min():.1f}",
                                                             value=round(plot_df['altura'].min(), 1),
                                                             step="any",
-                                                            style={'width': '80px'}
                                                         ),
-                                                        html.Label("Max:", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
+                                                        html.Label("Max", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
                                                         dcc.Input(
                                                             id='altura-max',
                                                             type='number',
                                                             placeholder=f"{plot_df['altura'].max():.1f}",
                                                             value=round(plot_df['altura'].max(), 1),
                                                             step="any",
-                                                            style={'width': '80px'}
                                                         ),
                                                     ],
                                                 ),
@@ -300,16 +294,14 @@ app.layout = html.Div([
                                                             placeholder=f"{plot_df['diametro'].min():.1f}",
                                                             value=round(plot_df['diametro'].min(), 1),
                                                             step="any",
-                                                            style={'width': '80px'}
                                                         ),
-                                                        html.Label("Max:", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
+                                                        html.Label("Max", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
                                                         dcc.Input(
                                                             id='diametro-max',
                                                             type='number',
                                                             placeholder=f"{plot_df['diametro'].max():.1f}",
                                                             value=round(plot_df['diametro'].max(), 1),
                                                             step="any",
-                                                            style={'width': '80px'}
                                                         ),
                                                     ],
                                                 ),
@@ -358,7 +350,7 @@ app.layout = html.Div([
                 html.Div(
                     className='timeline-container',
                     children=[
-                        dcc.Graph(id='timeline', config=config, figure=empty_figure()),
+                        dcc.Graph(id='timeline', config=config, figure=timeline_figure(ind_df['ano_de_aquisicao'].dropna().unique().astype(np.int16))),
                     ]
                 ),
             ],

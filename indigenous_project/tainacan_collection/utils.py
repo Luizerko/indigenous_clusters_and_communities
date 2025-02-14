@@ -5,7 +5,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from PIL import Image
 import ast
-import requests
+import math
 
 import pandas as pd
 import numpy as np
@@ -49,9 +49,6 @@ def fig_update_layout(fig, df_len, x_range=(-norm_factor,norm_factor), y_range=(
         # Mouse default configuration (panning instead of zooming)
         dragmode='pan',
         hoverdistance = 6,
-
-        # # Animating graphs
-        # transition=dict(duration=500, easing='sin-in-out')
     )
 
     # Hide axes' labels and ticks
@@ -121,8 +118,149 @@ def empty_figure_legend(color_df, x_range=(-norm_factor,norm_factor), y_range=(-
 
     return fig
 
-# Create timeline figure
+# Utility function to create a downward half-circle arc between two rows for the timeline
+def make_turn_arc(x0, y0, side="right", radius=0.5, steps=20):
+    if side == 'right':
+        start_angle = math.pi / 2
+        end_angle = -math.pi / 2
+    else:
+        start_angle = math.pi / 2
+        end_angle = 3 * math.pi / 2
 
+    cx = x0
+    cy = y0 - 0.5
+    angles = np.linspace(start_angle, end_angle, steps)
+    arc_pts = []
+    for angle in angles:
+        arc_x = cx + radius * math.cos(angle)
+        arc_y = cy + radius * math.sin(angle)
+        arc_pts.append((arc_x, arc_y))
+
+    arc_pts[0] = (x0, y0)
+    arc_pts[-1] = (x0, y0 - 1)
+    return arc_pts
+
+# Create timeline figure with clickable markers for years 
+def timeline_figure(years):
+
+    # Computing zigzag coordinates
+    years = -np.sort(-years)
+    cols = 8
+    n_years = len(years)
+    n_rows = math.ceil(n_years/cols)
+    line_points = []
+    year_points = []
+    annotations = []
+    idx = 0
+    direction = -1
+    for row in range(n_rows):
+        row_years = min(cols, n_years-row*cols)
+        col_indices = range(row_years)
+        for c in col_indices:
+            if direction == 1:
+                x = c+0.2
+            else:
+                x = cols-1-c-0.2
+            y = -row
+            year = years[idx]
+            line_points.append((x, y))
+            year_points.append((x, y, year))
+
+            # Add annotation for the year under the marker
+            annotations.append(dict(
+                x=x,
+                y=y+0.2,
+                text=str(year),
+                showarrow=False,
+                font=dict(weight='bold'),
+                xanchor='center',
+                yanchor='top'
+            ))
+
+            idx += 1
+
+        if row < n_rows - 1:
+            end_x = (cols-1) if direction == 1 else 0
+            end_y = -row
+            side = 'right' if direction == 1 else 'left'
+            arc_pts = make_turn_arc(end_x, end_y, side, 0.5, 20)
+
+            line_points.extend(arc_pts[1:])
+
+        direction *= -1
+
+    # Separate out x, y from line_points
+    if line_points:
+        xs_line, ys_line = zip(*line_points)
+    else:
+        xs_line, ys_line = [], []
+
+    # Separate out x, y, text from year_points
+    if year_points:
+        xs_year, ys_year, txt_years = zip(*year_points)
+    else:
+        xs_year, ys_year, txt_years = [], [], []
+
+    # Plot the timeline as a continuous zigzagging line
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=xs_line,
+        y=ys_line,
+        mode='lines',
+        line=dict(color='#062a57', width=4),
+        hoverinfo='none',
+        name='timeline'
+    ))
+
+    fig.add_trace(
+        go.Scatter(
+            x=xs_year,
+            y=ys_year,
+            mode='markers',
+            marker=dict(size=30, color='#062a57', line=dict(width=6, color="#f2f2f2")),
+            text=[str(y) for y in txt_years],
+            hoverinfo='none',
+            name='years'
+        )
+    )
+
+
+    # Updating figure layout
+    fig.update_layout(
+        plot_bgcolor="#f2f2f2",
+        paper_bgcolor="#f2f2f2",
+        
+        font=dict(family="Roboto, sans-serif", size=16, color="black"),
+        
+        title_x=0.5,
+        margin=dict(l=0, r=0, t=0, b=0),
+        
+        showlegend=False,
+
+        xaxis_title=None,
+        yaxis_title=None,
+        coloraxis_showscale=False,
+
+        dragmode=None,
+        hoverdistance = 5,
+
+        annotations=annotations
+    )
+ 
+    fig.update_xaxes(
+        range=[-1, 8],
+        fixedrange=True,
+        visible=False
+    )
+
+    fig.update_yaxes(
+        range=[-9, 1],
+        fixedrange=True,
+        visible=False,
+        autorange='reversed'
+    )
+
+    return fig
 
 # Creating the map of Brazil and plotting markers on states
 def brazil_figure():

@@ -137,6 +137,18 @@ def filter_image_data_distribution(df, filtered_categories_names, transform, thr
     labels_minority, minority_name_to_num, _ = preparing_image_labels(minority_ind_df, column_name)
     labels_majority, majority_name_to_num, _ = preparing_image_labels(undersampled_majority_ind_df, column_name, len(minority_classes))
     
+    # Create val dataset
+    val_minority = random.sample(list(labels_minority), int(0.1*len(labels_minority)))
+    val_majority = random.sample(list(labels_majority), int(0.1*len(labels_majority)))
+    val_labels = {}
+    for key in val_minority:
+        val_labels[key] = labels_minority[key]
+        del labels_minority[key]
+    for key in val_majority:
+        val_labels[key] = labels_majority[key]
+        del labels_majority[key]
+    val_dataset = ImageDataset(val_labels, transform=transform, augment=False)
+
     # Create test dataset
     test_minority = random.sample(list(labels_minority), int(0.1*len(labels_minority)))
     test_majority = random.sample(list(labels_majority), int(0.1*len(labels_majority)))
@@ -158,7 +170,7 @@ def filter_image_data_distribution(df, filtered_categories_names, transform, thr
 
     augmented_dataset = ConcatDataset(minority_datasets + majority_datasets)
 
-    return minority_classes, majority_classes, labels_minority, labels_majority, test_labels, augmented_dataset, test_dataset
+    return minority_classes, majority_classes, labels_minority, labels_majority, val_labels, test_labels, augmented_dataset, val_dataset, test_dataset
 
 # Plotting old and new class distributions
 def plot_class_distributions(categories, filtered_categories, labels_minority, labels_majority, threshold_multiplier=2, column_name='povo'):
@@ -262,7 +274,7 @@ def train_loop(model, num_classes, train_dataloader, val_dataloader, device, cri
     best_val_acc = 0
     patience = max(3, int(0.1*epochs))
     patience_counter = 0
-    tolerance = 0.005
+    tolerance = 0.01
 
     acc_metric = Accuracy(task="multiclass", num_classes=num_classes).to(device)
     prec_metric = Precision(task="multiclass", num_classes=num_classes, \
@@ -338,10 +350,14 @@ def train_loop(model, num_classes, train_dataloader, val_dataloader, device, cri
     return losses, accuracies, class_precisions, class_recalls
 
 # Function for setting-up training, executing training and then running tests
-def execute_train_test(dataset, test_dataset, device, batch_size, epochs, num_classes, model, criterion, opt, model_name, column_name='povo'):
+def execute_train_test(dataset, test_dataset, device, batch_size, epochs, num_classes, model, criterion, opt, model_name, column_name='povo', val_dataset=None):
     # Creating training, validation and test datasets
-    train_size = int(0.85*len(dataset))
-    train_dataloader, val_dataloader = get_train_val_split(dataset, train_size, batch_size)
+    if val_dataset is None:
+        train_size = int(0.85*len(dataset))
+        train_dataloader, val_dataloader = get_train_val_split(dataset, train_size, batch_size)
+    else:
+        train_dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
+        val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
     # Training set-up and execution
