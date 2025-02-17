@@ -67,6 +67,7 @@ class ImageDataset(Dataset):
 
         if self.transform:
             image = self.transform(image)
+
         label = self.labels.get(image_path, -1)
         return image, label, idx
 
@@ -227,20 +228,23 @@ def get_train_val_split(dataset, train_size, batch_size=32):
     return train_dataloader, val_dataloader
 
 # Function to iterating over data to get projections
-def get_vit_embeddings(model, dataloader, device, fine_tuned=False):
+def get_embeddings(model, dataloader, device, fine_tuned=False, model_name='vit'):
     image_embeddings = []
     image_indices = []
     model.eval()
-    for batch_images, _, batch_indices in tqdm(dataloader, desc="Computing embeddings"):
+    for batch_images, _, batch_indices in tqdm(dataloader, desc="Computing embeddings", leave=True, total=len(dataloader), ncols=100):
         batch_images = batch_images.to(device)
         with torch.no_grad():
             # Soft "removing" classifier head, if fine-tuned model
             if fine_tuned:
-                outputs = model.vit(batch_images)
+                if model_name == 'vit':
+                    outputs = model.vit(batch_images)
+                elif model_name == 'dino':
+                    outputs = model.dino(batch_images)
             else:
                 outputs = model(batch_images)
         
-        # Do I get the last_hidden_state of CLS token or the pooler_output?
+        # Getting embeddings from last_hidden_state of CLS token (maybe pooler_output?)
         embeddings = outputs['last_hidden_state'][:, 0, :]
         # embeddings = outputs['pooler_output']
         image_embeddings.append(embeddings.cpu())
@@ -282,7 +286,7 @@ def train_loop(model, num_classes, train_dataloader, val_dataloader, device, cri
     rec_metric = Recall(task="multiclass", num_classes=num_classes, \
                         average=None).to(device)
     
-    for epoch in tqdm(range(epochs), desc=f"Training model", leave=True):
+    for epoch in tqdm(range(epochs), desc=f"Training model", leave=True, total=epochs, ncols=100):
         model.train()
         epoch_loss = .0
         for batch_images, batch_labels, _ in train_dataloader:
@@ -363,20 +367,20 @@ def execute_train_test(dataset, test_dataset, device, batch_size, epochs, num_cl
     # Training set-up and execution
     losses, accuracies, class_precisions, class_recalls = train_loop(model, num_classes, train_dataloader, val_dataloader, device, criterion, opt, model_name, epochs)
     plot_train_curves(losses, accuracies, f"ViT Fine-Tuned on '{column_name}'")
-    print(f'Per class precision: {[cp[-1] for cp in class_precisions]}\n')
-    print(f'Per class recall: {[cr[-1] for cr in class_recalls]}\n')
+    print(f'Average per class precision: {np.mean([cp[-1] for cp in class_precisions]):.4f}\n')
+    print(f'Average per class recall: {np.mean([cr[-1] for cr in class_recalls]):.4f}\n')
 
     # Evaluating model on test dataset
     test_acc, test_prec, test_rec = evaluate_model(model, model_name, num_classes, test_dataloader, device)
     print(f'Test accuracy: {test_acc}\n')
-    print(f'Test per class precisions: {test_prec}\n')
-    print(f'Test per class recalls: {test_rec}\n')
+    print(f'Test average per class precisions: {np.mean(test_prec):.4f}\n')
+    print(f'Test average per class recalls: {np.mean(test_rec):.4f}\n')
 
 # Computing embeddings for fine-tuned classifier
 def compute_classifier_embeddings(dataloader, model, device):
     # Computing image embeddings
     model.classifier = nn.Identity()
-    image_embeddings, image_indices = get_vit_embeddings(model, dataloader, device, True)
+    image_embeddings, image_indices = get_embeddings(model, dataloader, device, True)
     image_indices = np.concatenate(image_indices, axis=0)
     image_embeddings = np.concatenate(image_embeddings, axis=0)
 
@@ -438,6 +442,8 @@ def evaluate_model(model, model_name, num_classes, test_dataloader, device):
         test_rec = rec_metric(all_preds, all_labels).tolist()
 
     return test_acc, test_prec, test_rec
+
+# Comparing precision and recall on specific classes
 
 # Function to visualize clusters
 def visualizing_clusters(df, projections, image_indices, column_name='povo', projection_name='UMAP'):

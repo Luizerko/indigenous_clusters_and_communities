@@ -158,9 +158,9 @@ def timeline_figure(years):
         col_indices = range(row_years)
         for c in col_indices:
             if direction == 1:
-                x = c+0.2
+                x = c-0.2
             else:
-                x = cols-1-c-0.2
+                x = cols-1-c+0.2
             y = -row
             year = years[idx]
             line_points.append((x, y))

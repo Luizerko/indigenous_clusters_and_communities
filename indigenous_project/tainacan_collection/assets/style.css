@@ -23,6 +23,38 @@ body {
     height: 8vh;
 }
 
+/* Adding icon to tab */
+#agrupamentos::after {
+    content: "ℹ️";
+    font-size: 16px;
+    margin-left: 6px;
+    cursor: pointer;
+}
+
+/* Styling tab tooltip */
+.tab-tooltip {
+    max-width: 500px !important;
+    white-space: normal !important;
+    font-size: 16px !important;
+    text-align: center;
+    border-radius: 5px;
+}
+
+/* Arrow styling */
+.tab-tooltip .arrow {
+    margin-top: -100px !important;
+}
+
+
+/* Expand invisible span to be hoverable */
+#info-hover-agrupamentos {
+    position: absolute;
+    right: 10px;  /* Adjust positioning */
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
 /* Class of all the tabs */
 .tab-parent {
     width: 100%;

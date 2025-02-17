@@ -120,8 +120,18 @@ app.layout = html.Div([
     dcc.Tabs([
         dcc.Tab(
             label='Agrupamentos do Acervo',
+            id='agrupamentos',
             className='tab-option',
             children=[
+                dbc.Tooltip(
+                    "Essa aba permite que o usuário explore diferentes agrupamentos nos dados do acervo, baseados tanto em similaridade imagética dos itens como em semelhanças textuais em suas descrições. Além disso, o usuário pode filtrar os dados a serem visualizados como bem entender, fazendo da página basicamente uma versão interativa do Tainacan",
+                    target="agrupamentos",
+                    trigger='click',
+                    id="tooltip-info-agrupamentos",
+                    placement="bottom",
+                    is_open=False,
+                    className='tab-tooltip'
+                ),
                 html.Div(
                     className='tool-container',
                     children=[
@@ -375,7 +385,7 @@ app.layout = html.Div([
 ], className='base-background')
 
 ################## CALLBCAKS ##################
-# Callback for hovering
+# Callback for hovering on 'Agrupamentos do Acervo'
 @app.callback(
     Output("graph-tooltip", "show"),
     Output("graph-tooltip", "bbox"),
@@ -461,7 +471,7 @@ def display_hover(hover_data, fig):
 
     return True, bbox, children, fig
 
-# Callback for clicking
+# Callback for clicking on 'Agrupamentos do Acervo'
 @app.callback(
     Output("url", "href"),
     Input("cluster-plot", "clickData"),
