@@ -392,7 +392,7 @@ def collapse_cluster_points(points, x_range=(-norm_factor,norm_factor), y_range=
     # Extracting labels for each point from clusters
     labels = {}
     for i, (cluster, min_distance) in enumerate(zip(clusters, min_distances)):
-        if len(cluster) < 5 and min_distance > threshold/8:
+        if len(cluster) < 5 and min_distance > threshold/2:
             for point_index in cluster:
                 labels[point_index] = -1
         else:

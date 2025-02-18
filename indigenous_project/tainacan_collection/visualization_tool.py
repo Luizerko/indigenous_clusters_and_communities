@@ -54,6 +54,8 @@ plot_df['estado_de_origem'] = ind_df['estado_de_origem'].values
 plot_df['thumbnail'] = ind_df['thumbnail'].values
 plot_df.fillna({'thumbnail': 'https://tainacan.museudoindio.gov.br/wp-content/plugins/tainacan/assets/images/placeholder_square.png'}, inplace=True)
 
+plot_df['descricao'] = ind_df['descricao'].values
+
 # Creating extra filters
 plot_df.set_index('ind_index', inplace=True)
 
@@ -105,7 +107,8 @@ plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indic
 plot_df.reset_index(inplace=True)
 
 # Dash app setup. DashPRoxy used for multiple callbacks with the same output, but made the app a bit buggy (multiple triggers of the same callback in a row)
-app = DashProxy(prevent_initial_callbacks=True, transforms=[MultiplexerTransform()], external_stylesheets=[dbc.themes.BOOTSTRAP])
+external_stylesheets=[dbc.themes.BOOTSTRAP, "https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"]
+app = DashProxy(prevent_initial_callbacks=True, transforms=[MultiplexerTransform()], external_stylesheets=external_stylesheets)
 
 # Dash graph configurations
 config = {
@@ -120,22 +123,21 @@ app.layout = html.Div([
     dcc.Tabs([
         dcc.Tab(
             label='Agrupamentos do Acervo',
-            id='agrupamentos',
+            id='aba-agrupamentos',
             className='tab-option',
             children=[
                 dbc.Tooltip(
                     "Essa aba permite que o usuário explore diferentes agrupamentos nos dados do acervo, baseados tanto em similaridade imagética dos itens como em semelhanças textuais em suas descrições. Além disso, o usuário pode filtrar os dados a serem visualizados como bem entender, fazendo da página basicamente uma versão interativa do Tainacan",
-                    target="agrupamentos",
+                    target="aba-agrupamentos",
                     trigger='click',
                     id="tooltip-info-agrupamentos",
                     placement="bottom",
                     is_open=False,
-                    className='tab-tooltip'
+                    className='tab-tooltip',
                 ),
                 html.Div(
                     className='tool-container',
                     children=[
-                        # html.H1("Agrupamentos do Acervo", className='graph-title'),
                         html.Div(
                             className='sidebar-graph',
                             children=[
@@ -355,8 +357,18 @@ app.layout = html.Div([
         ),
         dcc.Tab(
             label='Coleção no Tempo',
+            id='aba-timeline',
             className='tab-option',
             children=[
+                dbc.Tooltip(
+                    "Essa aba permite que o usuário navegue pela coleção através de sua linha do tempo, selecionando itens por seu ano de aquisição pelo museu.",
+                    target="aba-timeline",
+                    trigger='click',
+                    id="tooltip-info-timeline",
+                    placement="bottom",
+                    is_open=False,
+                    className='tab-tooltip',
+                ),
                 html.Div(
                     className='timeline-container',
                     children=[
@@ -367,8 +379,18 @@ app.layout = html.Div([
         ),
         dcc.Tab(
             label='Coleção no Brasil',
+            id='aba-mapa',
             className='tab-option',
             children=[
+                dbc.Tooltip(
+                    "Essa aba permite que o usuário estude a coleção geograficamente, entendendo a regionalidade dos povos e localizando os itens no mapa do Brasil.",
+                    target="aba-mapa",
+                    trigger='click',
+                    id="tooltip-info-mapa",
+                    placement="bottom",
+                    is_open=False,
+                    className='tab-tooltip',
+                ),
                 html.Div(
                     className='map-container',
                     children=[
@@ -751,6 +773,7 @@ def display_state_items(clickData, is_open):
     state_symb = brazil_states_dict[state_name]
 
     state_items = plot_df[plot_df['estado_de_origem'].apply(lambda x: state_symb in x if pd.notna(x) else False)]
+    state_items = state_items.sort_values(by='nome_do_item')
 
     items_grid = html.Div([
         html.Div([
@@ -758,8 +781,20 @@ def display_state_items(clickData, is_open):
             html.A([
                 row['nome_do_item'].title(), html.Br(),
                 f"{row['povo'].title()}, {int(row['ano_de_aquisicao'])}"
-            ], href=row['url'], target="_blank", 
-                style={'font-weight': 'bold', 'text-decoration': 'none', 'color': '#062a57', 'text-align': 'center', 'font-size': '16px'})
+            ], href=row['url'], target="_blank", style={'font-weight': 'bold', 'text-decoration': 'none', 'color': '#062a57', 'text-align': 'center', 'font-size': '16px'}),
+            dbc.Button(
+                html.I(className="bi bi-info-circle-fill"),
+                id={'type': 'info-icon', 'index': i},
+                color="link",
+                style={'font-size': '18px', 'cursor': 'pointer', 'padding': '5px', 'color': '#062a57'}
+            ),
+            dbc.Popover(
+                dbc.PopoverBody(row['descricao'].capitalize()),
+                id={'type': 'popover', 'index': i},
+                target={'type': 'info-icon', 'index': i},
+                trigger="click",
+                placement="right"
+            )
         ], style={
             'display': 'flex', 
             'flex-direction': 'column', 
@@ -771,7 +806,7 @@ def display_state_items(clickData, is_open):
             'border-radius': '8px', 
             'background-color': '#f9f9f9'
         })
-        for _, row in state_items.iterrows()
+        for i, (_, row) in enumerate(state_items.iterrows())
     ], style={
         'display': 'grid',
         'grid-template-columns': 'repeat(3, 1fr)',

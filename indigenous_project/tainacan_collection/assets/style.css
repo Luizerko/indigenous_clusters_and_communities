@@ -23,26 +23,64 @@ body {
     height: 8vh;
 }
 
-/* Adding icon to tab */
-#agrupamentos::after {
-    content: "ℹ️";
-    font-size: 16px;
+/* Adding icon to tab Agrupamentos */
+#aba-agrupamentos::after {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 18px;
     margin-left: 6px;
     cursor: pointer;
+    background-image: url("https://cdn.jsdelivr.net/npm/bootstrap-icons/icons/info-circle-fill.svg");
+    background-size: contain;
+    background-repeat: no-repeat;
+    filter: invert(11%) sepia(62%) saturate(2398%) hue-rotate(197deg) brightness(97%) contrast(94%);
 }
 
-/* Styling tab tooltip */
-.tab-tooltip {
-    max-width: 500px !important;
+/* Adding icon to tab Timeline */
+#aba-timeline::after {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    margin-left: 6px;
+    cursor: pointer;
+    background-image: url("https://cdn.jsdelivr.net/npm/bootstrap-icons/icons/info-circle-fill.svg");
+    background-size: contain;
+    background-repeat: no-repeat;
+    filter: invert(11%) sepia(62%) saturate(2398%) hue-rotate(197deg) brightness(97%) contrast(94%);
+}
+
+/* Adding icon to tab Mapa */
+#aba-mapa::after {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    margin-left: 6px;
+    cursor: pointer;
+    background-image: url("https://cdn.jsdelivr.net/npm/bootstrap-icons/icons/info-circle-fill.svg");
+    background-size: contain;
+    background-repeat: no-repeat;
+    filter: invert(11%) sepia(62%) saturate(2398%) hue-rotate(197deg) brightness(97%) contrast(94%);
+}
+
+/* Styling tab tooltips */
+.tooltip {
+    top: -3vh !important;
+    left: 12vh !important;
+}
+
+.tooltip-inner {
+    max-width: 300px !important;
     white-space: normal !important;
-    font-size: 16px !important;
-    text-align: center;
+    font-size: 14px !important;
+    text-align: justify;
     border-radius: 5px;
 }
 
-/* Arrow styling */
-.tab-tooltip .arrow {
-    margin-top: -100px !important;
+.tooltip-arrow {
+    display: none !important;
 }
 
 
@@ -91,12 +129,6 @@ body {
     border-radius: 10px;
     padding-top: 1.5%;
 }
-
-/* Title of the graph */
-/* .graph-title {
-    text-align: center;
-    color: #062a57;
-} */
 
 /* Div for the sidebar and graph */
 .sidebar-graph {

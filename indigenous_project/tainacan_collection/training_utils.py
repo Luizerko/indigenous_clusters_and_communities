@@ -367,14 +367,17 @@ def execute_train_test(dataset, test_dataset, device, batch_size, epochs, num_cl
     # Training set-up and execution
     losses, accuracies, class_precisions, class_recalls = train_loop(model, num_classes, train_dataloader, val_dataloader, device, criterion, opt, model_name, epochs)
     plot_train_curves(losses, accuracies, f"ViT Fine-Tuned on '{column_name}'")
-    print(f'Average per class precision: {np.mean([cp[-1] for cp in class_precisions]):.4f}\n')
-    print(f'Average per class recall: {np.mean([cr[-1] for cr in class_recalls]):.4f}\n')
+    print(f'Validation accuracy: {accuracies[-1]}')
+    print(f'Validation average per class precision: {np.mean([cp[-1] for cp in class_precisions]):.4f}')
+    print(f'Validation average per class recall: {np.mean([cr[-1] for cr in class_recalls]):.4f}\n')
 
     # Evaluating model on test dataset
     test_acc, test_prec, test_rec = evaluate_model(model, model_name, num_classes, test_dataloader, device)
-    print(f'Test accuracy: {test_acc}\n')
-    print(f'Test average per class precisions: {np.mean(test_prec):.4f}\n')
-    print(f'Test average per class recalls: {np.mean(test_rec):.4f}\n')
+    print(f'Test accuracy: {test_acc}')
+    print(f'Test average per class precision: {np.mean(test_prec):.4f}')
+    print(f'Test average per class recall: {np.mean(test_rec):.4f}\n')
+
+    return test_prec, test_rec
 
 # Computing embeddings for fine-tuned classifier
 def compute_classifier_embeddings(dataloader, model, device):
@@ -444,6 +447,13 @@ def evaluate_model(model, model_name, num_classes, test_dataloader, device):
     return test_acc, test_prec, test_rec
 
 # Comparing precision and recall on specific classes
+def prec_rec_on_selected_classes(categories, filtered_categories, precisions, recalls):
+    all_classes = np.array(list(categories.keys()))
+    filtered_classes = np.array(list(filtered_categories.keys()))
+    indices = np.where(np.isin(all_classes, filtered_classes))[0]
+
+    print(f'Test average precision on filtered classes: {np.mean(np.array(precisions)[indices])}')
+    print(f'Test average recall on filtered classes: {np.mean(np.array(recalls)[indices])}')
 
 # Function to visualize clusters
 def visualizing_clusters(df, projections, image_indices, column_name='povo', projection_name='UMAP'):
