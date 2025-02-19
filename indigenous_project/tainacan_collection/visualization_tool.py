@@ -10,7 +10,8 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 import numpy as np
 
-from utils import brazil_states_dict, norm_factor, empty_figure, empty_figure_legend, timeline_figure, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map, update_cluster_selection, get_dropdown_options
+# from utils import brazil_states_dict, norm_factor, empty_figure, empty_figure_legend, timeline_figure, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map, update_cluster_selection, get_dropdown_options
+from utils import *
 
 from sklearn.datasets import make_blobs
 
@@ -47,7 +48,8 @@ plot_df.fillna({'povo': '----'}, inplace=True)
 plot_df['categoria'] = ind_df['categoria'].values
 
 plot_df['ano_de_aquisicao'] = ind_df['ano_de_aquisicao'].values
-plot_df.fillna({'ano_de_aquisicao': '----'}, inplace=True)
+plot_df.fillna({'ano_de_aquisicao': '0'}, inplace=True)
+plot_df['ano_de_aquisicao'] = plot_df['ano_de_aquisicao'].astype(int)
 
 plot_df['estado_de_origem'] = ind_df['estado_de_origem'].values
 
@@ -55,6 +57,7 @@ plot_df['thumbnail'] = ind_df['thumbnail'].values
 plot_df.fillna({'thumbnail': 'https://tainacan.museudoindio.gov.br/wp-content/plugins/tainacan/assets/images/placeholder_square.png'}, inplace=True)
 
 plot_df['descricao'] = ind_df['descricao'].values
+plot_df.fillna({'descricao': 'Item sem descrição.'}, inplace=True)
 
 # Creating extra filters
 plot_df.set_index('ind_index', inplace=True)
@@ -212,7 +215,34 @@ app.layout = html.Div([
                                             ]
                                         ),
                                         html.Div(
-                                            className='filter-dimensoes',
+                                            className='filter-range',
+                                            children=[
+                                                html.Label("Ano de Aquisição:", style={'fontWeight': 'bold', 'fontSize': '16px'}),
+                                                html.Div(
+                                                    className='input-container',
+                                                    children=[
+                                                        html.Label("Min", style={'fontSize': '14px', 'marginRight': '5px'}),
+                                                        dcc.Input(
+                                                            id='ano-min',
+                                                            type='number',
+                                                            placeholder=f"{plot_df['ano_de_aquisicao'].min()}",
+                                                            value=plot_df['ano_de_aquisicao'].min(),
+                                                            step=1,
+                                                        ),
+                                                        html.Label("Max", style={'fontSize': '14px', 'marginLeft': '20px', 'marginRight': '5px'}),
+                                                        dcc.Input(
+                                                            id='ano-max',
+                                                            type='number',
+                                                            placeholder=f"{plot_df['ano_de_aquisicao'].max()}",
+                                                            value=plot_df['ano_de_aquisicao'].max(),
+                                                            step=1,
+                                                        ),
+                                                    ],
+                                                ),
+                                            ]
+                                        ),
+                                        html.Div(
+                                            className='filter-range',
                                             children=[
                                                 html.Label("Comprimento (cm):", style={'fontWeight': 'bold', 'fontSize': '16px'}),
                                                 html.Div(
@@ -239,7 +269,7 @@ app.layout = html.Div([
                                             ]
                                         ),
                                         html.Div(
-                                            className='filter-dimensoes',
+                                            className='filter-range',
                                             children=[
                                                 html.Label("Largura (cm):", style={'fontWeight': 'bold', 'fontSize': '16px'}),
                                                 html.Div(
@@ -266,7 +296,7 @@ app.layout = html.Div([
                                             ]
                                         ),
                                         html.Div(
-                                            className='filter-dimensoes',
+                                            className='filter-range',
                                             children=[
                                                 html.Label("Altura (cm):", style={'fontWeight': 'bold', 'fontSize': '16px'}),
                                                 html.Div(
@@ -293,7 +323,7 @@ app.layout = html.Div([
                                             ]
                                         ),
                                         html.Div(
-                                            className='filter-dimensoes',
+                                            className='filter-range',
                                             children=[
                                                 html.Label("Diâmetro (cm):", style={'fontWeight': 'bold', 'fontSize': '16px'}),
                                                 html.Div(
@@ -464,10 +494,9 @@ def display_hover(hover_data, fig):
     img_src = df_row['image_path']
     nome_do_item = df_row['nome_do_item']
     povo = df_row['povo']
-    try:
-        ano_de_aquisicao = int(df_row['ano_de_aquisicao'])
-    except:
-        ano_de_aquisicao = df_row['ano_de_aquisicao']
+    ano_de_aquisicao = df_row['ano_de_aquisicao']
+    if ano_de_aquisicao == 0:
+        ano_de_aquisicao = '----'
 
     # Hovering box with image only for points with image
     if img_src == 'data/placeholder_square.png':
@@ -673,6 +702,8 @@ def fade_in_update(fade_in, fig):
     Output('povo-filter', 'value'),
     Output('estado-filter', 'value'),
     Output('materia-filter', 'value'),
+    Output('ano-min', 'value'),
+    Output('ano-max', 'value'),
     Output('comprimento-min', 'value'),
     Output('comprimento-max', 'value'),
     Output('largura-min', 'value'),
@@ -697,7 +728,7 @@ def update_cluster(selected_option):
     elif selected_option == 'cluster_3':
         update_cluster_selection(plot_df, tipo_materia_prima_baseline_df)
 
-    return True, 'all', 'all', 'all', 'all', plot_df['comprimento'].min(), plot_df['comprimento'].max(), plot_df['largura'].min(), plot_df['largura'].max(), plot_df['altura'].min(), plot_df['altura'].max(), plot_df['diametro'].min(), plot_df['diametro'].max()
+    return True, 'all', 'all', 'all', 'all', plot_df['ano_de_aquisicao'].min(), plot_df['ano_de_aquisicao'].max(), plot_df['comprimento'].min(), plot_df['comprimento'].max(), plot_df['largura'].min(), plot_df['largura'].max(), plot_df['altura'].min(), plot_df['altura'].max(), plot_df['diametro'].min(), plot_df['diametro'].max()
 
 # Callback for filtering data
 @app.callback(
@@ -706,6 +737,8 @@ def update_cluster(selected_option):
     Input('povo-filter', 'value'),
     Input('estado-filter', 'value'),
     Input('materia-filter', 'value'),
+    Input('ano-min', 'value'),
+    Input('ano-max', 'value'),
     Input('comprimento-min', 'value'),
     Input('comprimento-max', 'value'),
     Input('largura-min', 'value'),
@@ -716,7 +749,7 @@ def update_cluster(selected_option):
     Input('diametro-max', 'value'),
     State('cluster-options', 'value')
 )
-def filter_data(selected_categoria, selected_povo, selected_estado, selected_materia, comprimento_min, comprimento_max, largura_min, largura_max, altura_min, altura_max, diametro_min, diametro_max, grouping):
+def filter_data(selected_categoria, selected_povo, selected_estado, selected_materia, ano_min, ano_max, comprimento_min, comprimento_max, largura_min, largura_max, altura_min, altura_max, diametro_min, diametro_max, grouping):
     # Preserving visibility indices
     if grouping == 'cluster_1':
         filtered_df = plot_df[plot_df['ind_index'].isin(povo_vit_df.index)].copy()
@@ -737,6 +770,9 @@ def filter_data(selected_categoria, selected_povo, selected_estado, selected_mat
 
     if selected_materia != 'all':
         filtered_df = filtered_df[filtered_df['tipo_materia_prima'].str.contains(selected_materia, na=False)]
+
+    # Filtering by year of acquisition
+    filtered_df = filtered_df[(filtered_df['ano_de_aquisicao'] >= ano_min) & (filtered_df['ano_de_aquisicao'] <= ano_max)]
 
     # Filtering by dimensions
     comprimento_min = round(comprimento_min, 1) if comprimento_min is not None else 0.0
@@ -777,23 +813,23 @@ def display_state_items(clickData, is_open):
 
     items_grid = html.Div([
         html.Div([
-            html.Img(src=row['thumbnail'], style={'width': '45%', 'margin-bottom': '8px'}),
+            html.Img(src=row['thumbnail'], style={'width': '60%', 'margin-bottom': '8px'}),
             html.A([
                 row['nome_do_item'].title(), html.Br(),
-                f"{row['povo'].title()}, {int(row['ano_de_aquisicao'])}"
+                f"{row['povo'].title()}, {row['ano_de_aquisicao'] if row['ano_de_aquisicao'] != 0 else '----'}"
             ], href=row['url'], target="_blank", style={'font-weight': 'bold', 'text-decoration': 'none', 'color': '#062a57', 'text-align': 'center', 'font-size': '16px'}),
             dbc.Button(
                 html.I(className="bi bi-info-circle-fill"),
                 id={'type': 'info-icon', 'index': i},
                 color="link",
-                style={'font-size': '18px', 'cursor': 'pointer', 'padding': '5px', 'color': '#062a57'}
+                style={'font-size': '18px', 'cursor': 'pointer', 'padding': '0px', 'color': '#062a57'}
             ),
             dbc.Popover(
                 dbc.PopoverBody(row['descricao'].capitalize()),
                 id={'type': 'popover', 'index': i},
                 target={'type': 'info-icon', 'index': i},
                 trigger="click",
-                placement="right"
+                placement="bottom",
             )
         ], style={
             'display': 'flex', 
@@ -802,7 +838,7 @@ def display_state_items(clickData, is_open):
             'justify-content': 'center',
             'margin-bottom': '20px',
             'border': '1px solid #ddd', 
-            'padding': '10px', 
+            'padding-top': '10px',
             'border-radius': '8px', 
             'background-color': '#f9f9f9'
         })

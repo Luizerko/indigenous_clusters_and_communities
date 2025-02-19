@@ -35,7 +35,6 @@ def normalize(data, norm_factor=2):
 
 # Function for preparing labels for dataset training
 def preparing_image_labels(df, label_column='povo', offset=0):
-    # label_column = 'povo', 'categoria', 'ano_de_aquisicao'
     name_to_num = {c: i+offset for i, c in enumerate(df[label_column].unique())}
     num_to_name = {c: i for i, c in name_to_num.items()}
     labels = {row['image_path_br']: name_to_num[row[label_column]] \
