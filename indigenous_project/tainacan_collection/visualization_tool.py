@@ -11,7 +11,7 @@ from sklearn.cluster import DBSCAN
 import numpy as np
 
 # from utils import brazil_states_dict, norm_factor, empty_figure, empty_figure_legend, timeline_figure, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map, update_cluster_selection, get_dropdown_options
-from utils import *
+from visual_utils import *
 
 from sklearn.datasets import make_blobs
 
