@@ -454,6 +454,7 @@ def train_loop(model, num_classes, train_dataloader, val_dataloader, device, cri
          # Early-stopping check and model saving
         if val_acc > best_val_acc:
             best_val_acc = val_acc
+            best_ind = epoch
             patience_counter = 0
 
             torch.save({
@@ -474,93 +475,120 @@ def train_loop(model, num_classes, train_dataloader, val_dataloader, device, cri
         tqdm.write((f'Epoch {epoch+1}, Loss: {epoch_loss:.4f}, '
                     f'Validation Accuracy: {val_acc:.4f}'))
 
-    return losses, accuracies, class_precisions, class_recalls
+    return losses, accuracies, class_precisions, class_recalls, best_ind
 
 # Training function for multihead architecture
-def multihead_train_loop(model, num_classes, train_dataloader, val_dataloader, device, criterion, opt, model_name, epochs=20):
-    losses = [[] for i in range(len(num_classes))]
-    accuracies = [[] for i in range(len(num_classes))]
+def multihead_train_loop(model, num_classes, train_dataloader, val_dataloader, device, criterions, opt, model_name, head_weights, epochs=20):
+    comb_losses = []
+    ind_losses = [[] for i in range(len(num_classes))]
+    avg_accuracies = []
+    ind_accuracies = [[] for i in range(len(num_classes))]
     class_precisions = [[[] for i in range(nc)] for nc in num_classes]
     class_recalls = [[[] for i in range(nc)] for nc in num_classes]
 
     # Early-stopping set up
-    best_val_acc = 0
+    best_val_avg_acc = 0
     patience = max(3, int(0.1*epochs))
     patience_counter = 0
     tolerance = 0.01
 
-    acc_metric = Accuracy(task="multiclass", num_classes=num_classes).to(device)
-    prec_metric = Precision(task="multiclass", num_classes=num_classes, \
-                            average=None).to(device)
-    rec_metric = Recall(task="multiclass", num_classes=num_classes, \
-                        average=None).to(device)
+    acc_metric = [Accuracy(task="multiclass", num_classes=nc).to(device) for nc in num_classes]
+    prec_metric = [Precision(task="multiclass", num_classes=nc, average=None).to(device) for nc in num_classes]
+    rec_metric = [Recall(task="multiclass", num_classes=nc, average=None).to(device) for nc in num_classes]
     
     for epoch in tqdm(range(epochs), desc=f"Training model", leave=True, total=epochs, ncols=100):
         model.train()
-        epoch_loss = .0
-        for batch_images, batch_labels, _ in train_dataloader:
-            batch_images, batch_labels = batch_images.to(device), batch_labels.to(device)
+        epoch_comb_loss = .0
+        epoch_ind_loss1 = .0
+        epoch_ind_loss2 = .0
+        for batch_images, [batch_labels1, batch_labels2], _ in train_dataloader:
+            batch_images, batch_labels1, batch_labels2 = batch_images.to(device), batch_labels1.to(device), batch_labels2.to(device)
             
             opt.zero_grad()
-            logits = model(batch_images)
-            loss = criterion(logits, batch_labels)
-            loss.backward()
+            logits1, logits2 = model(batch_images)
+            loss1 = criterions[0](logits1, batch_labels1)
+            loss2 = criterions[1](logits2, batch_labels2)
+            comb_loss = head_weights[0]*loss1 + head_weights[1]*loss2
+            comb_loss.backward()
             opt.step()
 
-            epoch_loss += loss.item()
+            epoch_ind_loss1 += loss1.item()
+            epoch_ind_loss2 += loss2.item()
+            epoch_comb_loss += comb_loss.item()
 
-        losses.append(torch.tensor(epoch_loss, dtype=torch.float16).item())
+        comb_losses.append(torch.tensor(epoch_comb_loss, dtype=torch.float16).item())
+        ind_losses[0].append(torch.tensor(epoch_ind_loss1, dtype=torch.float16).item())
+        ind_losses[1].append(torch.tensor(epoch_ind_loss2, dtype=torch.float16).item())
 
         # Validation set for early-stopping on metrics that are not directly optimized
         model.eval()
         with torch.no_grad():
-            all_preds = []
-            all_labels = []
+            all_preds = [[] for i in range(len(num_classes))]
+            all_labels = [[] for i in range(len(num_classes))]
 
-            for batch_images, batch_labels, _ in val_dataloader:
-                batch_images, batch_labels = batch_images.to(device), batch_labels.to(device)
-                logits = model(batch_images)
-                preds = torch.argmax(logits, dim=1)
+            for batch_images, [batch_labels1, batch_labels2], _ in val_dataloader:
+                batch_images, batch_labels1, batch_labels2 = batch_images.to(device), batch_labels1.to(device), batch_labels2.to(device)
+                logits1, logits2 = model(batch_images)
+                preds1 = torch.argmax(logits1, dim=1)
+                preds2 = torch.argmax(logits2, dim=1)
                 
-                all_preds.append(preds)
-                all_labels.append(batch_labels)
+                all_preds[0].append(preds1)
+                all_preds[1].append(preds2)
+                all_labels[0].append(batch_labels1)
+                all_labels[1].append(batch_labels2)
             
-            all_preds = torch.cat(all_preds)
-            all_labels = torch.cat(all_labels)
+            all_preds[0] = torch.cat(all_preds[0])
+            all_preds[1] = torch.cat(all_preds[1])
+            all_labels[0] = torch.cat(all_labels[0])
+            all_labels[1] = torch.cat(all_labels[1])
             
-            val_acc = acc_metric(all_preds, all_labels).item()
-            val_prec = prec_metric(all_preds, all_labels).tolist()
-            val_rec = rec_metric(all_preds, all_labels).tolist()
+            val_acc1 = acc_metric[0](all_preds[0], all_labels[0]).item()
+            val_acc2 = acc_metric[1](all_preds[1], all_labels[1]).item()
+            
+            val_prec1 = prec_metric[0](all_preds[0], all_labels[0]).tolist()
+            val_prec2 = prec_metric[1](all_preds[1], all_labels[1]).tolist()
+            
+            val_rec1 = rec_metric[0](all_preds[0], all_labels[0]).tolist()
+            val_rec2 = rec_metric[1](all_preds[1], all_labels[1]).tolist()
 
-        accuracies.append(torch.tensor(val_acc, dtype=torch.float16).item())
-        for i, (prec, rec) in enumerate(zip(val_prec, val_rec)):
-            class_precisions[i].append(torch.tensor(prec, dtype=torch.float16).item())
-            class_recalls[i].append(torch.tensor(rec, dtype=torch.float16).item())
+
+        ind_accuracies[0].append(torch.tensor(val_acc1, dtype=torch.float16).item())
+        ind_accuracies[1].append(torch.tensor(val_acc2, dtype=torch.float16).item())
+        avg_accuracies.append(torch.mean(torch.tensor([ind_accuracies[0][-1], ind_accuracies[1][-1]]), dtype=torch.float16).item())
+
+        for i, (prec, rec) in enumerate(zip(val_prec1, val_rec1)):
+            class_precisions[0][i].append(torch.tensor(prec, dtype=torch.float16).item())
+            class_recalls[0][i].append(torch.tensor(rec, dtype=torch.float16).item())
+
+        for i, (prec, rec) in enumerate(zip(val_prec2, val_rec2)):
+            class_precisions[1][i].append(torch.tensor(prec, dtype=torch.float16).item())
+            class_recalls[1][i].append(torch.tensor(rec, dtype=torch.float16).item())
 
          # Early-stopping check and model saving
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
+        if avg_accuracies[-1] > best_val_avg_acc:
+            best_val_avg_acc = avg_accuracies[-1]
+            best_ind = epoch
             patience_counter = 0
 
             torch.save({
                 'epoch': epoch+1,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': opt.state_dict(),
-                'best_val_acc': best_val_acc
+                'best_val_avg_acc': best_val_avg_acc
             }, 'data/models_weights/' + model_name + '.pth')
         
             tqdm.write(f'Best model saved at epoch {epoch+1}')
 
-        elif best_val_acc-val_acc > tolerance:
+        elif best_val_avg_acc-avg_accuracies[-1] > tolerance:
             patience_counter += 1
             if patience_counter >= patience:
                 tqdm.write("Early-stopping training!")
                 break
         
-        tqdm.write((f'Epoch {epoch+1}, Loss: {epoch_loss:.4f}, '
-                    f'Validation Accuracy: {val_acc:.4f}'))
+        tqdm.write((f'Epoch {epoch+1}, Combined Loss: {epoch_comb_loss:.4f}, '
+                    f'Validation Average Accuracy: {avg_accuracies[-1]:.4f}'))
 
-    return losses, accuracies, class_precisions, class_recalls
+    return comb_losses, ind_losses, avg_accuracies, ind_accuracies, class_precisions, class_recalls, best_ind
 
 # Function for setting-up training, executing training and then running tests
 def execute_train_test(dataset, test_dataset, device, batch_size, epochs, num_classes, model, criterion, opt, model_name, column_name='povo', val_dataset=None, architecture_name='ViT'):
@@ -574,11 +602,11 @@ def execute_train_test(dataset, test_dataset, device, batch_size, epochs, num_cl
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
     # Training set-up and execution
-    losses, accuracies, class_precisions, class_recalls = train_loop(model, num_classes, train_dataloader, val_dataloader, device, criterion, opt, model_name, epochs)
+    losses, accuracies, class_precisions, class_recalls, best_ind = train_loop(model, num_classes, train_dataloader, val_dataloader, device, criterion, opt, model_name, epochs)
     plot_train_curves(losses, accuracies, f"{architecture_name} Fine-Tuned on '{column_name}'")
-    print(f'Validation accuracy: {accuracies[-1]}')
-    print(f'Validation average per class precision: {np.mean([cp[-1] for cp in class_precisions]):.4f}')
-    print(f'Validation average per class recall: {np.mean([cr[-1] for cr in class_recalls]):.4f}\n')
+    print(f'Validation accuracy: {accuracies[best_ind]}')
+    print(f'Validation average per class precision: {np.mean([cp[best_ind] for cp in class_precisions]):.4f}')
+    print(f'Validation average per class recall: {np.mean([cr[best_ind] for cr in class_recalls]):.4f}\n')
 
     # Evaluating model on test dataset
     test_acc, test_prec, test_rec = evaluate_model(model, model_name, num_classes, test_dataloader, device)
@@ -589,7 +617,7 @@ def execute_train_test(dataset, test_dataset, device, batch_size, epochs, num_cl
     return test_prec, test_rec
 
 # Function for setting-up training, executing training and then running tests for multihead architectures
-def multihead_execute_train_test(dataset, test_dataset, device, batch_size, epochs, num_classes, model, criterion, opt, model_name, column_names=['povo', 'categoria'], val_dataset=None, architecture_name='ViT'):
+def multihead_execute_train_test(dataset, test_dataset, device, batch_size, epochs, num_classes, model, criterions, opt, model_name, column_names=['povo', 'categoria'], val_dataset=None, architecture_name='ViT', head_weights=[0.5, 0.5]):
     # Creating training, validation and test datasets
     if val_dataset is None:
         train_size = int(0.9*len(dataset))
@@ -600,19 +628,30 @@ def multihead_execute_train_test(dataset, test_dataset, device, batch_size, epoc
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
     # Training set-up and execution
-    losses, accuracies, class_precisions, class_recalls = multihead_train_loop(model, num_classes, train_dataloader, val_dataloader, device, criterion, opt, model_name, epochs)
-    plot_train_curves(losses, accuracies, f"Multi-head {architecture_name} Fine-Tuned on '{column_names}'")
-    print(f'Validation accuracy: {accuracies[-1]}')
-    print(f'Validation average per class precision: {np.mean([cp[-1] for cp in class_precisions]):.4f}')
-    print(f'Validation average per class recall: {np.mean([cr[-1] for cr in class_recalls]):.4f}\n')
+    comb_losses, ind_losses, avg_accuracies, ind_accuracies, class_precisions, class_recalls, best_ind = multihead_train_loop(model, num_classes, train_dataloader, val_dataloader, device, criterions, opt, model_name, head_weights, epochs)
+    plot_train_curves(comb_losses, avg_accuracies, f"Multi-head {architecture_name} Fine-Tuned on '{column_names}'")
+    
+    print(f"Validation '{column_names[0]}' head accuracy: {ind_accuracies[0][best_ind]}")
+    print(f"Validation '{column_names[1]}' head accuracy: {ind_accuracies[1][best_ind]}")
+    print(f'Validation average accuracy: {avg_accuracies[best_ind]}')
+
+    print(f"Validation '{column_names[0]}' head average per class precision: {np.mean([cp[best_ind] for cp in class_precisions[0]]):.4f}")
+    print(f"Validation '{column_names[0]}' head average per class recall: {np.mean([cr[best_ind] for cr in class_recalls[0]]):.4f}\n")
+    print(f"Validation '{column_names[1]}' head average per class precision: {np.mean([cp[best_ind] for cp in class_precisions[1]]):.4f}")
+    print(f"Validation '{column_names[1]}' head average per class recall: {np.mean([cr[best_ind] for cr in class_recalls[1]]):.4f}\n")
 
     # Evaluating model on test dataset
-    test_acc, test_prec, test_rec = evaluate_model(model, model_name, num_classes, test_dataloader, device)
-    print(f'Test accuracy: {test_acc}')
-    print(f'Test average per class precision: {np.mean(test_prec):.4f}')
-    print(f'Test average per class recall: {np.mean(test_rec):.4f}\n')
+    test_ind_accs, test_avg_acc, test_precs, test_recs = multihead_evaluate_model(model, model_name, num_classes, test_dataloader, device)
+    print(f"Test '{column_names[0]}' head accuracy: {test_ind_accs[0]}")
+    print(f"Test '{column_names[1]}' head accuracy: {test_ind_accs[1]}")
+    print(f'Test average accuracy: {test_avg_acc}')
+    
+    print(f"Test '{column_names[0]}' head average per class precision: {np.mean(test_precs[0]):.4f}")
+    print(f"Test '{column_names[0]}' head average per class recall: {np.mean(test_recs[0]):.4f}\n")
+    print(f"Test '{column_names[1]}' head average per class precision: {np.mean(test_precs[1]):.4f}")
+    print(f"Test '{column_names[1]}' head average per class recall: {np.mean(test_recs[1]):.4f}\n")
 
-    return test_prec, test_rec
+    return test_precs, test_recs
 
 # Function for plotting loss and accuracy curves
 def plot_train_curves(losses, accuracies, model_name):
@@ -667,6 +706,49 @@ def evaluate_model(model, model_name, num_classes, test_dataloader, device):
         test_rec = rec_metric(all_preds, all_labels).tolist()
 
     return test_acc, test_prec, test_rec
+
+# Function for evaluating the model on the multihead test dataset
+def multihead_evaluate_model(model, model_name, num_classes, test_dataloader, device):
+    # Initializing evaluation metrics
+    acc_metric = [Accuracy(task="multiclass", num_classes=nc).to(device) for nc in num_classes]
+    prec_metric = [Precision(task="multiclass", num_classes=nc, average=None).to(device) for nc in num_classes]
+    rec_metric = [Recall(task="multiclass", num_classes=nc, average=None).to(device) for nc in num_classes]
+
+    # Loading best model, setting it to eval and forward passing
+    checkpoint = torch.load('data/models_weights/' + model_name + '.pth', map_location=device)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.eval()
+    with torch.no_grad():
+        all_preds = [[] for i in range(len(num_classes))]
+        all_labels = [[] for i in range(len(num_classes))]
+
+        for batch_images, [batch_labels1, batch_labels2], _ in test_dataloader:
+            batch_images, batch_labels1, batch_labels2 = batch_images.to(device), batch_labels1.to(device), batch_labels2.to(device)
+            logits1, logits2 = model(batch_images)
+            preds1 = torch.argmax(logits1, dim=1)
+            preds2 = torch.argmax(logits2, dim=1)
+            
+            all_preds[0].append(preds1)
+            all_preds[1].append(preds2)
+            all_labels[0].append(batch_labels1)
+            all_labels[1].append(batch_labels2)
+        
+        all_preds[0] = torch.cat(all_preds[0])
+        all_preds[1] = torch.cat(all_preds[1])
+        all_labels[0] = torch.cat(all_labels[0])
+        all_labels[1] = torch.cat(all_labels[1])
+        
+        test_acc1 = acc_metric[0](all_preds[0], all_labels[0]).item()
+        test_acc2 = acc_metric[1](all_preds[1], all_labels[1]).item()
+        test_avg_acc = torch.mean(torch.tensor([test_acc1, test_acc2]), dtype=torch.float16).item()
+        
+        test_prec1 = prec_metric[0](all_preds[0], all_labels[0]).tolist()
+        test_prec2 = prec_metric[1](all_preds[1], all_labels[1]).tolist()
+        
+        test_rec1 = rec_metric[0](all_preds[0], all_labels[0]).tolist()
+        test_rec2 = rec_metric[1](all_preds[1], all_labels[1]).tolist()
+
+    return [test_acc1, test_acc2], test_avg_acc, [test_prec1, test_prec2], [test_rec1, test_rec2]
 
 # Comparing precision and recall on specific classes
 def prec_rec_on_selected_classes(categories, filtered_categories, precisions, recalls):
