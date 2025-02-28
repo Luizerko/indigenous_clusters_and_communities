@@ -633,7 +633,7 @@ def multihead_execute_train_test(dataset, test_dataset, device, batch_size, epoc
     
     print(f"Validation '{column_names[0]}' head accuracy: {ind_accuracies[0][best_ind]}")
     print(f"Validation '{column_names[1]}' head accuracy: {ind_accuracies[1][best_ind]}")
-    print(f'Validation average accuracy: {avg_accuracies[best_ind]}')
+    print(f'Validation average accuracy: {avg_accuracies[best_ind]}\n')
 
     print(f"Validation '{column_names[0]}' head average per class precision: {np.mean([cp[best_ind] for cp in class_precisions[0]]):.4f}")
     print(f"Validation '{column_names[0]}' head average per class recall: {np.mean([cr[best_ind] for cr in class_recalls[0]]):.4f}\n")
@@ -644,7 +644,7 @@ def multihead_execute_train_test(dataset, test_dataset, device, batch_size, epoc
     test_ind_accs, test_avg_acc, test_precs, test_recs = multihead_evaluate_model(model, model_name, num_classes, test_dataloader, device)
     print(f"Test '{column_names[0]}' head accuracy: {test_ind_accs[0]}")
     print(f"Test '{column_names[1]}' head accuracy: {test_ind_accs[1]}")
-    print(f'Test average accuracy: {test_avg_acc}')
+    print(f'Test average accuracy: {test_avg_acc}\n')
     
     print(f"Test '{column_names[0]}' head average per class precision: {np.mean(test_precs[0]):.4f}")
     print(f"Test '{column_names[0]}' head average per class recall: {np.mean(test_recs[0]):.4f}\n")
