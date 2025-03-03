@@ -1,16 +1,17 @@
 import plotly.express as px
 import plotly.graph_objects as go
+import dash
 from dash import Dash, dcc, html, Input, Output, State, no_update
 from dash_extensions.enrich import DashProxy, MultiplexerTransform
 import dash_bootstrap_components as dbc
 
-from PIL import Image
 import ast
+import re
+from PIL import Image
 import pandas as pd
 from sklearn.cluster import DBSCAN
 import numpy as np
 
-# from utils import brazil_states_dict, norm_factor, empty_figure, empty_figure_legend, timeline_figure, brazil_figure, plot_with_markers, plot_with_images, collapse_cluster_points, generate_color_map, update_cluster_selection, get_dropdown_options
 from visual_utils import *
 
 from sklearn.datasets import make_blobs
@@ -26,6 +27,13 @@ tipo_materia_prima_baseline_df = pd.read_csv('data/clusters/tipo_materia_prima_b
 
 categoria_vit_df = pd.read_csv('data/clusters/categoria_vit.csv', index_col='id')
 povo_vit_df = pd.read_csv('data/clusters/povo_vit.csv', index_col='id')
+
+# Loading and processing geolocation dataframe to increase granularity of map tab
+ind_geo = pd.read_csv('data/terras_indigenas_geolocation_processed.csv', index_col='id')
+ind_geo = ind_geo[ind_geo['povo'].str.contains('|'.join(ind_df['povo'].dropna().unique()), na=False)]
+povo_values = ind_df['povo'].dropna().unique()
+povo_pattern = '(' + '|'.join(map(re.escape, povo_values)) + ')'
+ind_geo['povo'] = ind_geo['povo'].str.extract(povo_pattern, expand=False)
 
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index
@@ -425,6 +433,8 @@ app.layout = html.Div([
                     className='map-container',
                     children=[
                         dcc.Graph(id='brazil-map', config=config, figure=brazil_figure()),
+                        dcc.Store(id='current-state', data=None),
+                        dcc.Store(id='current-page', data=0)
                     ]
                 ),
             ],
@@ -432,7 +442,14 @@ app.layout = html.Div([
     ]),
     dbc.Modal([
         dbc.ModalHeader(dbc.ModalTitle('Itens Advindos do', style={'fontWeight': 'bold', 'color': '#062a57'}, id='state-header')),
-        dbc.ModalBody(id='state-items'),
+        dbc.ModalBody([
+            html.Div(id='state-items'),
+            html.Div(id="pagination-text", style={"text-align": "center", "margin-top": "10px", "font-weight": "bold", "color": "#062a57"}),
+            html.Div([
+                dbc.Button("Anterior", id="prev-page", style={"margin-right": "20px", "fontWeight": "bold", "backgroundColor": "#062a57", "color": "white", "borderRadius": "10px", "border": "none", "padding": "10px 10px"}),
+                dbc.Button("Próxima", id="next-page", style={"fontWeight": "bold", "backgroundColor": "#062a57", "color": "white", "borderRadius": "10px", "border": "none", "padding": "10px 10px"})
+            ], style={"display": "flex", "justify-content": "center", "margin-top": "20px"})
+        ])
     ], id='modal-items', scrollable=True, is_open=False, backdrop=True, size='lg')
 ], className='base-background')
 
@@ -799,17 +816,50 @@ def filter_data(selected_categoria, selected_povo, selected_estado, selected_mat
     Output("modal-items", "is_open"),
     Output("state-items", "children"),
     Output("state-header", "children"),
+    Output("pagination-text", "children"),
     Output("brazil-map", "clickData"),
+    Output("current-state", "data"),
+    Output("current-page", "data"),
     Input("brazil-map", "clickData"),
-    State("modal-items", "is_open")
+    Input("prev-page", "n_clicks"),
+    Input("next-page", "n_clicks"),
+    State("modal-items", "is_open"),
+    State("current-state", "data"),
+    State("current-page", "data"),
 )
-def display_state_items(clickData, is_open):
+def display_state_items(clickData, prev_page_click, next_page_click, is_open, current_state, current_page):
+    # Handling context for pagination later
+    ctx = dash.callback_context
+    potential_button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if potential_button_id == 'prev-page':
+        current_page -= 1
+        state_name = current_state
+        is_open_update = is_open
+    elif potential_button_id == 'next-page':
+        current_page += 1
+        state_name = current_state
+        is_open_update = is_open
+    else:
+        state_name = clickData["points"][0]["hovertext"]
+        is_open_update = not is_open
+    
     # Extracting clicked state and filtering items belonging to that state
-    state_name = clickData["points"][0]["hovertext"]
     state_symb = brazil_states_dict[state_name]
 
     state_items = plot_df[plot_df['estado_de_origem'].apply(lambda x: state_symb in x if pd.notna(x) else False)]
     state_items = state_items.sort_values(by='nome_do_item')
+
+    # Handling pagination
+    items_per_page = 99
+    total_pages = len(state_items)//items_per_page + 1
+    if current_page < 0:
+        return no_update, no_update, no_update, no_update, no_update, no_update, 0
+    elif current_page > total_pages-1:
+        return no_update, no_update, no_update, no_update, no_update, no_update, total_pages-1
+
+    start_idx = current_page*items_per_page
+    end_idx = start_idx+items_per_page
+    paginated_items = state_items.iloc[start_idx:end_idx]
 
     items_grid = html.Div([
         html.Div([
@@ -842,7 +892,7 @@ def display_state_items(clickData, is_open):
             'border-radius': '8px', 
             'background-color': '#f9f9f9'
         })
-        for i, (_, row) in enumerate(state_items.iterrows())
+        for i, (_, row) in enumerate(paginated_items.iterrows())
     ], style={
         'display': 'grid',
         'grid-template-columns': 'repeat(3, 1fr)',
@@ -851,9 +901,11 @@ def display_state_items(clickData, is_open):
         'padding': '0'
     })
 
+    pagination_text = f"Página {current_page + 1} / {total_pages}"
+    
     header_title = f'{len(state_items)} Itens Advindos do {state_name}'
 
-    return not is_open, items_grid, header_title, None
+    return is_open_update, items_grid, header_title, pagination_text, None, state_name, current_page
 
 # Running app
 if __name__ == '__main__':
