@@ -6,7 +6,12 @@ The modern world presents overwhelming challenges for most indigenous peoples, a
 
 The main challenges lie in extracting, organizing, and analyzing the data from the Tainacan platform, which is currently not readily usable for large-scale computational tasks. The metadata structuring is inconsistent, the images require preprocessing, there are almost no possibilities of exploring relationships between artifacts based on several dimensions such as visual similarity, geographic origin, or metadata attributes (i.e. textual descriptions of objects), and the interactivity with the collection is very limited. This project seeks to address these issues by building an end-to-end pipeline that starts with data extraction and normalization, followed by various applications of feature extraction, clustering and projection techniques to explore connections within the dataset, and finally the development of a tool for globally visualizing the collection. The aim is not only to understand these clusters but to compare them against one another, established indigenous literature and geographic data, creating an exploratory application that can inform and engage the general public through an interactive platform, as well as become a useful research instrument for future cataloging.
 
-<!-- Add images of the tool here -->
+<p align="center">
+  <img src="assets/visual_tool_overview.png" alt="Visual tool overview." width="60%" style="margin-top: 15px;" />
+</p>
+<p align="center" style="margin-bottom: 15px;">
+  Initial view of the visual tool.
+</p>
 
 ## Repository Hierarchy
 
