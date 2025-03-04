@@ -1,12 +1,18 @@
 # Tainacan-Based Dataset
 
-This page describes how we used the [Tainacan collection](https://tainacan.museudoindio.gov.br/) to create our dataset and develop our tool.
+This page provides an overview of how we utilized the [Tainacan collection](https://tainacan.museudoindio.gov.br/) to build our dataset, which was later used for clustering and analysis.
 
-## Creating the Dataset
+## Dataset Creation Process
 
-Before starting any activity, we need to collect the data. To do this, we first use a [bash script](https://github.com/Luizerko/master_thesis/tree/main/indigenous_project/tainacan_collection/scrapping_data.sh) to scrape data from the Tainacan platform, followed by a [Python script](https://github.com/Luizerko/master_thesis/tree/main/indigenous_project/tainacan_collection/creating_dataset.py) to organize it into a CSV format. With this quick setup, we can start exploring the dataset to understand the amount of data, how it’s distributed across different categories, the connections between columns, and potential ways to group the data effectively.
+The first step in our workflow is data collection. We accomplish this through a two-stage process:
 
-For a deeper dive into this exploration, check out this [Jupyter Notebook](https://github.com/Luizerko/master_thesis/tree/main/indigenous_project/tainacan_collection/dataset_exploration.ipynb). In here, however, we only provide a general summary of the documentation created for each column of the dataset based on the analyses:
+1. **Scraping the data:** A [Bash script](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection/scrapping_data.sh) is used to extract data from the Tainacan platform.
+
+2. **Processing and structuring:** A [Python script](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection/creating_dataset.py) then processes the raw data and organizes it into a structured CSV format.
+
+Once the dataset is prepared, we proceed with **data cleaning and exploratory analysis** to assess the volume and distribution of the data, identify key categories and their relationships and explore potential clustering opportunities. For a more in-depth analysis of the dataset, refer to the [Jupyter notebook](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection/dataset_exploration.ipynb).
+
+Below, we provide a high-level summary of the dataset attributes, based on our initial inspection and documentation efforts.
 
 | Column Name           | Description                                                                                                                                          |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -55,29 +61,31 @@ For a deeper dive into this exploration, check out this [Jupyter Notebook](https
 | `conservacao`        | Conservation state of the item: good, regular, or bad.                                                                                            |
 | `image_path`         | Local path to the associated image.                                                                                                               |
 
-## Processing the Dataset
+## Data Processing
 
-Although many analyses were done while assembling the dataset, there’s still a lot of work needed to standardize the columns and prepare them for clustering. Several adjustments were made to deal with inconsistent formatting, missing data, and incorrect use of data structures (you can find more details once again in the [Jupyter Notebook](https://github.com/Luizerko/master_thesis/tree/main/indigenous_project/tainacan_collection/dataset_exploration.ipynb)). Here, however, we focus on the biggest and most important processing steps that are crucial for clustering and visualization later on.
+While many analyses were conducted during dataset assembly, additional preprocessing is required to prepare the data for clustering. Beyond handling inconsistencies such as formatting issues, missing data, and incorrect data structures, we focus on two key preprocessing steps crucial for clustering both images and text: **background removal for images** and **text normalization**.
 
 ### Image Background Removal
 
-The collection's metadata might have some formatting issues, but the images are generally high-quality and well-processed. Their neutral backgrounds make object extraction easier, though the background colors vary - some are white, others black, for example - depending on external factors like when the photo was taken. If we don’t remove these backgrounds, our models might group images based on the background instead of their content, leading to artificial clustering results.
+Although the collection's metadata contains some formatting inconsistencies, the images themselves are generally high-quality and well-processed. The problem, however, lies mostly on the consistency of the backgrounds. If they are not removed, the fine-tuned image extractors might group images based on background characteristics rather than object features, leading to misleading results.
 
-To solve this, we used an [open-source pipeline for background removal](https://huggingface.co/briaai/RMBG-2.0). Their code already included preprocessing, normalizing images and guaranteeing they have the same size before removing background. Here are some examples of the segmentation applied to our collection (mapping back to the original image sizes):
-
-<p align="center">
-  <img src="assets/vase_br.jpg" alt="Vase BR" width="25%" style="margin: 5px;" />
-  <img src="assets/vase_br_r.png" alt="Vase BR Result" width="25%" style="margin: 5px;" />
-</p>
-<p align="center">
-  <img src="assets/bracelet_br.jpg" alt="Bracelet BR" width="25%" style="margin: 5px;" />
-  <img src="assets/bracelet_br_r.png" alt="Bracelet BR Result" width="25%" style="margin: 5px;" />
-</p>
-<p align="center">
-  <img src="assets/fiber_br.jpg" alt="Vase BR" width="25%" style="margin: 5px;" />
-  <img src="assets/fiber_br_r.png" alt="Vase BR Result" width="25%" style="margin: 5px;" />
-</p>
+To mitigate this issue, we made use of a state-of-the-art [open-source background removal pipeline](https://huggingface.co/briaai/RMBG-2.0). This solution includes built-in preprocessing, ensuring images are numerically normalized to have consistent size before background removal. Below are examples of the pipeline applied to our collection - images are mapped back to their original sizes before plotting:
 
 <p align="center">
-  <b>Figure 1:</b> In the upper row, we can a see a simple example with a vase, a single object and with very well-defined form. In the middle row, in turn, we can see an example with multiple objects. Finally, in the lower row, we can see an example with an object that doesn't have a well-defined form. These were selected to show both a bit of the variety of objects we can find in the collection and also to show how well the pipeline works.
+  <img src="assets/vase_br.jpg" alt="Original vase image." width="30%" style="margin: 5px;" />
+  <img src="assets/vase_br_r.png" alt="Background removed vase image." width="30%" style="margin: 5px;" />
 </p>
+<p align="center">
+  <img src="assets/bracelet_br.jpg" alt="Original bracelet image." width="30%" style="margin: 5px;" />
+  <img src="assets/bracelet_br_r.png" alt="Background removed bracelet image." width="30%" style="margin: 5px;" />
+</p>
+<p align="center">
+  <img src="assets/fiber_br.jpg" alt="Original fiber image." width="30%" style="margin: 5px;" />
+  <img src="assets/fiber_br_r.png" alt="Background removed fiber image." width="30%" style="margin: 5px;" />
+</p>
+
+<p align="center">
+  The top row presents a simple example featuring a vase - a single, well-defined object. The middle row, in turn, demonstrates background removal for multiple objects, while the bottom row showcases an object with a very complex (not well-defined) form. These examples illustrate both the variety of objects in the collection and the effectiveness of the background removal pipeline.
+</p>
+
+### Text Normalization

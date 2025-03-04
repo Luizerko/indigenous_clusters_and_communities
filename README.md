@@ -7,7 +7,7 @@ The modern world presents overwhelming challenges for most indigenous peoples, a
 The main challenges lie in extracting, organizing, and analyzing the data from the Tainacan platform, which is currently not readily usable for large-scale computational tasks. The metadata structuring is inconsistent, the images require preprocessing, there are almost no possibilities of exploring relationships between artifacts based on several dimensions such as visual similarity, geographic origin, or metadata attributes (i.e. textual descriptions of objects), and the interactivity with the collection is very limited. This project seeks to address these issues by building an end-to-end pipeline that starts with data extraction and normalization, followed by various applications of feature extraction, clustering and projection techniques to explore connections within the dataset, and finally the development of a tool for globally visualizing the collection. The aim is not only to understand these clusters but to compare them against one another, established indigenous literature and geographic data, creating an exploratory application that can inform and engage the general public through an interactive platform, as well as become a useful research instrument for future cataloging.
 
 <p align="center">
-  <img src="assets/visual_tool_overview.png" alt="Visual tool overview." width="60%" style="margin-top: 15px;" />
+  <img src="assets/visual_tool_overview.png" alt="Visual tool overview." width="100%" style="margin-top: 20px;" />
 </p>
 <p align="center" style="margin-bottom: 15px;">
   Initial view of the visual tool.
@@ -31,9 +31,13 @@ The main challenges lie in extracting, organizing, and analyzing the data from t
     └── ...
 
 This is the base folder for the project. In here, you'll find:
+ 
  - The [install documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/INSTALL.md) to help set up your own environment.
+
  - The [dataset documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/DATASET.md) describing how the data was extracted and processed, as well as explaining its attributes. 
+ 
  - The [visualization tool documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/VISUALIZATION.md) containing details reagarding the tool egineering and visual examples of its parts.
+ 
  - The [clustering experiments documentation](https://github.com/Luizerko/master_thesis/tree/main/indigenous_project/CLUSTER.md) describing all the clustering technical implementations and obtained results.
  
 If you want to take a look at the code itself, go into the [`tainacan_collection`](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection) folder and explore the individual files.

@@ -1,87 +1,120 @@
 # Clustering Experiments
 
-This page explains all the clustering experiments we conducted, from basic baselines to more complex grouping computations. Here, you will find details on all the methods we implemented, what worked well, and what didn’t.
+This page outlines the clustering experiments we conducted, ranging from simple baseline methods to more sophisticated grouping techniques. Here, you will find details on the approaches we implemented, insights into what worked well, reflections on the challenges we encountered, and conclusions we can draw from all that.
 
 ## The Baselines
 
-Before diving into advanced machine learning techniques, we first analyzed the fundamental aspects of our data. What insights can we extract directly from the dataset? What knowledge can we incorporate from our museum specialists? Understanding this is crucial because, at some point, we need to compare our sophisticated clusters to simpler baselines to evaluate their usefulness. This goes beyond measuring how well an embedding space spreads data or how effective a clustering algorithm is.
+Before applying advanced machine learning techniques, we began by exploring fundamental aspects of our data. Instead of immediately relying on algorithms, we first sought to understand what insights could be directly extracted from the dataset and how domain knowledge from museum specialists could be integrated. Establishing these baselines was crucial for two reasons:
+
+1. **Comparing our clusters to existing knowledge:** This helped evaluate how well our models captured essential patterns in the collection.
+
+2. **Identifying knowledge gaps:** By analyzing our clustering results, we could pinpoint connections between items and communities that were previously not identified.
+
+This analysis extends beyond traditional quantitative measures, such as embedding space distribution and clustering algorithm performance. Instead, it also focus on the **qualitative** aspects - evaluating whether the clusters align with meaningful patterns within the collection and how effectively they reveal new insights.
 
 ### Random Orthonormal Projections
 
-To establish these baselines, we explored multiple approaches. We began by selecting a few categorical features that were easy to cluster by and combined them into a higher-dimensional space for clustering. However, while categorical features are easy to group, we had to be careful not to assume any inherent relationships between different categories. Some of these features lack hierarchy or taxonomy, meaning the clusters should be treated as equidistant from each other. This issue becomes even more pronounced when combining multiple categorical features, as we cannot assume underlying relationships.
+To establish these baselines, we first explored clustering categorical features by mapping them into a higher-dimensional space. We couldn't, however, assume any inherent relationships between categories, making it crucial to treat clusters as equidistant. To enforce that, we applied **random orthonormal projections**. For each feature (in our expetiment `categoria` with 10 classes and `tipo_de_materia_prima` with 4 classes), we generated a random orthonormal matrix, ensuring every category had a unit vector, all of them orthogonal to one another. For multi-category features, we summed categories' vectors when a datapoint belonged to more than 1 category. This produced "high-dimensional" representations of data that we could use for clustering.
 
-To enable clustering while preserving equidistance, we experimented with a **random orthonormal projection** approach. For each feature, we generated a random orthonormal matrix where both rows and columns matched the number of categories in that feature. Since all vectors were orthogonal unit vectors, we ensured they remained equally distant from one another. This method also worked for features that allowed multiple categories, as we could simply sum the vector representations of these multiple categories to get the final representation of a datapoint. Once we generated these vector representations, we concatenated them for each datapoint, creating high-dimensional vectors ready for clustering.
+While theoretically interesting, this approach naturally failed. The resulting space was highly sparse, leading to poor clustering and later visualization. Even before clustering, lower-dimensional projections showed no clear groupings or symmetry.
 
-While this idea seemed promising, it failed drastically. The resulting space was highly sparse, making it unsuitable for both clustering and visualization. Even before applying clustering methods, we attempted to project the high-dimensional points into a lower-dimensional space for visualization. Regardless of the projection method, we observed poor point-cloud distributions with no clear clusters or symmetry, preventing the equidistance property from holding effectively.
+To better preserve distances, we tested two projection techniques:
 
-To try and guarantee the distance property we were interested in, the two projection techniques we experimented with were:
+- **MDS:** Effective in low dimensions (so 14 shouldn't be a problem) and optimizes for distance preservation.
 
-- **MDS**: This method works well in low-dimensional spaces, so it should be fine when we only used 14 dimensions: 10 categories from the `categoria` feature and 4 from the `tipo_de_materia_prima` feature. And since MDS optimizes for distance preservation, it was theoretically a good fit for maintaining equidistance in a 2D projection.
+- **TriMap:** Suitable for higher-dimensional spaces while maintaining global structure.
 
-- **TriMap**: We also tested TriMap due to its ability to handle higher-dimensional spaces while preserving global structure, an ideal property for equidistance.
-
-Despite these efforts, the results were still far from ideal. TriMap performed slightly better than MDS, but neither method produced the desired clustering structure.
+Despite slight improvements with TriMap, neither method yielded meaningful clusters.
 
 <div align="center">
     <br>
-    <img src="assets/projections_orthonormal.png", width="450">
+    <img src="assets/projections_orthonormal.png" alt="Projections using MDS and TriMap with Random Orthonormal Projections." width="500">
 </div>
 <div align='center'>
-    <span>Plot showing MDS and TriMap 2D projections from random orthonormal vectors for 2 features (14 dimensions).</span>
+    <span>Plot showing MDS and TriMap 2D projections from random orthonormal vectors for 2 (concatenated) features (14 dimensions).</span>
     <br>
 </div>
 
-### Categorical Clustering  
+### Categorical Clustering
 
-After the failed experiments with random orthogonal projections, we decided to return to the basics and use direct **categorical clustering**. To do this, we adapted features that allowed multiple category assignments using multi-hot encoding - essentially creating binary features for each possible category within the original feature.  
+After the failure of random orthonormal projections, we returned directly to **categorical clustering**. We used **multi-hot encoding** to transform features with multiple category assignments into binary vectors. Then, we applied **K-Modes**, a clustering algorithm designed for categorical data that measures dissimilarity based on category mismatches instead of Euclidean distance.
 
-From there, we simply concatenated these features into a vector for each datapoint and applied **K-Modes**, an algorithm similar to K-Means but designed for categorical data. Instead of using Euclidean distances, K-Modes calculates the number of mismatches between categorical values across different points.  
+Using `categoria` and `tipo_de_materia_prima` again, we found that **16 clusters** provided the best balance, slightly exceeding the sum of individual category counts (14) - not suggesting an overestimation but still accounting for possible correlations between categories across the features. While this approach prevented cluster assignment issues through the direct use of the categories, we still had a very sparse feature space and visualization remained challenging.
 
-Using `categoria` and `tipo_de_materia_prima` again, we analyzed the elbow curve and determined that 16 clusters provided the best balance - avoiding both excessive fragmentation and oversimplification. This number is interesting because it is only slightly larger than the sum of the individual category counts of both features. This suggests that it is not an overestimation but rather accounts for possible correlations between certain categories across the two features.
+- **t-SNE** failed, producing unnatural circular patterns due to its KL-Divergence minimization on (sparse) categorical data.
 
-This time, while the representation of each datapoint remained sparse, the categorical clustering method prevented issues with cluster assignment. However, visualization remained problematic.  
+- **UMAP** struggled, as the sparse feature space violated its assumption of an underlying manifold, leading to a chaotic point cloud.
 
-- **t-SNE** failed drastically, generating an unusual pattern of well-defined circular point sets. This likely occurred because t-SNE minimizes the KL-Divergence between distributions in high and low dimensions. Given that our high-dimensional space is categorical, t-SNE created a similar projection, resulting in a sparse and disjointed representation.
-
-- **UMAP** also failed, likely due to our sparse space violating the assumption of an underlying high-dimensional manifold. The result was a dense and chaotic cloud of points, with only a few concentrated clusters emerging from the confusion.
-
-- **TriMap** performed better than the other two. On one hand, it managed to create more identifiable clusters, and on the other, it spread clusters of the same color across multiple areas of the plot. While splitting clusters might seem undesirable, it is actually necessary to maintain equidistance in 2D for more than 3 categories - some categories need to appear in multiple places so that their cloud points remain equally distant from others. However, despite this relatively better performance, the visualization was still unclear, and the method clearly struggled with the data.  
+- **TriMap** performed best, forming a few identifiable clusters. However, some clusters split across multiple areas - necessary for preserving some kind of equidistance between all clusters in 2D. Despite this improvement, visualization remained unclear.
 
 <div align="center">
     <br>
-    <img src="assets/projections_categorical.png", width="550">
+    <img src="assets/projections_categorical.png" alt="Projections using t-SNE, UMAP and TriMap with Categorical Clustering." width="550">
 </div>
 <div align='center'>
-    <span>Plot showing t-SNE, UMAP and TriMap 2D projections from categorical vectors for 2 features (14 dimensions).</span>
+    <span>Plot showing t-SNE, UMAP, and TriMap 2D projections from categorical vectors for 2 features (14 dimensions).</span>
     <br>
 </div>
 
 ### Basic Feature-Based Clustering  
 
-Due to the failures of the previous methods, we decided to take an even more fundamental approach, using only the most well-defined and easily visualized features of our data as baselines. Below, we outline the chosen features:  
+Due to the failures of the previous methods, we opted for a simpler approach, **directly using only the most well-defined and easily visualized feature** as baseline: `tipo_de_materia_prima`. This feature has three meaningful categories - *animal*, *vegetal*, and *mineral*. A fourth category (*sintetico*) exists, but no data points fall into this group. Items can also belong to multiple categories.
 
-- **`tipo_de_materia_prima`**: This feature contains three meaningful categories - *animal*, *vegetal*, and *mineral*. Although a fourth category (*sintetico*) exists, no data points fall into this group. Additionally, items can belong to multiple categories.  
+To represent clusters in 2D, we used a triangle representation:
 
-    To represent clusters in 2D, we used a triangle representation:
+- Each vertex represents one category (*animal*, *vegetal*, or *mineral*).
 
-    - Each vertex represents one category (*animal*, *vegetal*, or *mineral*).
+- Midpoints between vertices represent items that belong to two categories (each one of the closest vertices).
 
-    - Midpoints between vertices represent items that belong to two categories.
+- Items that belong to all three categories are placed in the center of the triangle.
 
-    - Items that belong to all three categories are placed in the center of the triangle.  
+Since each category would otherwise collapse into a single point, making visualization difficult, we added 2D Gaussian noise to create a point-cloud effect.
 
-    Since each category would otherwise be represented as a single point in space, making visualization difficult, we added 2D Gaussian noise to create a point-cloud effect.  
-
-    <div align="center">
-        <br>
-        <img src="assets/tipo_de_materia_prima_baseline.png", width="350">
-    </div>
-    <div align='center'>
-        <span>Plot showing clusters of <i>tipo_de_materia_prima</i>.</span>
-        <br>
-    </div>
-
-- **`dimensoes`**:
+<div align="center">
+    <br>
+    <img src="assets/tipo_de_materia_prima_baseline.png", alt="Plot showing tipo_de_materia_prima clusters." width="500">
+</div>
+<div align='center'>
+    <span>Plot showing clusters of <i>tipo_de_materia_prima</i>.</span>
+    <br>
+</div>
 
 ### Specialist Taxonomy
+
+We consulted museum specialists in indigenous cultures, but each expert typically focuses on a specific group or small communities. While specialists exist for every community, there is no centralized structure connecting or organizing relationships between them.
+
+Given this, we identified **language** as the best proxy for mapping community relationships, as we have a well-defined hierarchical structure for most indigenous languages in Brazil. Using this framework, we built a **hierarchical graph** for communities, connecting them to one another through their languages.
+
+## Clustering Through Machine Learning
+
+### Image-Based Clustering
+
+This section delves into the technical aspects of one of our machine learning approaches: using image-based clustering to group objects, aiming to understand how they connect through visual similarities. The results of this process serve two main purposes:
+
+1. **Enhancing collection navigation:** By clustering visually similar objects together, we create an interactive and intuitive way for users to explore the collection. Similar objects will be positioned in close proximity within our final projection, allowing users to navigate different “micro-universes” of the collection, observe category transitions, and explore relationships between items.  
+
+2. **Uncovering latent relationships:** Our models help to reveal previously undocumented connections between groups of objects or cultural communities. This is particularly valuable for researchers studying indigenous peoples, as it provides insights into shared artistic or manufacturing traditions. Given the lack of centralized taxonomies for indigenous groups in Brazil, our tool could serve as a pivotal resource for broader ethnographic studies in the country.  
+
+To implement this, we use **image feature extractors** to project background-removed images (see [dataset documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/DATASET.md) for details) into high-dimensional space. We then **apply dimensionality reduction** techniques to visualize the clusters.
+
+Beyond simple projections, we experimented with fine-tuning models to improve item dispersion and enable subdivision by specific attributes (e.g., `povo` or `categoria`). This allows users to explore both individual item neighborhoods and broader categorical relationships within the dataset. 
+
+We now proceed to describe the technical details, report the obtained results and show some of the generated images for clarity:
+
+#### Technical Pipeline
+
+Utilizamos dois principais modelos de extração de feautures para essa etapa, ambos baseados em transformers. Isso porque, para extração de features, normalmente fazemos uso do backbone de um modelo treinado em alguma tarefa de classificação geral relacionada a imagens (classificação do imagenet21K nos casos dos modelos que utilizamos) e as arquiteturas que usam de transformers atualmente são as state-of-the-art nessas tarefas.
+
+Começamos com o modelo ViT Base com patches de tamanho 16x16 já que se trata de uma rede de extrema importância na área e que, apesar de não ser mais cutting-edge, ainda é uma boa referência inicial para modelos transformers (base de vários modelos state-of-the-art atuais, inclusive o outro que treinamos e o próximo que discutiremos DINOv2).
+
+#### Results
+
+
+
+### Text-Based Clustering
+
+
+
+### Multimodal clustering
+
 
