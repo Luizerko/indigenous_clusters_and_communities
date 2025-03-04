@@ -760,10 +760,10 @@ def prec_rec_on_selected_classes(categories, filtered_categories, precisions, re
     print(f'Test average recall on filtered classes: {np.mean(np.array(recalls)[indices])}')
 
 # Computing embeddings for fine-tuned classifier
-def compute_classifier_embeddings(dataloader, model, device):
+def compute_classifier_embeddings(dataloader, model, device, model_name='vit'):
     # Computing image embeddings
     model.classifier = nn.Identity()
-    image_embeddings, image_indices = get_embeddings(model, dataloader, device, True)
+    image_embeddings, image_indices = get_embeddings(model, dataloader, device, True, model_name)
     image_indices = np.concatenate(image_indices, axis=0)
     image_embeddings = np.concatenate(image_embeddings, axis=0)
 
