@@ -11,18 +11,18 @@ The main challenges lie in extracting, organizing, and analyzing the data from t
 ## Repository Hierarchy
 
     .
-    ├── assets                  # Collection of images and GIFs used for the documentation
-    ├── tainacan_collection     # Code collection for Tainacan data exploration (project's core folder)
-    |   ├── assets              # Stylesheets for visualization tool
-    |   ├── image_based         # Code focused on image based feature extraction and clustering
-    |   ├── language_based      # Code focused on language based feature extraction and clustering
-    |   ├── multimodal          # Code focused on multimodal feature extraction and clustering
+    ├── assets                # Collection of images and GIFs used for the documentation
+    ├── tainacan_collection   # Code collection for Tainacan data exploration (core code folder)
+    |   ├── assets            # Stylesheets for visualization tool
+    |   ├── image_based       # Code focused on image based feature extraction and clustering
+    |   ├── language_based    # Code focused on language based feature extraction and clustering
+    |   ├── multimodal        # Code focused on multimodal feature extraction and clustering
     |   └── ...
     ├── README.md
-    ├── INSTALL.md              # Environment installation documentation
-    ├── DATASET.md              # Data extraction and processing documentation
-    ├── VISUALIZATION.md        # Visualization tool documentation
-    ├── CLUSTERING.md           # Clustering experiments documentation
+    ├── INSTALL.md            # Environment installation documentation
+    ├── DATASET.md            # Data extraction and processing documentation
+    ├── VISUALIZATION.md      # Visualization tool documentation
+    ├── CLUSTERING.md         # Clustering experiments documentation
     └── ...
 
 This is the base folder for the project. In here, you'll find:
