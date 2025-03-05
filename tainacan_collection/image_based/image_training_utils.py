@@ -37,7 +37,7 @@ def normalize(data, norm_factor=2):
 def preparing_image_labels(df, label_column='povo', offset=0):
     name_to_num = {c: i+offset for i, c in enumerate(df[label_column].unique())}
     num_to_name = {c: i for i, c in name_to_num.items()}
-    labels = {row['image_path_br']: name_to_num[row[label_column]] for index, row in df.loc[df['image_path_br'].notna()].iterrows()}
+    labels = {'../'+row['image_path_br']: name_to_num[row[label_column]] for index, row in df.loc[df['image_path_br'].notna()].iterrows()}
     
     return labels, name_to_num, num_to_name
 
@@ -49,7 +49,7 @@ def preparing_image_multi_labels(df, second_class_name_to_num, label_columns=['p
     name_to_num.append(second_class_name_to_num)
     num_to_name = [{c: i for i, c in name_to_num[1].items()}]
 
-    labels = {row['image_path_br']: [name_to_num[i][row[lc]] for i, lc in enumerate(label_columns)] for index, row in df.loc[df['image_path_br'].notna()].iterrows()}
+    labels = {'../'+row['image_path_br']: [name_to_num[i][row[lc]] for i, lc in enumerate(label_columns)] for index, row in df.loc[df['image_path_br'].notna()].iterrows()}
 
     return labels, name_to_num, num_to_name
 
@@ -462,7 +462,7 @@ def train_loop(model, num_classes, train_dataloader, val_dataloader, device, cri
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': opt.state_dict(),
                 'best_val_acc': best_val_acc
-            }, 'data/models_weights/' + model_name + '.pth')
+            }, '../data/models_weights/' + model_name + '.pth')
         
             tqdm.write(f'Best model saved at epoch {epoch+1}')
 
@@ -575,7 +575,7 @@ def multihead_train_loop(model, num_classes, train_dataloader, val_dataloader, d
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': opt.state_dict(),
                 'best_val_avg_acc': best_val_avg_acc
-            }, 'data/models_weights/' + model_name + '.pth')
+            }, '../data/models_weights/' + model_name + '.pth')
         
             tqdm.write(f'Best model saved at epoch {epoch+1}')
 
@@ -683,7 +683,7 @@ def evaluate_model(model, model_name, num_classes, test_dataloader, device):
     rec_metric = Recall(task="multiclass", num_classes=num_classes, average=None).to(device)
 
     # Loading best model, setting it to eval and forward passing
-    checkpoint = torch.load('data/models_weights/' + model_name + '.pth', map_location=device)
+    checkpoint = torch.load('../data/models_weights/' + model_name + '.pth', map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     with torch.no_grad():
@@ -715,7 +715,7 @@ def multihead_evaluate_model(model, model_name, num_classes, test_dataloader, de
     rec_metric = [Recall(task="multiclass", num_classes=nc, average=None).to(device) for nc in num_classes]
 
     # Loading best model, setting it to eval and forward passing
-    checkpoint = torch.load('data/models_weights/' + model_name + '.pth', map_location=device)
+    checkpoint = torch.load('../data/models_weights/' + model_name + '.pth', map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     with torch.no_grad():
@@ -842,6 +842,6 @@ def saving_outputs(df, labels, projections, image_indices, column_name='povo', s
 
     visualization_df = pd.DataFrame(index=indices, data={'x': pos_xy[:, 0], 'y': pos_xy[:, 1], 'cluster': clusters, 'cluster_names': cluster_names})
     visualization_df.index.name='id'
-    visualization_df.to_csv('data/clusters/' + save_file)
+    visualization_df.to_csv('../data/clusters/' + save_file)
 
     return visualization_df

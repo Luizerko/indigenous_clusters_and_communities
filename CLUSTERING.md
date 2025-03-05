@@ -99,15 +99,98 @@ To implement this, we use **image feature extractors** to project background-rem
 
 Beyond simple projections, we experimented with fine-tuning models to improve item dispersion and enable subdivision by specific attributes (e.g., `povo` or `categoria`). This allows users to explore both individual item neighborhoods and broader categorical relationships within the dataset. 
 
-We now proceed to describe the technical details, report the obtained results and show some of the generated images for clarity:
+We now proceed to describe the technical pipelines implemented, report the obtained results and show some of the generated images for clarity. For this stage, we used two main feature extraction models, both based on transformers. Transformer-based architectures are currently state-of-the-art for feature extraction, as they leverage pretrained backbones with the best results when optimized on large-scale classification tasks (such as ImageNet21K in our case).
 
-#### Technical Pipeline
+#### ViT Base (Patch 16x16)  
 
-Utilizamos dois principais modelos de extração de feautures para essa etapa, ambos baseados em transformers. Isso porque, para extração de features, normalmente fazemos uso do backbone de um modelo treinado em alguma tarefa de classificação geral relacionada a imagens (classificação do imagenet21K nos casos dos modelos que utilizamos) e as arquiteturas que usam de transformers atualmente são as state-of-the-art nessas tarefas.
+We started with the **ViT Base model with 16x16 patches**, trained on ImageNet21K, available on [Hugging Face](https://huggingface.co/google/vit-base-patch16-224-in21k). Although no longer cutting-edge, ViT remains a foundational model in the field and serves as a solid reference point for transformer-based architectures. Many state-of-the-art models, including the next one we discuss (DINOv2), build upon it.
 
-Começamos com o modelo ViT Base com patches de tamanho 16x16 já que se trata de uma rede de extrema importância na área e que, apesar de não ser mais cutting-edge, ainda é uma boa referência inicial para modelos transformers (base de vários modelos state-of-the-art atuais, inclusive o outro que treinamos e o próximo que discutiremos DINOv2).
+For preprocessing, we resized images to 224x224 (cropping if larger in any dimension and bilinear interpolation if smaller), then normalized them using a mean of 0.5 and a standard deviation of 0.5 for all channels, following the model’s preprocessing pipeline.
 
-#### Results
+Using only the **pretrained backbone**, we projected the images into a high-dimensional space and applied **dimensionality reduction techniques** to generate 2D visualizations for the interactive tool. We tested three different techniques:
+
+- **TriMap:** Poor results, with minimal data dispersion and poor visual separation.
+
+- **t-SNE:** Produced an entangled, chaotic cloud with no clear clusters.
+
+- **UMAP:** Successfully created a meaningful manifold, capturing structure with the vanilla pretrained model and groupings when fine-tuned (as discussed later).  
+
+<!-- Image showing vanilla projections for all methods (TriMap, t-SNE, and UMAP) -->
+
+The resulting projection reveals a dense point cloud due to the lack of a specific training category. However, a **continuous manifold emerges**, where visually similar objects are positioned close together. This reflects the model’s ability to capture diverse visual similarities, including shape, colors, texture and details. This manifold alone offers a unique and interactive way to navigate the collection. But what happens when we introduce more structured knowledge into the data?
+
+To refine clustering, we performed **fine-tuning** using the `povo` and `categoria` features, aiming for semantically distinct object groupings. This allows for categorical exploration and a more nuanced understanding of relationships between indigenous communities and their artistic traditions.
+
+For that, we added a **classification head** to the network’s backbone - a **single linear layer** with 768-dimensional output from the backbone as the input size and the number of classes in the chosen feature as the output size. While common fine-tuning methods involve adding a small fully connected network, ViT fine-tuning is typically performed by adding a single linear layer at the top of the network. This approach is supported by section **3.1** of the [ViT original paper](https://ar5iv.labs.arxiv.org/html/2010.11929) and section **3.2** of [this paper](https://openreview.net/pdf?id=4nPswr1KcP), which explores ViT training strategies.
+
+##### Training Models and Results
+
+We trained several models to achieve the best possible results and assess the effectiveness of each adjustment we were implementing. Going into the implementation details, the dataset was split into 80% training, 10% validation, 10% test, and the original collection contained approximately **11,000 images**.
+
+For each model, we tracked:  
+  - **Loss**  
+  - **Validation accuracy**  
+  - **Average class precision**  
+  - **Average class recall**  
+
+All models were trained on a 8GB RTX 4070 until convergence (typically between 20 and 30 epochs) using:  
+- **Adam optimizer** (with weight decay)  
+- **Cross-entropy loss** (either with or without weights)  
+- **Early stopping** (1% accuracy tolerance, 3-iteration patience)  
+- **Five runs per model** (for mean and standard deviation analysis)  
+
+Most models, however, were not trained directly on the original dataset due to **severe class imbalance** for `povo` and, to a lesser extent, `categoria`. To address this, we developed a **rebalancing pipeline**, which significantly improved model performance.  
+
+<!-- Images showing class imbalance for 'povo' and 'categoria' -->
+
+For `povo`, we started by understanding the distribution. We analyzed the quantiles of class sizes. `povo` contains 187 classes, but 25% of these (~47 classes) have only 4 images - insufficient for training. Even after removing these 25% least populated classes, around 99% of the dataset remains intact. We ultimately removed 75% of the least populated classes (~138 classes), keeping only classes with more than 65 images, preserving around 85% of the original data.
+
+Despite filtering, class sizes still varied significantly. To address this we performed a **class median analysis**: classes with more than 2 times the median image count were labeled as *majority* classes, and others were labeled as *minority* classes. After that we started **data augmentation for minority classes** through random horizontal flips, random vertical flips and random Gaussian blur. For the majority classes, in turn, we **randomly (under)sampled images** to match minority class sizes. Notice, however, that only augmenting minority classes could introduce a bias where the model differentiates minority/majority classes based on artificially added noise. Thus, we applied stronger undersampling to majority classes and then also augmented them.  
+
+Even after balancing, class disparities remained though. Because of that, we **assigned weights** inversely proportional to the amount of data the class had, ensuring equal contribution during training.  
+
+For `categoria`, the procedure was nearly identical to `povo`, with one key difference: only one class (*"etnobotânica"*) was significantly underrepresented. Hence, instead of a full quantile study, we filtered this single class. The remaining balancing steps followed the same augmentation, undersampling, and weight adjustment process.
+
+The tables below summarizes the parameters for different models and the corresponding quantitative results.
+
+| Dataset | Learning Rate | Weight Decay | Frozen Layers (%) | Weighted Loss | Test Accuracy (%) | Avg. Precision | Avg. Recall | Avg. Precision on Selected Classes | Avg. Recall on Selected Classes | 
+|-|-|-|-|-|-|-|-|-|-|
+| Original | 5e-5 | 2e-6 | 0 | False | 67.91 ± 3.46 | 0.27 ± 0.02 | 0.25 ± 0.02 | 0.60 ± 0.03 | **0.67 ± 0.05** |
+| Balanced | 2e-5 | 2e-6 | 0 | True | **70.47 ± 1.58** | - | - | **0.70 ± 0.03** | 0.65 ± 0.04 |
+| Balanced | 2e-5 | 2e-6 | 50 | True | 67.77 ± 1.95 | - | - | 0.68 ± 0.02 | 0.63 ± 0.02 |
+| Balanced | 2e-5 | 2e-6 | 80 | True | 66.58 ± 1.07 | - | - | 0.63 ± 0.01 | 0.62 ± 0.02 |
+<p align="center" style="margin-bottom: 25px;">
+  Parameters and results for ViT models fine-tuned on `povo`.
+</p>
+
+| Dataset | Learning Rate | Weight Decay | Frozen Layers (%) | Weighted Loss | Test Accuracy (%) | Avg. Precision | Avg. Recall | Avg. Precision on Selected Classes | Avg. Recall on Selected Classes | 
+|-|-|-|-|-|-|-|-|-|-|
+| Original | 1e-5 | 2e-6 | 0 | False | 67.91 ± 3.46 | 0.27 ± 0.02 | 0.25 ± 0.02 | 0.60 ± 0.03 | **0.67 ± 0.05** |
+| Balanced | 3e-6 | 1e-6 | 0 | True | **70.47 ± 1.58** | - | - | **0.70 ± 0.03** | 0.65 ± 0.04 |
+| Balanced | 3e-6 | 1e-6 | 50 | True | 68.73 ± 1.95 | - | - | 0.67 ± 0.02 | 0.63 ± 0.02 |
+| Balanced | 3e-6 | 1e-6 | 80 | True | 66.58 ± 1.07 | - | - | 0.63 ± 0.01 | 0.62 ± 0.02 |
+<p align="center" style="margin-bottom: 25px;">
+  Parameters and results for ViT models fine-tuned on `categoria`.
+</p>
+
+In addition to the previously mentioned models, we developed a multi-head model to explore the semantics of the network’s image projections when optimizing both features simultaneously. We implemented two classification heads - one for `povo` and another for `categoria` - with the loss being the weighted average of both losses.
+
+Balancing the dataset was even more challenging in this case, as optimizing for one feature could disrupt the other. Joint distribution balancing was impractical due to the vast number of classes and because of the even worse joint-class imbalance, with little correlation between `povo` and `categoria`. Ultimately, we used the previously filtered classes for both features and initially balanced only for `povo`. This approach had minimal impact on `categoria`, which was already less imbalanced and not a major issue.
+
+The table below summarizes the parameters for different head weights and the corresponding quantitative results.
+
+| Learning Rate | Weight Decay | Head Weights (`povo`/`categoria`) | `povo` Head Test Accuracy (%) | `povo` Head Avg. Precision on Selected Classes | `povo` Head Avg. Recall on Selected Classes | `categoria` Head Test Accuracy (%) | `categoria` Head Avg. Precision on Selected Classes | `categoria` Head Avg. recall on Selected Classes |
+|-|-|-|-|-|-|-|-|-|
+| 1e-5 | 3e-6 | 50/50 | 67.91 ± 3.46 | 0.25 ± 0.02 | 0.27 ± 0.02 | 68.73 ± 1.95 | 0.60 ± 0.03 | 0.67 ± 0.05 |
+| 1e-5 | 3e-6 | 70/30 | 67.91 ± 3.46 | 0.25 ± 0.02 | 0.27 ± 0.02 | 68.73 ± 1.95 | 0.60 ± 0.03 | 0.67 ± 0.05 |
+| 1e-5 | 3e-6 | 30/70 | 67.91 ± 3.46 | 0.25 ± 0.02 | 0.27 ± 0.02 | 68.73 ± 1.95 | 0.60 ± 0.03 | 0.67 ± 0.05 |
+| 1e-5 | 3e-6 | 100/0 | 67.91 ± 3.46 | 0.25 ± 0.02 | 0.27 ± 0.02 | 68.73 ± 1.95 | 0.60 ± 0.03 | 0.67 ± 0.05 |
+| 1e-5 | 3e-6 | 0/100 | 67.91 ± 3.46 | 0.25 ± 0.02 | 0.27 ± 0.02 | 68.73 ± 1.95 | 0.60 ± 0.03 | 0.67 ± 0.05 |
+<p align="center" style="margin-bottom: 25px;">
+  Parameters and results for multi-head ViT models fine-tuned on both `povo` and `categoria`. The columns <i>Dataset</i>, <i>Frozen Layers (%)</i>, <i>Weighted Loss</i>, <i>Avg. Precision</i> and <i>Avg. Recall</i> are not found in this table because we trained all models with the same (balanced) dataset, no frozen layers, always with weighted loss for both heads and only on the selected categories.
+</p>
+
+#### DINOv2
 
 
 

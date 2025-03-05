@@ -14,7 +14,7 @@ Once the dataset is prepared, we proceed with **data cleaning and exploratory an
 
 Below, we provide a high-level summary of the dataset attributes, based on our initial inspection and documentation efforts.
 
-| Column Name           | Description                                                                                                                                          |
+| Attribute Name           | Description                                                                                                                                          |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `url`                | Link to the object in Tainacan's archive.                                                                                                           |
 | `thumbnail`          | Link to the thumbnail image of the element. `NaN` if there's no image associated with the object.                                                   |
