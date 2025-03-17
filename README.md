@@ -38,7 +38,7 @@ This is the base folder for the project. In here, you'll find:
  
  - The [visualization tool documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/VISUALIZATION.md) containing details reagarding the tool egineering and visual examples of its parts.
  
- - The [clustering experiments documentation](https://github.com/Luizerko/master_thesis/tree/main/indigenous_project/CLUSTER.md) describing all the clustering technical implementations and obtained results.
+ - The [clustering experiments documentation](https://github.com/Luizerko/master_thesis/tree/main/indigenous_project/CLUSTERING.md) describing all the clustering technical implementations and obtained results.
  
 If you want to take a look at the code itself, go into the [`tainacan_collection`](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection) folder and explore the individual files.
 

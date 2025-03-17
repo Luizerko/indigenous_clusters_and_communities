@@ -155,23 +155,25 @@ The tables below summarizes the parameters for different models and the correspo
 
 | Dataset | Learning Rate | Weight Decay | Frozen Layers (%) | Weighted Loss | Test Accuracy (%) | Avg. Precision | Avg. Recall | Avg. Precision on Selected Classes | Avg. Recall on Selected Classes | 
 |-|-|-|-|-|-|-|-|-|-|
-| Original | 5e-5 | 2e-6 | 0 | False | 67.91 ± 3.46 | 0.27 ± 0.02 | 0.25 ± 0.02 | 0.60 ± 0.03 | **0.67 ± 0.05** |
-| Balanced | 2e-5 | 2e-6 | 0 | True | **70.47 ± 1.58** | - | - | **0.70 ± 0.03** | 0.65 ± 0.04 |
-| Balanced | 2e-5 | 2e-6 | 50 | True | 67.77 ± 1.95 | - | - | 0.68 ± 0.02 | 0.63 ± 0.02 |
-| Balanced | 2e-5 | 2e-6 | 80 | True | 66.58 ± 1.07 | - | - | 0.63 ± 0.01 | 0.62 ± 0.02 |
+| Original | 5e-5 | 2e-6 | 0 | False | **69.92 ± 2.46** | 0.27 ± 0.02 | 0.25 ± 0.02 | 0.59 ± 0.03 | <ins>0.63 ± 0.05</ins> |
+| Balanced | 2e-5 | 2e-6 | 0 | True | <ins>69.47 ± 1.58</ins> | - | - | **0.70 ± 0.02** | **0.70 ± 0.04** |
+| Balanced | 2e-5 | 2e-6 | 50 | True | 68.87 ± 3.95 | - | - | <ins>0.68 ± 0.05</ins> | <ins>0.63 ± 0.08</ins> |
+| Balanced | 2e-5 | 2e-6 | 80 | True | 66.56 ± 2.37 | - | - | 0.63 ± 0.04 | 0.62 ± 0.06 |
 <p align="center" style="margin-bottom: 25px;">
   Parameters and results for ViT models fine-tuned on `povo`.
 </p>
 
 | Dataset | Learning Rate | Weight Decay | Frozen Layers (%) | Weighted Loss | Test Accuracy (%) | Avg. Precision | Avg. Recall | Avg. Precision on Selected Classes | Avg. Recall on Selected Classes | 
 |-|-|-|-|-|-|-|-|-|-|
-| Original | 1e-5 | 2e-6 | 0 | False | 67.91 ± 3.46 | 0.27 ± 0.02 | 0.25 ± 0.02 | 0.60 ± 0.03 | **0.67 ± 0.05** |
-| Balanced | 3e-6 | 1e-6 | 0 | True | **70.47 ± 1.58** | - | - | **0.70 ± 0.03** | 0.65 ± 0.04 |
-| Balanced | 3e-6 | 1e-6 | 50 | True | 68.73 ± 1.95 | - | - | 0.67 ± 0.02 | 0.63 ± 0.02 |
-| Balanced | 3e-6 | 1e-6 | 80 | True | 66.58 ± 1.07 | - | - | 0.63 ± 0.01 | 0.62 ± 0.02 |
+| Original | 1e-5 | 2e-6 | 0 | False | 88.11 ± 1.61 | 0.78 ± 0.04 | 0.75 ± 0.03 | <ins>0.87 ± 0.02</ins> | 0.84 ± 0.02 |
+| Balanced | 3e-6 | 1e-6 | 0 | True | **88.65 ± 1.27** | - | - | **0.88 ± 0.03** | **0.85 ± 0.02** |
+| Balanced | 3e-6 | 1e-6 | 50 | True | <ins>88.63 ± 1.75</ins> | - | - | <ins>0.87 ± 0.02</ins> | **0.85 ± 0.02** |
+| Balanced | 3e-6 | 1e-6 | 80 | True | 87.12 ± 2.01 | - | - | 0.86 ± 0.04 | 0.84 ± 0.05 |
 <p align="center" style="margin-bottom: 25px;">
   Parameters and results for ViT models fine-tuned on `categoria`.
 </p>
+
+As tabelas acima mostram que o modelo 
 
 In addition to the previously mentioned models, we developed a multi-head model to explore the semantics of the network’s image projections when optimizing both features simultaneously. We implemented two classification heads - one for `povo` and another for `categoria` - with the loss being the weighted average of both losses.
 
@@ -181,18 +183,34 @@ The table below summarizes the parameters for different head weights and the cor
 
 | Learning Rate | Weight Decay | Head Weights (`povo`/`categoria`) | `povo` Head Test Accuracy (%) | `povo` Head Avg. Precision on Selected Classes | `povo` Head Avg. Recall on Selected Classes | `categoria` Head Test Accuracy (%) | `categoria` Head Avg. Precision on Selected Classes | `categoria` Head Avg. recall on Selected Classes |
 |-|-|-|-|-|-|-|-|-|
-| 1e-5 | 3e-6 | 50/50 | 67.91 ± 3.46 | 0.25 ± 0.02 | 0.27 ± 0.02 | 68.73 ± 1.95 | 0.60 ± 0.03 | 0.67 ± 0.05 |
-| 1e-5 | 3e-6 | 70/30 | 67.91 ± 3.46 | 0.25 ± 0.02 | 0.27 ± 0.02 | 68.73 ± 1.95 | 0.60 ± 0.03 | 0.67 ± 0.05 |
+| 1e-5 | 3e-6 | 50/50 | 68.82 ± 3.46 | 0.68 ± 0.02 | 0.67 ± 0.02 | 86.87 ± 1.95 | 0.85 ± 0.03 | 0.83 ± 0.05 |
+| 1e-5 | 3e-6 | 70/30 | 71.11 ± 2.06 | 0.72 ± 0.03 | 0.70 ± 0.02 | 87.74 ± 2.34 | 0.88 ± 0.02 | 0.87 ± 0.03 |
 | 1e-5 | 3e-6 | 30/70 | 67.91 ± 3.46 | 0.25 ± 0.02 | 0.27 ± 0.02 | 68.73 ± 1.95 | 0.60 ± 0.03 | 0.67 ± 0.05 |
-| 1e-5 | 3e-6 | 100/0 | 67.91 ± 3.46 | 0.25 ± 0.02 | 0.27 ± 0.02 | 68.73 ± 1.95 | 0.60 ± 0.03 | 0.67 ± 0.05 |
-| 1e-5 | 3e-6 | 0/100 | 67.91 ± 3.46 | 0.25 ± 0.02 | 0.27 ± 0.02 | 68.73 ± 1.95 | 0.60 ± 0.03 | 0.67 ± 0.05 |
 <p align="center" style="margin-bottom: 25px;">
   Parameters and results for multi-head ViT models fine-tuned on both `povo` and `categoria`. The columns <i>Dataset</i>, <i>Frozen Layers (%)</i>, <i>Weighted Loss</i>, <i>Avg. Precision</i> and <i>Avg. Recall</i> are not found in this table because we trained all models with the same (balanced) dataset, no frozen layers, always with weighted loss for both heads and only on the selected categories.
 </p>
 
 #### DINOv2
 
+| Dataset | Learning Rate | Weight Decay | Frozen Layers (%) | Weighted Loss | Test Accuracy (%) | Avg. Precision | Avg. Recall | Avg. Precision on Selected Classes | Avg. Recall on Selected Classes | 
+|-|-|-|-|-|-|-|-|-|-|
+| Original | 1e-6 | 3e-7 | 0 | False | 69.12 ± 4.27 | 0.29 ± 0.07 | 0.28 ± 0.09 | 0.61 ± 0.07 | 0.60 ± 0.08 |
+| Balanced | 1e-6 | 3e-7 | 0 | True | 69.67 ± 1.88 | - | - | 0.69 ± 0.02 | 0.68 ± 0.03 |
+| Balanced | 1e-6 | 3e-7 | 50 | True | **72.23 ± 3.32** | - | - | **0.72 ± 0.05** | **0.72 ± 0.03** |
+| Balanced | 1e-6 | 3e-7 | 80 | True | 68.76 ± 2.94 | - | - | 0.69 ± 0.03 | 0.67 ± 0.04 |
+<p align="center" style="margin-bottom: 25px;">
+  Parameters and results for DINOv2 models fine-tuned on `povo`.
+</p>
 
+| Dataset | Learning Rate | Weight Decay | Frozen Layers (%) | Weighted Loss | Test Accuracy (%) | Avg. Precision | Avg. Recall | Avg. Precision on Selected Classes | Avg. Recall on Selected Classes | 
+|-|-|-|-|-|-|-|-|-|-|
+| Original | 1e-5 | 2e-6 | 0 | False | 88.11 ± 1.61 | 0.78 ± 0.01 | 0.75 ± 0.02 | **0.87 ± 0.02** | 0.84 ± 0.02 |
+| Balanced | 3e-6 | 1e-6 | 0 | True | 88.04 ± 1.27 | - | - | 0.86 ± 0.01 | **0.85 ± 0.02** |
+| Balanced | 3e-6 | 1e-6 | 50 | True | **88.23 ± 1.75** | - | - | 0.86 ± 0.02 | **0.85 ± 0.03** |
+| Balanced | 3e-6 | 1e-6 | 80 | True | 87.63 ± 0.89 | - | - | 0.85 ± 0.01 | 0.84 ± 0.01 |
+<p align="center" style="margin-bottom: 25px;">
+  Parameters and results for DINOv2 models fine-tuned on `categoria`.
+</p>
 
 ### Text-Based Clustering
 

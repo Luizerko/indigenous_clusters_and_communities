@@ -102,6 +102,9 @@ def get_embeddings(model, dataloader, device, fine_tuned=False, model_name='vit'
                     outputs = model.vit(batch_images)
                 elif model_name == 'dino':
                     outputs = model.dino(batch_images)
+                # Choosing anyone of the heads for multihead model
+                # if model.multi_head:
+                #     outputs = outputs[0]
             else:
                 outputs = model(batch_images)
         
@@ -404,10 +407,8 @@ def train_loop(model, num_classes, train_dataloader, val_dataloader, device, cri
     tolerance = 0.01
 
     acc_metric = Accuracy(task="multiclass", num_classes=num_classes).to(device)
-    prec_metric = Precision(task="multiclass", num_classes=num_classes, \
-                            average=None).to(device)
-    rec_metric = Recall(task="multiclass", num_classes=num_classes, \
-                        average=None).to(device)
+    prec_metric = Precision(task="multiclass", num_classes=num_classes, average=None).to(device)
+    rec_metric = Recall(task="multiclass", num_classes=num_classes, average=None).to(device)
     
     for epoch in tqdm(range(epochs), desc=f"Training model", leave=True, total=epochs, ncols=100):
         model.train()
@@ -762,7 +763,9 @@ def prec_rec_on_selected_classes(categories, filtered_categories, precisions, re
 # Computing embeddings for fine-tuned classifier
 def compute_classifier_embeddings(dataloader, model, device, model_name='vit'):
     # Computing image embeddings
-    model.classifier = nn.Identity()
+    # model.classifier1 = nn.Identity()
+    # if model.multi_head:
+    #     model.classifier2 = nn.Identity()
     image_embeddings, image_indices = get_embeddings(model, dataloader, device, True, model_name)
     image_indices = np.concatenate(image_indices, axis=0)
     image_embeddings = np.concatenate(image_embeddings, axis=0)
@@ -802,8 +805,7 @@ def visualizing_clusters(df, projections, image_indices, column_name='povo', pro
     for cluster in unique_values:
         mask = df.index[df[column_name] == cluster].tolist()
         sequential_indices = np.array([df.index.get_loc(idx) for idx in mask])
-        plt.scatter(projections_sorted[sequential_indices, 0], \
-                    projections_sorted[sequential_indices, 1], 
+        plt.scatter(projections_sorted[sequential_indices, 0], projections_sorted[sequential_indices, 1], \
                     color=color_dict[cluster], label=f"{cluster.title()}", alpha=0.7)
 
     plt.title(f"Visualizing Clusters for '{column_name}' on {projection_name} Projection")
@@ -811,17 +813,18 @@ def visualizing_clusters(df, projections, image_indices, column_name='povo', pro
     plt.ylabel("")
     plt.xticks([])
     plt.yticks([])
-    plt.legend(title="Clusters", bbox_to_anchor=(1.05, 1), loc="upper left", \
-            fontsize=8, frameon=True)
+    plt.legend(title="Clusters", bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8, frameon=True)
 
     plt.tight_layout()
     plt.show()
 
 # Function to safe outputs for visualization tool
-def saving_outputs(df, labels, projections, image_indices, column_name='povo', save_file='povo_vit.csv'):
+def saving_outputs(df, labels, projections, image_indices, column_name='povo', save_file='povo_vit.csv', no_clusters=False):
+
     # Getting unique cluster values
-    unique_values = df[df[column_name].notna()][column_name].unique()
-    cluster_dict = {c: i for i, c in enumerate(unique_values)}
+    if not no_clusters:
+        unique_values = df[df[column_name].notna()][column_name].unique()
+        cluster_dict = {c: i for i, c in enumerate(unique_values)}
 
     # Computing indices and reordering projections to match the original dataframe order
     indices = []
@@ -833,12 +836,13 @@ def saving_outputs(df, labels, projections, image_indices, column_name='povo', s
     clusters = np.full(len(pos_xy), -1)
     cluster_names = np.full(len(pos_xy), '', dtype=object)
 
-    for cluster, cluster_num in cluster_dict.items():
-        mask = df.index[df[column_name] == cluster].tolist()
-        sequential_indices = np.array([df.index.get_loc(idx) for idx in mask])
-        
-        clusters[sequential_indices] = cluster_num
-        cluster_names[sequential_indices] = cluster
+    if not no_clusters:
+        for cluster, cluster_num in cluster_dict.items():
+            mask = df.index[df[column_name] == cluster].tolist()
+            sequential_indices = np.array([df.index.get_loc(idx) for idx in mask])
+            
+            clusters[sequential_indices] = cluster_num
+            cluster_names[sequential_indices] = cluster
 
     visualization_df = pd.DataFrame(index=indices, data={'x': pos_xy[:, 0], 'y': pos_xy[:, 1], 'cluster': clusters, 'cluster_names': cluster_names})
     visualization_df.index.name='id'

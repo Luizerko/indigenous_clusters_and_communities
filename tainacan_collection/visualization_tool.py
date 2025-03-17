@@ -28,13 +28,6 @@ tipo_materia_prima_baseline_df = pd.read_csv('data/clusters/tipo_materia_prima_b
 categoria_vit_df = pd.read_csv('data/clusters/categoria_vit.csv', index_col='id')
 povo_vit_df = pd.read_csv('data/clusters/povo_vit.csv', index_col='id')
 
-# Loading and processing geolocation dataframe to increase granularity of map tab
-ind_geo = pd.read_csv('data/terras_indigenas_geolocation_processed.csv', index_col='id')
-ind_geo = ind_geo[ind_geo['povo'].str.contains('|'.join(ind_df['povo'].dropna().unique()), na=False)]
-povo_values = ind_df['povo'].dropna().unique()
-povo_pattern = '(' + '|'.join(map(re.escape, povo_values)) + ')'
-ind_geo['povo'] = ind_geo['povo'].str.extract(povo_pattern, expand=False)
-
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index
 
