@@ -12,6 +12,8 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 import numpy as np
 
+from google.cloud import storage
+
 from visual_utils import *
 
 from sklearn.datasets import make_blobs
@@ -33,6 +35,14 @@ plot_df['ind_index'] = ind_df.index
 
 # Extracting and processing information that will be used from dataframe
 plot_df['image_path'] = ind_df['image_path'].values
+
+# Initializing the storage client with my service account key
+storage_client = storage.Client.from_service_account_json('data/master-thesis-454117-c3204ebce791.json')
+
+# Creating temporary URL for lazy loading images
+plot_df['temporary_br_url'] = pd.NA
+plot_df.loc[plot_df['image_path'].notna(), 'temporary_br_url'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: generate_signed_url(storage_client, 'background-removed-tainacan-images', f"{path.split('/')[-1].split('.')[0]}.png"))
+
 plot_df['image_path_br'] = ind_df['image_path'].values
 plot_df.loc[plot_df['image_path_br'].notna(), 'image_path_br'] = plot_df.loc[plot_df['image_path_br'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")
 plot_df.fillna({'image_path': 'data/placeholder_square.png'}, inplace=True)
@@ -426,8 +436,9 @@ app.layout = html.Div([
                     className='map-container',
                     children=[
                         dcc.Graph(id='brazil-map', config=config, figure=brazil_figure()),
-                        dcc.Store(id='current-state', data=None),
-                        dcc.Store(id='current-page', data=0)
+                        dcc.Store(id='current-name', data=None),
+                        dcc.Store(id='current-page', data=0),
+                        dcc.Store(id='current-curve', data=0)
                     ]
                 ),
             ],
@@ -811,48 +822,59 @@ def filter_data(selected_categoria, selected_povo, selected_estado, selected_mat
     Output("state-header", "children"),
     Output("pagination-text", "children"),
     Output("brazil-map", "clickData"),
-    Output("current-state", "data"),
+    Output("current-name", "data"),
     Output("current-page", "data"),
+    Output("current-curve", "data"),
     Input("brazil-map", "clickData"),
     Input("prev-page", "n_clicks"),
     Input("next-page", "n_clicks"),
     State("modal-items", "is_open"),
-    State("current-state", "data"),
+    State("current-name", "data"),
     State("current-page", "data"),
+    State("current-curve", "data"),
 )
-def display_state_items(clickData, prev_page_click, next_page_click, is_open, current_state, current_page):
+def display_state_items(clickData, prev_page_click, next_page_click, is_open, current_name, current_page, current_curve):
     # Handling context for pagination later
     ctx = dash.callback_context
     potential_button_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if potential_button_id == 'prev-page':
         current_page -= 1
-        state_name = current_state
+        name = current_name
+        curve = current_curve
         is_open_update = is_open
     elif potential_button_id == 'next-page':
         current_page += 1
-        state_name = current_state
+        name = current_name
+        curve = current_curve
         is_open_update = is_open
     else:
-        state_name = clickData["points"][0]["hovertext"]
+        name = clickData["points"][0]["hovertext"]
+        curve = clickData["points"][0]["curveNumber"]
         is_open_update = not is_open
     
     # Extracting clicked state and filtering items belonging to that state
-    state_symb = brazil_states_dict[state_name]
+    if curve == 0:
+        symb = brazil_states_dict[name]
+        items = plot_df[plot_df['estado_de_origem'].apply(lambda x: symb in x if pd.notna(x) else False)]
+        items = items.sort_values(by='nome_do_item')
 
-    state_items = plot_df[plot_df['estado_de_origem'].apply(lambda x: state_symb in x if pd.notna(x) else False)]
-    state_items = state_items.sort_values(by='nome_do_item')
+    # Extracting clicked 'povo' and filtering items belonging to them
+    elif curve == 1:
+        symb = name.lower()
+        items = plot_df[plot_df['povo'].apply(lambda x: symb in x if pd.notna(x) else False)]
+        items = items.sort_values(by='nome_do_item')
 
     # Handling pagination
     items_per_page = 99
-    total_pages = len(state_items)//items_per_page + 1
+    total_pages = len(items)//items_per_page + 1
     if current_page < 0:
-        return no_update, no_update, no_update, no_update, no_update, no_update, 0
+        return no_update, no_update, no_update, no_update, no_update, no_update, 0, no_update
     elif current_page > total_pages-1:
-        return no_update, no_update, no_update, no_update, no_update, no_update, total_pages-1
+        return no_update, no_update, no_update, no_update, no_update, no_update, total_pages-1, no_update
 
     start_idx = current_page*items_per_page
     end_idx = start_idx+items_per_page
-    paginated_items = state_items.iloc[start_idx:end_idx]
+    paginated_items = items.iloc[start_idx:end_idx]
 
     items_grid = html.Div([
         html.Div([
@@ -896,9 +918,12 @@ def display_state_items(clickData, prev_page_click, next_page_click, is_open, cu
 
     pagination_text = f"Página {current_page + 1} / {total_pages}"
     
-    header_title = f'{len(state_items)} Itens Advindos do {state_name}'
+    if curve == 0:
+        header_title = f'{len(items)} Itens do {name}'
+    elif curve == 1:
+        header_title = f'{len(items)} Itens do povo {name}'
 
-    return is_open_update, items_grid, header_title, pagination_text, None, state_name, current_page
+    return is_open_update, items_grid, header_title, pagination_text, None, name, current_page, curve
 
 # Running app
 if __name__ == '__main__':

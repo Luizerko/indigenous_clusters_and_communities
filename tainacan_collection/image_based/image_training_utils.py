@@ -767,8 +767,8 @@ def compute_classifier_embeddings(dataloader, model, device, model_name='vit'):
     # if model.multi_head:
     #     model.classifier2 = nn.Identity()
     image_embeddings, image_indices = get_embeddings(model, dataloader, device, True, model_name)
-    image_indices = np.concatenate(image_indices, axis=0)
     image_embeddings = np.concatenate(image_embeddings, axis=0)
+    image_indices = np.concatenate(image_indices, axis=0)
 
     # Computing data projections
     trimap_proj, tsne_proj, umap_proj = data_projections(image_embeddings)

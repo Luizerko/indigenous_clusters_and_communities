@@ -155,7 +155,7 @@ The tables below summarizes the parameters for different models and the correspo
 
 | Dataset | Learning Rate | Weight Decay | Frozen Layers (%) | Weighted Loss | Test Accuracy (%) | Avg. Precision | Avg. Recall | Avg. Precision on Selected Classes | Avg. Recall on Selected Classes | 
 |-|-|-|-|-|-|-|-|-|-|
-| Original | 5e-5 | 2e-6 | 0 | False | **69.92 ± 2.46** | 0.27 ± 0.02 | 0.25 ± 0.02 | 0.59 ± 0.03 | <ins>0.63 ± 0.05</ins> |
+| Original | 5e-5 | 2e-6 | 0 | False | **67.72 ± 3.46** | 0.27 ± 0.02 | 0.25 ± 0.02 | 0.59 ± 0.03 | <ins>0.63 ± 0.05</ins> |
 | Balanced | 2e-5 | 2e-6 | 0 | True | <ins>69.47 ± 1.58</ins> | - | - | **0.70 ± 0.02** | **0.70 ± 0.04** |
 | Balanced | 2e-5 | 2e-6 | 50 | True | 68.87 ± 3.95 | - | - | <ins>0.68 ± 0.05</ins> | <ins>0.63 ± 0.08</ins> |
 | Balanced | 2e-5 | 2e-6 | 80 | True | 66.56 ± 2.37 | - | - | 0.63 ± 0.04 | 0.62 ± 0.06 |

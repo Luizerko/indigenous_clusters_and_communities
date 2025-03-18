@@ -6,6 +6,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from PIL import Image
 import ast
 import math
+from datetime import timedelta
 
 import pandas as pd
 import numpy as np
@@ -24,6 +25,7 @@ brazil_states_dict = {"Acre": "AC", "Alagoas": "AL", "Amapá": "AP", "Amazonas":
 
 # Loading and processing geolocation dataframe to increase granularity of map tab
 ind_geo = pd.read_csv('data/terras_indigenas_geolocation_filtered.csv', index_col='id')
+ind_geo['povo'] = ind_geo['povo'].str.capitalize()
 
 # Normalizing factor for visualization range
 norm_factor = 12
@@ -51,7 +53,7 @@ def fig_update_layout(fig, df_len, x_range=(-norm_factor,norm_factor), y_range=(
 
         # Mouse default configuration (panning instead of zooming)
         dragmode='pan',
-        hoverdistance = 6,
+        hoverdistance=6,
     )
 
     # Hide axes' labels and ticks
@@ -272,10 +274,13 @@ def brazil_figure():
     fig.update_layout(
         mapbox_style="carto-positron",  # options are 'open-street-map', 'stamen-terrain', 'carto-positron', etc.
         margin={"r": 0, "t": 0, "l": 0, "b": 0},
-        title="Mapa do Brasil e suas Comunidades Indígenas"
+        title="Mapa do Brasil e suas Comunidades Indígenas",
+        hoverdistance=8
     )
 
-    fig.update_traces(marker=dict(size=20, color='#062a57'))
+    fig.update_traces(marker=dict(size=20, color='#062a57', opacity=0.85), hoverlabel=dict(font=dict(size=20)))
+
+    fig.add_trace(go.Scattermapbox(lat=ind_geo['x'], lon=ind_geo['y'], mode='markers', marker=dict(size=14, color='#9b3636', opacity=0.85), hovertext=ind_geo['povo'], hoverinfo='text', showlegend=False, hoverlabel=dict(font=dict(size=14, weight='bold'))))
 
     return fig
 
@@ -354,6 +359,18 @@ def plot_with_images(df, num_points, x_range=(-norm_factor,norm_factor), y_range
     return fig
 
 ########## GENERAL PURPOSE UTIL FUNCTIONS ##########
+# Function to access image on he bucket and create a temporary signed URL
+def generate_signed_url(storage_client, bucket_name, blob_name, expiration_minutes=1):
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    url = blob.generate_signed_url(
+        version='v4',
+        expiration=timedelta(minutes=expiration_minutes),
+        method='GET'
+    )
+    return url
+
 # Normalize points based on zoom level
 def normalize_points(points, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
     norm_x = (points[:, 0]-x_range[0]) / (x_range[1]-x_range[0])

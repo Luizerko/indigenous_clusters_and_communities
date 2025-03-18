@@ -1,5 +1,6 @@
 *__pycache__
 *.pdf
+*.txt
 *.ipynb_checkpoints/
 
 thesis_info_and_paperwork/
@@ -9,3 +10,4 @@ museu_info_and_paperwork/
 graffiti_project/
 
 tainacan_collection/data/
+tainacan_collection/google-cloud-sdk/
