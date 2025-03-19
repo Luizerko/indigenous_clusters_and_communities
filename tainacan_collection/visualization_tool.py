@@ -417,7 +417,7 @@ app.layout = html.Div([
                 html.Div(
                     className='timeline-container',
                     children=[
-                        dcc.Graph(id='timeline', config=config, figure=timeline_figure(ind_df['ano_de_aquisicao'].dropna().unique().astype(np.int16))),
+                        dcc.Graph(id='timeline', config=config, clear_on_unhover=True, figure=timeline_figure(ind_df['ano_de_aquisicao'].dropna().unique().astype(np.int16))),
                     ]
                 ),
             ],
@@ -475,7 +475,7 @@ app.layout = html.Div([
 def display_hover(hover_data, fig):
     fig = go.Figure(fig)
 
-    # Remove transition from hover callback (should we do that?)
+    # (Almost) remove transition from hover callback (should we do that?)
     fig.update_layout(
         transition=dict(duration=25)
     )
@@ -833,6 +833,40 @@ def filter_data(selected_categoria, selected_povo, selected_estado, selected_mat
     plot_df['visibility'] = plot_df.index.isin(filtered_df.index)
 
     return True
+
+# Callback to increase marker size on hover in timeline tab
+@app.callback(
+    Output('timeline', 'figure'),
+    Input('timeline', 'hoverData'),
+    State('timeline', 'figure'),
+    prevent_initial_call=True
+)
+def resize_marker_on_hover(hover_data, fig):
+    fig = go.Figure(fig)
+
+    # Adding small transition from hover callback
+    fig.update_layout(
+        transition=dict(duration=25)
+    )
+
+    print(fig.data)
+
+    # Resetting markers on hover-out
+    old_sizes = list(np.full((len(fig.data[1].x)), 30))
+    old_line_widths = list(np.full((len(fig.data[1].x)), 6))
+    fig.data[1].marker.size = old_sizes
+    fig.data[1].marker.line.width = old_line_widths
+    fig.data[1].marker.opacity = 1
+
+    if hover_data:
+        # Extracting plotly dash information and changing size on hover
+        num = hover_data["points"][0]["pointNumber"]
+        old_sizes[num] = 40
+        old_line_widths[num] = 3
+        fig.data[1].marker.size = old_sizes
+        fig.data[1].marker.line.width = old_line_widths
+
+    return fig
 
 # Callback for map state-items modal
 @app.callback(
