@@ -278,14 +278,14 @@ def brazil_figure():
         hoverdistance=8
     )
 
-    fig.update_traces(marker=dict(size=20, color='#062a57', opacity=0.85), hoverlabel=dict(font=dict(size=20)))
+    fig.update_traces(marker=dict(size=22, color='#062a57', opacity=0.8), hoverlabel=dict(font=dict(size=22)))
 
-    fig.add_trace(go.Scattermapbox(lat=ind_geo['x'], lon=ind_geo['y'], mode='markers', marker=dict(size=14, color='#9b3636', opacity=0.85), hovertext=ind_geo['povo'], hoverinfo='text', showlegend=False, hoverlabel=dict(font=dict(size=14, weight='bold'))))
+    fig.add_trace(go.Scattermapbox(lat=ind_geo['x'], lon=ind_geo['y'], mode='markers', marker=dict(size=16, color='#9b3636', opacity=0.8), hovertext=ind_geo['povo'], hoverinfo='text', showlegend=False, hoverlabel=dict(font=dict(size=16, weight='bold'))))
 
     return fig
 
 # Create scatter plot with markers
-def plot_with_markers(df, num_points, color_df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
+def plot_with_markers(df, num_points, color_df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor), only_images=True, no_legend=False):
     # Creating Plotly figure
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -305,28 +305,44 @@ def plot_with_markers(df, num_points, color_df, x_range=(-norm_factor,norm_facto
     fig_update_layout(fig, num_points, x_range, y_range)
 
     # Plotting legend
-    df_copy = color_df.copy()
-    df_copy['cluster_names'] = df_copy['cluster_names'].apply(lambda x: x.capitalize() if isinstance(x, str) else x)
-    unique_clusters = df_copy[['color', 'cluster_names']].drop_duplicates()
-    unique_clusters = unique_clusters.sort_values(by=['cluster_names'], ascending=True).sort_values(by='cluster_names', key=lambda x: x.str.len())
-    legend_order = unique_clusters['cluster_names'].tolist()
-    
-    color_dict = {}
-    for _, row in unique_clusters.iterrows():
-        color_dict[str(row['cluster_names'])] = row['color']
-    dummy_fig = px.scatter(
-        df_copy,
-        x=[-100 for i in range(len(df_copy))],
-        y=[-100 for i in range(len(df_copy))],
-        color='cluster_names',
-        labels={'cluster_names': 'Cluster Names'},
-        color_discrete_map=color_dict,
-        category_orders={'cluster_names': legend_order}
-    )
-    for trace in dummy_fig.data:
-        trace.showlegend = True
-        trace.marker.size = 15
-        fig.add_trace(trace)
+    if not no_legend:
+        df_copy = color_df.copy()
+        df_copy['cluster_names'] = df_copy['cluster_names'].apply(lambda x: x.capitalize() if isinstance(x, str) else x)
+        unique_clusters = df_copy[['color', 'cluster_names']].drop_duplicates()
+        unique_clusters = unique_clusters.sort_values(by=['cluster_names'], ascending=True).sort_values(by='cluster_names', key=lambda x: x.str.len())
+        legend_order = unique_clusters['cluster_names'].tolist()
+        
+        color_dict = {}
+        for _, row in unique_clusters.iterrows():
+            color_dict[str(row['cluster_names'])] = row['color']
+        dummy_fig = px.scatter(
+            df_copy,
+            x=[-100 for i in range(len(df_copy))],
+            y=[-100 for i in range(len(df_copy))],
+            color='cluster_names',
+            labels={'cluster_names': 'Cluster Names'},
+            color_discrete_map=color_dict,
+            category_orders={'cluster_names': legend_order}
+        )
+        for trace in dummy_fig.data:
+            trace.showlegend = True
+            trace.marker.size = 15
+            fig.add_trace(trace)
+
+    if only_images:
+        # Observation for image option
+        fig.add_annotation(
+            text="Apenas itens com imagens são exibidos nesta opção",
+            xref="paper", yref="paper",
+            x=0.01, y=0.02,
+            showarrow=False,
+            font=dict(size=14, color="#062a57"),
+            align="center",
+            bordercolor="#062a57",
+            borderwidth=1,
+            borderpad=8,
+            bgcolor='rgba(255, 255, 255, 0.8)',
+        )
 
     return fig
 
@@ -336,15 +352,15 @@ def plot_with_images(df, num_points, x_range=(-norm_factor,norm_factor), y_range
     fig = go.Figure()
     for index, row in df.iterrows():
         fig.add_layout_image(
-            dict(source=Image.open(row['image_path_br']), x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/8, sizey=(y_range[1]-y_range[0])/8, xanchor="center",yanchor="middle")
-            # dict(source='https://c8.alamy.com/comp/CE5JRA/wikipedia-the-online-encyclopedia-screenshot-CE5JRA.jpg', x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/8, sizey=(y_range[1]-y_range[0])/8, xanchor="center",yanchor="middle")
+            # dict(source=Image.open(row['image_path_br']), x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/8, sizey=(y_range[1]-y_range[0])/8, xanchor="center",yanchor="middle")
+            dict(source=row['temporary_br_url'], x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/8, sizey=(y_range[1]-y_range[0])/8, xanchor="center",yanchor="middle")
         )
     
     fig_update_layout(fig, num_points, x_range, y_range)
 
     # Observation for image option
     fig.add_annotation(
-        text="Apenas itens com imagens são exibidos nessa opção",
+        text="Apenas itens com imagens são exibidos nesta opção",
         xref="paper", yref="paper",
         x=0.01, y=0.02,
         showarrow=False,
@@ -434,7 +450,7 @@ def generate_color_map(clusters):
     return color_map
 
 # Function to generically update dataframe when we select a clustering option
-def update_cluster_selection(plot_df, selected_df):
+def update_cluster_selection(plot_df, selected_df, no_clusters=False):
     plot_df.set_index('ind_index', inplace=True)
         
     indices = selected_df.index
@@ -442,12 +458,20 @@ def update_cluster_selection(plot_df, selected_df):
 
     plot_df.loc[indices, "x"] = selected_df['x'].values
     plot_df.loc[indices, "y"] = selected_df['y'].values
-    plot_df.loc[indices, "cluster"] = selected_df['cluster'].values
-    plot_df.loc[indices, 'cluster_names'] = selected_df['cluster_names'].values
-    plot_df.fillna({'cluster_names': ''}, inplace=True)
+    
+    if no_clusters:
+        plot_df.loc[indices, "cluster"] = 1
+        plot_df.loc[indices, 'cluster_names'] = 'no cluster'
+        plot_df.fillna({'cluster_names': ''}, inplace=True)
+        plot_df.loc[indices, 'color'] = 'rgba(255, 113, 0, 1)'
 
-    color_map = generate_color_map(plot_df.loc[indices, 'cluster_names'].values)
-    plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indices, 'cluster_names'].values]
+    else:
+        plot_df.loc[indices, "cluster"] = selected_df['cluster'].values
+        plot_df.loc[indices, 'cluster_names'] = selected_df['cluster_names'].values
+        plot_df.fillna({'cluster_names': ''}, inplace=True)
+
+        color_map = generate_color_map(plot_df.loc[indices, 'cluster_names'].values)
+        plot_df.loc[indices, 'color'] = [color_map[label] for label in plot_df.loc[indices, 'cluster_names'].values]
 
     plot_df.reset_index(inplace=True)
 

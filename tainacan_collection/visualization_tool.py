@@ -27,8 +27,10 @@ plot_df = pd.DataFrame({"x": x[:, 0], "y": x[:, 1], "cluster": y})
 # Loading clusters
 tipo_materia_prima_baseline_df = pd.read_csv('data/clusters/tipo_materia_prima_baseline.csv', index_col='id')
 
-categoria_vit_df = pd.read_csv('data/clusters/categoria_vit.csv', index_col='id')
+vanilla_vit_df = pd.read_csv('data/clusters/vanilla_vit.csv', index_col='id')
 povo_vit_df = pd.read_csv('data/clusters/povo_vit.csv', index_col='id')
+categoria_vit_df = pd.read_csv('data/clusters/categoria_vit.csv', index_col='id')
+multihead_vit_df = pd.read_csv('data/clusters/multihead_vit.csv', index_col='id')
 
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index
@@ -41,7 +43,7 @@ storage_client = storage.Client.from_service_account_json('data/master-thesis-45
 
 # Creating temporary URL for lazy loading images
 plot_df['temporary_br_url'] = pd.NA
-plot_df.loc[plot_df['image_path'].notna(), 'temporary_br_url'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: generate_signed_url(storage_client, 'background-removed-tainacan-images', f"{path.split('/')[-1].split('.')[0]}.png"))
+plot_df.loc[plot_df['image_path'].notna(), 'temporary_br_url'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: generate_signed_url(storage_client, 'background-removed-tainacan-images', f"{path.split('/')[-1].split('.')[0]}.png", expiration_minutes=5))
 
 plot_df['image_path_br'] = ind_df['image_path'].values
 plot_df.loc[plot_df['image_path_br'].notna(), 'image_path_br'] = plot_df.loc[plot_df['image_path_br'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")
@@ -365,9 +367,11 @@ app.layout = html.Div([
                                         dcc.Dropdown(
                                             id='cluster-options',
                                             options=[
-                                                {'label': 'Categoria ViT', 'value': 'cluster_1'},
-                                                {'label': 'Povo ViT', 'value': 'cluster_2'},
+                                                {'label': 'Similaridade Imagética por Categoria (ViT)', 'value': 'cluster_1'},
+                                                {'label': 'Similaridade Imagética por Povo (ViT)', 'value': 'cluster_2'},
                                                 {'label': 'Tipo de Materia Prima', 'value': 'cluster_3'},
+                                                {'label': 'Similaridade Imagética (ViT)', 'value': 'cluster_4'},
+                                                {'label': 'Similaridade Imagética por Categoria e Povo (ViT)', 'value': 'cluster_5'},
                                             ],
                                             multi=False,
                                             placeholder='Selecione uma opção de agrupamento',
@@ -572,8 +576,9 @@ def open_click(click_data, fig):
     Input('toggle-view', 'value'),
     Input('cluster-plot', 'relayoutData'),
     Input('zoom-update', 'data'),
+    State('cluster-options', 'value')
 )
-def update_scatter_plot(view_type, relayout_data, zoom_update):
+def update_scatter_plot(view_type, relayout_data, zoom_update, grouping):
     # Handling (potential) constant trigerring and app crashing
     if relayout_data is None:
         return no_update, False, False
@@ -591,7 +596,10 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
 
     # Computing collapses
     coords = filtered_plot_df[['x', 'y']].to_numpy()
-    labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.04)
+    if grouping != 'cluster_3' and grouping != 'cluster_4' and grouping != 'cluster_5':
+        labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.04)
+    else:
+        labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.06)
 
     # Splitting clusters (inliers) and outliers for collapsing
     collapse_df = pd.DataFrame(coords, columns=["x", "y"], index=filtered_plot_df.index)
@@ -604,7 +612,8 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
     collapse_df["cluster_names"] = filtered_plot_df['cluster_names']
 
     # Getting URLs for lazy image loading
-    collapse_df["thumbnail"] = filtered_plot_df['thumbnail']
+    # collapse_df["thumbnail"] = filtered_plot_df['thumbnail']
+    collapse_df["temporary_br_url"] = filtered_plot_df['temporary_br_url']
 
     outliers = collapse_df[collapse_df['cluster'] == -1]
     outliers = outliers.copy()
@@ -643,7 +652,7 @@ def update_scatter_plot(view_type, relayout_data, zoom_update):
     # Replotting outliers
     if len(visible_outliers) > 0:
         if view_type == 'markers':
-            fig = plot_with_markers(visible_outliers, len(collapse_df), color_df, x_range, y_range)
+            fig = plot_with_markers(visible_outliers, len(collapse_df), color_df, x_range, y_range, grouping!='cluster_3', grouping=='cluster_4' or grouping=='cluster_5')
         else:
             num_points = len(filtered_plot_df.loc[filtered_plot_df['image_path_br'] != 'data/placeholder_square.png'])
             fig = plot_with_images(visible_outliers, num_points, x_range, y_range)
@@ -749,6 +758,12 @@ def update_cluster(selected_option):
     elif selected_option == 'cluster_3':
         update_cluster_selection(plot_df, tipo_materia_prima_baseline_df)
 
+    elif selected_option == 'cluster_4':
+        update_cluster_selection(plot_df, vanilla_vit_df, no_clusters=True)
+
+    elif selected_option == 'cluster_5':
+        update_cluster_selection(plot_df, multihead_vit_df, no_clusters=True)
+
     return True, 'all', 'all', 'all', 'all', plot_df['ano_de_aquisicao'].min(), plot_df['ano_de_aquisicao'].max(), plot_df['comprimento'].min(), plot_df['comprimento'].max(), plot_df['largura'].min(), plot_df['largura'].max(), plot_df['altura'].min(), plot_df['altura'].max(), plot_df['diametro'].min(), plot_df['diametro'].max()
 
 # Callback for filtering data
@@ -778,6 +793,10 @@ def filter_data(selected_categoria, selected_povo, selected_estado, selected_mat
         filtered_df = plot_df[plot_df['ind_index'].isin(categoria_vit_df.index)].copy()
     elif grouping == 'cluster_3':
         filtered_df = plot_df[plot_df['ind_index'].isin(tipo_materia_prima_baseline_df.index)].copy()
+    elif grouping == 'cluster_4':
+        filtered_df = plot_df[plot_df['ind_index'].isin(vanilla_vit_df.index)].copy()
+    elif grouping == 'cluster_5':
+        filtered_df = plot_df[plot_df['ind_index'].isin(multihead_vit_df.index)].copy()
 
     # Applying filters if a selection is made
     if selected_categoria != 'all':
