@@ -599,7 +599,7 @@ def update_scatter_plot(view_type, relayout_data, zoom_update, grouping):
     if grouping != 'cluster_3' and grouping != 'cluster_4' and grouping != 'cluster_5':
         labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.04)
     else:
-        labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.06)
+        labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.05)
 
     # Splitting clusters (inliers) and outliers for collapsing
     collapse_df = pd.DataFrame(coords, columns=["x", "y"], index=filtered_plot_df.index)
@@ -657,7 +657,7 @@ def update_scatter_plot(view_type, relayout_data, zoom_update, grouping):
             num_points = len(filtered_plot_df.loc[filtered_plot_df['image_path_br'] != 'data/placeholder_square.png'])
             fig = plot_with_images(visible_outliers, num_points, x_range, y_range)
     else:
-        if len(color_df) > 0:
+        if len(color_df) > 0 and grouping != 'cluster_4' and grouping != 'cluster_5':
             fig = empty_figure_legend(color_df, x_range, y_range, len(collapse_df))
         else:
             fig = empty_figure(x_range, y_range, len(collapse_df))
@@ -841,15 +841,13 @@ def filter_data(selected_categoria, selected_povo, selected_estado, selected_mat
     State('timeline', 'figure'),
     prevent_initial_call=True
 )
-def resize_marker_on_hover(hover_data, fig):
+def resize_timeline_marker_on_hover(hover_data, fig):
     fig = go.Figure(fig)
 
     # Adding small transition from hover callback
     fig.update_layout(
         transition=dict(duration=25)
     )
-
-    print(fig.data)
 
     # Resetting markers on hover-out
     old_sizes = list(np.full((len(fig.data[1].x)), 30))
@@ -858,9 +856,10 @@ def resize_marker_on_hover(hover_data, fig):
     fig.data[1].marker.line.width = old_line_widths
     fig.data[1].marker.opacity = 1
 
-    if hover_data:
+    if hover_data and hover_data["points"][0]["curveNumber"] == 1:
         # Extracting plotly dash information and changing size on hover
         num = hover_data["points"][0]["pointNumber"]
+
         old_sizes[num] = 40
         old_line_widths[num] = 3
         fig.data[1].marker.size = old_sizes
