@@ -64,6 +64,9 @@ plot_df['ano_de_aquisicao'] = ind_df['ano_de_aquisicao'].values
 plot_df.fillna({'ano_de_aquisicao': '0'}, inplace=True)
 plot_df['ano_de_aquisicao'] = plot_df['ano_de_aquisicao'].astype(int)
 
+plot_df['data_de_aquisicao'] = ind_df['data_de_aquisicao'].values
+plot_df.fillna({'data_de_aquisicao': '0001-01-01'}, inplace=True)
+
 plot_df['estado_de_origem'] = ind_df['estado_de_origem'].values
 
 plot_df['thumbnail'] = ind_df['thumbnail'].values
@@ -417,7 +420,8 @@ app.layout = html.Div([
                 html.Div(
                     className='timeline-container',
                     children=[
-                        dcc.Graph(id='timeline', config=config, clear_on_unhover=True, figure=timeline_figure(ind_df['ano_de_aquisicao'].dropna().unique().astype(np.int16))),
+                        dcc.Graph(id='timeline', config=config, clear_on_unhover=True, figure=timeline_figure_zigzag(ind_df['ano_de_aquisicao'].dropna().unique().astype(np.int16))),
+                        dcc.Store(id='is-grid', data=0),
                     ]
                 ),
             ],
@@ -866,6 +870,40 @@ def resize_timeline_marker_on_hover(hover_data, fig):
         fig.data[1].marker.line.width = old_line_widths
 
     return fig
+
+# Callback to switch between the zigzag timeline and the grid
+@app.callback(
+    Output('is-grid', 'data'),
+    Output('timeline', 'figure'),
+    Input('timeline', 'clickData'),
+    State('is-grid', 'data'),
+    State('timeline', 'figure'),
+    prevent_initial_call=True
+)
+def switch_timeline_grid(click_data, is_grid, fig):
+    fig = go.Figure(fig)
+
+    # Adding small transition from hover callback
+    # fig.update_layout(
+    #     transition=dict(duration=25)
+    # )
+
+    if is_grid:
+        if click_data and click_data["points"][0]["curveNumber"] == 1:
+            # Extracting plotly dash information
+            pt = click_data["points"][0]
+            text = pt['text']
+            num = pt["pointNumber"]
+
+    else:
+        if click_data and click_data["points"][0]["curveNumber"] == 1:
+            # Extracting plotly dash information
+            pt = click_data["points"][0]
+            year = int(pt['text'])
+            fig = timeline_figure_grid(plot_df[plot_df['ano_de_aquisicao'] == year])
+
+
+    return no_update
 
 # Callback for map state-items modal
 @app.callback(
