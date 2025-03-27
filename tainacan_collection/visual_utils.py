@@ -357,27 +357,32 @@ def timeline_figure_zigzag(years):
 
     return fig
 
-# Utility function to generate grid of points for timeline grid figure
-# def generate_grid()
-
 # Create timeline figure with clickable markers for years 
 def timeline_figure_grid(df):
-
-    # Sorting dataframe by 'data_de_aquisicao'
-    grid_df = df.sort_values(by='data_de_aquisicao').copy()
-
-    # Filtering out wrong data
+    # Filtering out wrong data and sorting dataframe by 'data_de_aquisicao'
+    grid_df = df.copy()
     grid_df.loc[grid_df['data_de_aquisicao'].str[:4] != grid_df['ano_de_aquisicao'].astype(str), 'data_de_aquisicao'] = '0001-01-01'
-    
+    grid_df = grid_df.sort_values(by='data_de_aquisicao')
+
     # Generating dynamic shaped and marker size grid for aspect ratio 4:3
     num_points = len(grid_df)
     ar_unit = math.sqrt(num_points/7)
     num_rows, num_cols = math.floor(3*ar_unit), math.ceil(4*ar_unit)
-    x_coords, y_coords = np.linspace(-0.5, 7.5, num_cols), np.linspace(-8.5, 0.5, num_rows)
+    x_coords, y_coords = np.linspace(0, 7.5, num_cols), np.linspace(0, -5.0, num_rows)
     X, Y = np.meshgrid(x_coords, y_coords)
 
     min_marker_size = 5
-    marker_size = max(min_marker_size, 450/math.sqrt(num_points))
+    marker_size = max(min_marker_size, 350/math.sqrt(num_points))
+
+    # Generating histogram data
+    num_no_date = len(grid_df.loc[grid_df['data_de_aquisicao'] == '0001-01-01'])
+    hist = {'Sem Data': num_no_date}
+
+    num_to_month = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
+    months = grid_df.loc[grid_df['data_de_aquisicao'] != '0001-01-01', 'data_de_aquisicao'] = pd.to_datetime(grid_df.loc[grid_df['data_de_aquisicao'] != '0001-01-01', 'data_de_aquisicao']).dt.month
+    for month, count in months.value_counts().to_dict().items():
+        hist[num_to_month[month]] = count
+    print(hist)
 
     # Generating colormap
     grid_df.loc[grid_df['data_de_aquisicao'] == '0001-01-01', 'data_de_aquisicao'] = 0
@@ -389,9 +394,19 @@ def timeline_figure_grid(df):
     colors = grid_df['data_de_aquisicao'].map(colors)
 
     grid_df = grid_df.replace({'data_de_aquisicao': 0}, 'Sem Informação de Data')
-
-    # Creating grid figure 
+    
+    # Creating back arrow button
     fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=[-0.8, -0.45],
+        y=[0, 0],
+        mode='markers',
+        marker=dict(size=30, color='#062a57', symbol=['arrow-left', 'line-ew'], line=dict(width=7, color='#062a57')),
+        hoverinfo='none',
+        name='back_button'
+    ))
+
+    # Creating grid figure
     fig.add_trace(go.Scatter(
         x=X.ravel()[:num_points],
         y=Y.ravel()[:num_points],
@@ -431,7 +446,7 @@ def timeline_figure_grid(df):
         range=[-9, 1],
         fixedrange=True,
         visible=False,
-        autorange='reversed'
+        # autorange='reversed'
     )
 
     return fig

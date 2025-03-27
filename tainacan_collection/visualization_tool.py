@@ -601,7 +601,7 @@ def update_scatter_plot(view_type, relayout_data, zoom_update, grouping):
     # Computing collapses
     coords = filtered_plot_df[['x', 'y']].to_numpy()
     if grouping != 'cluster_3' and grouping != 'cluster_4' and grouping != 'cluster_5':
-        labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.04)
+        labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.035)
     else:
         labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.05)
 
@@ -890,22 +890,22 @@ def switch_timeline_grid(click_data, turn_grid, fig):
     #     transition=dict(duration=25)
     # )
 
-    print(turn_grid)
-
     if turn_grid == 0:
-        if click_data and click_data["points"][0]["curveNumber"] == 1:
-            # Extracting plotly dash information
-            pt = click_data["points"][0]
-            text = pt['text']
-            num = pt["pointNumber"]
+        # Clicking back arrow on the year grid
+        if click_data and click_data["points"][0]["curveNumber"] == 0:
+            # Replotting zigzag figure
+            fig = timeline_figure_zigzag(ind_df['ano_de_aquisicao'].dropna().unique().astype(np.int16))
+            
             turn_grid = 1
 
     else:
+        # Clicking an year
         if click_data and click_data["points"][0]["curveNumber"] == 1:
-            # Extracting plotly dash information
+            # Extracting plotly dash information and plotting grid figure
             pt = click_data["points"][0]
             year = int(pt['text'])
             fig = timeline_figure_grid(plot_df[plot_df['ano_de_aquisicao'] == year])
+            
             turn_grid = 0
 
     return turn_grid, fig
