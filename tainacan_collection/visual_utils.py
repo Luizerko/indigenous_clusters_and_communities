@@ -349,7 +349,7 @@ def timeline_figure_zigzag(years):
     )
 
     fig.update_yaxes(
-        range=[-9, 1],
+        range=[-10, 1],
         fixedrange=True,
         visible=False,
         autorange='reversed'
@@ -357,90 +357,49 @@ def timeline_figure_zigzag(years):
 
     return fig
 
+# Utility function to generate grid of points for timeline grid figure
+# def generate_grid()
+
 # Create timeline figure with clickable markers for years 
 def timeline_figure_grid(df):
 
-    # Computing zigzag coordinates
-    years = -np.sort(-years)
-    cols = 8
-    n_years = len(years)
-    n_rows = math.ceil(n_years/cols)
-    line_points = []
-    year_points = []
-    annotations = []
-    idx = 0
-    direction = -1
-    for row in range(n_rows):
-        row_years = min(cols, n_years-row*cols)
-        col_indices = range(row_years)
-        for c in col_indices:
-            if direction == 1:
-                x = c-0.2
-            else:
-                x = cols-1-c+0.2
-            y = -row
-            year = years[idx]
-            line_points.append((x, y))
-            year_points.append((x, y, year))
+    # Sorting dataframe by 'data_de_aquisicao'
+    grid_df = df.sort_values(by='data_de_aquisicao').copy()
 
-            # Add annotation for the year under the marker
-            annotations.append(dict(
-                x=x,
-                y=y+0.2,
-                text=str(year),
-                showarrow=False,
-                font=dict(weight='bold'),
-                xanchor='center',
-                yanchor='top'
-            ))
+    # Filtering out wrong data
+    grid_df.loc[grid_df['data_de_aquisicao'].str[:4] != grid_df['ano_de_aquisicao'].astype(str), 'data_de_aquisicao'] = '0001-01-01'
+    
+    # Generating dynamic shaped and marker size grid for aspect ratio 4:3
+    num_points = len(grid_df)
+    ar_unit = math.sqrt(num_points/7)
+    num_rows, num_cols = math.floor(3*ar_unit), math.ceil(4*ar_unit)
+    x_coords, y_coords = np.linspace(-0.5, 7.5, num_cols), np.linspace(-8.5, 0.5, num_rows)
+    X, Y = np.meshgrid(x_coords, y_coords)
 
-            idx += 1
+    min_marker_size = 5
+    marker_size = max(min_marker_size, 450/math.sqrt(num_points))
 
-        if row < n_rows - 1:
-            end_x = (cols-1) if direction == 1 else 0
-            end_y = -row
-            side = 'right' if direction == 1 else 'left'
-            arc_pts = make_turn_arc(end_x, end_y, side, 0.5, 20)
+    # Generating colormap
+    grid_df.loc[grid_df['data_de_aquisicao'] == '0001-01-01', 'data_de_aquisicao'] = 0
+    grid_df.loc[grid_df['data_de_aquisicao'] != 0, 'data_de_aquisicao'] = pd.to_datetime(grid_df['data_de_aquisicao'][grid_df['data_de_aquisicao'] != 0]).dt.dayofyear
 
-            line_points.extend(arc_pts[1:])
+    days = grid_df['data_de_aquisicao'].unique()
+    cmap = LinearSegmentedColormap.from_list('truncated_cmap', plt.cm.hot(np.linspace(0.0, 0.6, len(days))))
+    colors = {day: f'rgba({int(cmap(i/(len(days)-1))[0]*255)}, {int(cmap(i/(len(days)-1))[1]*255)}, {int(cmap(i/(len(days)-1))[2]*255)}, 1)' for i, day in enumerate(days)}
+    colors = grid_df['data_de_aquisicao'].map(colors)
 
-        direction *= -1
+    grid_df = grid_df.replace({'data_de_aquisicao': 0}, 'Sem Informação de Data')
 
-    # Separate out x, y from line_points
-    if line_points:
-        xs_line, ys_line = zip(*line_points)
-    else:
-        xs_line, ys_line = [], []
-
-    # Separate out x, y, text from year_points
-    if year_points:
-        xs_year, ys_year, txt_years = zip(*year_points)
-    else:
-        xs_year, ys_year, txt_years = [], [], []
-
-    # Plot the timeline as a continuous zigzagging line
+    # Creating grid figure 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=xs_line,
-        y=ys_line,
-        mode='lines',
-        line=dict(color='#062a57', width=4),
+        x=X.ravel()[:num_points],
+        y=Y.ravel()[:num_points],
+        mode='markers',
+        marker=dict(size=marker_size, color=colors, line=dict(width=4, color="#f2f2f2")),
         hoverinfo='none',
-        name='timeline'
+        name='year_timeline'
     ))
-
-    fig.add_trace(
-        go.Scatter(
-            x=xs_year,
-            y=ys_year,
-            mode='markers',
-            marker=dict(size=30, color='#062a57', line=dict(width=6, color="#f2f2f2")),
-            text=[str(y) for y in txt_years],
-            hoverinfo='none',
-            name='years'
-        )
-    )
-
 
     # Updating figure layout
     fig.update_layout(
@@ -460,8 +419,6 @@ def timeline_figure_grid(df):
 
         dragmode=None,
         hoverdistance = 5,
-
-        annotations=annotations
     )
  
     fig.update_xaxes(

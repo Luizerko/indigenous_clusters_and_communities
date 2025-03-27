@@ -421,7 +421,7 @@ app.layout = html.Div([
                     className='timeline-container',
                     children=[
                         dcc.Graph(id='timeline', config=config, clear_on_unhover=True, figure=timeline_figure_zigzag(ind_df['ano_de_aquisicao'].dropna().unique().astype(np.int16))),
-                        dcc.Store(id='is-grid', data=0),
+                        dcc.Store(id='turn-grid', data=1),
                     ]
                 ),
             ],
@@ -838,14 +838,15 @@ def filter_data(selected_categoria, selected_povo, selected_estado, selected_mat
 
     return True
 
-# Callback to increase marker size on hover in timeline tab
+# Callback for hovering in both possibilities of timeline tab
 @app.callback(
     Output('timeline', 'figure'),
     Input('timeline', 'hoverData'),
+    State('turn-grid', 'data'),
     State('timeline', 'figure'),
     prevent_initial_call=True
 )
-def resize_timeline_marker_on_hover(hover_data, fig):
+def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
     fig = go.Figure(fig)
 
     # Adding small transition from hover callback
@@ -853,34 +854,35 @@ def resize_timeline_marker_on_hover(hover_data, fig):
         transition=dict(duration=25)
     )
 
-    # Resetting markers on hover-out
-    old_sizes = list(np.full((len(fig.data[1].x)), 30))
-    old_line_widths = list(np.full((len(fig.data[1].x)), 6))
-    fig.data[1].marker.size = old_sizes
-    fig.data[1].marker.line.width = old_line_widths
-    fig.data[1].marker.opacity = 1
-
-    if hover_data and hover_data["points"][0]["curveNumber"] == 1:
-        # Extracting plotly dash information and changing size on hover
-        num = hover_data["points"][0]["pointNumber"]
-
-        old_sizes[num] = 40
-        old_line_widths[num] = 3
+    if turn_grid == 1:
+        # Resetting markers on hover-out
+        old_sizes = list(np.full((len(fig.data[1].x)), 30))
+        old_line_widths = list(np.full((len(fig.data[1].x)), 6))
         fig.data[1].marker.size = old_sizes
         fig.data[1].marker.line.width = old_line_widths
+        fig.data[1].marker.opacity = 1
+
+        if hover_data and hover_data["points"][0]["curveNumber"] == 1:
+            # Extracting plotly dash information and changing size on hover
+            num = hover_data["points"][0]["pointNumber"]
+
+            old_sizes[num] = 40
+            old_line_widths[num] = 3
+            fig.data[1].marker.size = old_sizes
+            fig.data[1].marker.line.width = old_line_widths
 
     return fig
 
 # Callback to switch between the zigzag timeline and the grid
 @app.callback(
-    Output('is-grid', 'data'),
+    Output('turn-grid', 'data'),
     Output('timeline', 'figure'),
     Input('timeline', 'clickData'),
-    State('is-grid', 'data'),
+    State('turn-grid', 'data'),
     State('timeline', 'figure'),
     prevent_initial_call=True
 )
-def switch_timeline_grid(click_data, is_grid, fig):
+def switch_timeline_grid(click_data, turn_grid, fig):
     fig = go.Figure(fig)
 
     # Adding small transition from hover callback
@@ -888,12 +890,15 @@ def switch_timeline_grid(click_data, is_grid, fig):
     #     transition=dict(duration=25)
     # )
 
-    if is_grid:
+    print(turn_grid)
+
+    if turn_grid == 0:
         if click_data and click_data["points"][0]["curveNumber"] == 1:
             # Extracting plotly dash information
             pt = click_data["points"][0]
             text = pt['text']
             num = pt["pointNumber"]
+            turn_grid = 1
 
     else:
         if click_data and click_data["points"][0]["curveNumber"] == 1:
@@ -901,9 +906,9 @@ def switch_timeline_grid(click_data, is_grid, fig):
             pt = click_data["points"][0]
             year = int(pt['text'])
             fig = timeline_figure_grid(plot_df[plot_df['ano_de_aquisicao'] == year])
+            turn_grid = 0
 
-
-    return no_update
+    return turn_grid, fig
 
 # Callback for map state-items modal
 @app.callback(
