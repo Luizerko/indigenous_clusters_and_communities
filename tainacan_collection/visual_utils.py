@@ -85,14 +85,30 @@ def fig_update_layout(fig, df_len, x_range=(-norm_factor,norm_factor), y_range=(
     )
 
 # Create empty figure for initialization
-def empty_figure(x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor), num_points=0):
+def empty_figure(x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor), num_points=0, only_images=True):
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=[], y=[]))
     fig_update_layout(fig, num_points, x_range, y_range)
+
+    if only_images:
+        # Observation for image option
+        fig.add_annotation(
+            text="Apenas itens com imagens são exibidos nesta opção",
+            xref="paper", yref="paper",
+            x=0.01, y=0.02,
+            showarrow=False,
+            font=dict(size=14, color="#062a57"),
+            align="center",
+            bordercolor="#062a57",
+            borderwidth=1,
+            borderpad=8,
+            bgcolor='rgba(255, 255, 255, 0.8)',
+        )
+
     return fig
 
 # Create empty figure with legend to keep legend even when we only have collapses
-def empty_figure_legend(color_df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor), num_points=0):
+def empty_figure_legend(color_df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor), num_points=0, only_images=True):
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=[], y=[]))
     fig_update_layout(fig, num_points, x_range, y_range)
@@ -120,6 +136,21 @@ def empty_figure_legend(color_df, x_range=(-norm_factor,norm_factor), y_range=(-
         trace.showlegend = True
         trace.marker.size = 15
         fig.add_trace(trace)
+
+    if only_images:
+        # Observation for image option
+        fig.add_annotation(
+            text="Apenas itens com imagens são exibidos nesta opção",
+            xref="paper", yref="paper",
+            x=0.01, y=0.02,
+            showarrow=False,
+            font=dict(size=14, color="#062a57"),
+            align="center",
+            bordercolor="#062a57",
+            borderwidth=1,
+            borderpad=8,
+            bgcolor='rgba(255, 255, 255, 0.8)',
+        )
 
     return fig
 
@@ -368,52 +399,68 @@ def timeline_figure_grid(df):
     num_points = len(grid_df)
     ar_unit = math.sqrt(num_points/7)
     num_rows, num_cols = math.floor(3*ar_unit), math.ceil(4*ar_unit)
-    x_coords, y_coords = np.linspace(0, 7.5, num_cols), np.linspace(0, -5.0, num_rows)
+    x_coords, y_coords = np.linspace(0, 7.5, num_cols), np.linspace(0.5, -7.5, num_rows)
     X, Y = np.meshgrid(x_coords, y_coords)
+    X = X.ravel()[:num_points]
+    Y = Y.ravel()[:num_points]
 
     min_marker_size = 5
-    marker_size = max(min_marker_size, 350/math.sqrt(num_points))
+    marker_size = max(min_marker_size, 250/math.sqrt(num_points))
 
     # Generating histogram data
     num_no_date = len(grid_df.loc[grid_df['data_de_aquisicao'] == '0001-01-01'])
-    hist = {'Sem Data': num_no_date}
-
-    num_to_month = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
-    months = grid_df.loc[grid_df['data_de_aquisicao'] != '0001-01-01', 'data_de_aquisicao'] = pd.to_datetime(grid_df.loc[grid_df['data_de_aquisicao'] != '0001-01-01', 'data_de_aquisicao']).dt.month
-    for month, count in months.value_counts().to_dict().items():
-        hist[num_to_month[month]] = count
-    print(hist)
-
-    # Generating colormap
+    hist = {'Sem Data': num_no_date, 'Janeiro': 0, 'Fevereiro': 0, 'Março': 0, 'Abril': 0, 'Maio': 0, 'Junho': 0, 'Julho': 0, 'Agosto': 0, 'Setembro': 0, 'Outubro': 0, 'Novembro': 0, 'Dezembro': 0}
     grid_df.loc[grid_df['data_de_aquisicao'] == '0001-01-01', 'data_de_aquisicao'] = 0
-    grid_df.loc[grid_df['data_de_aquisicao'] != 0, 'data_de_aquisicao'] = pd.to_datetime(grid_df['data_de_aquisicao'][grid_df['data_de_aquisicao'] != 0]).dt.dayofyear
 
-    days = grid_df['data_de_aquisicao'].unique()
-    cmap = LinearSegmentedColormap.from_list('truncated_cmap', plt.cm.hot(np.linspace(0.0, 0.6, len(days))))
-    colors = {day: f'rgba({int(cmap(i/(len(days)-1))[0]*255)}, {int(cmap(i/(len(days)-1))[1]*255)}, {int(cmap(i/(len(days)-1))[2]*255)}, 1)' for i, day in enumerate(days)}
-    colors = grid_df['data_de_aquisicao'].map(colors)
+    num_to_month = {0: 'Sem Data', 1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
+    months = grid_df.loc[grid_df['data_de_aquisicao'] != 0, 'data_de_aquisicao'] = pd.to_datetime(grid_df.loc[grid_df['data_de_aquisicao'] != 0, 'data_de_aquisicao']).dt.month
+    for month, count in dict(sorted(months.value_counts().to_dict().items())).items():
+        hist[num_to_month[month]] = count
 
-    grid_df = grid_df.replace({'data_de_aquisicao': 0}, 'Sem Informação de Data')
+    # Generating colormaps
+    cmap = LinearSegmentedColormap.from_list('truncated_cmap', plt.cm.hot(np.linspace(0.0, 0.6, len(hist))))
+    month_colors = {month: f'rgba({int(cmap(i/(len(hist)-1))[0]*255)}, {int(cmap(i/(len(hist)-1))[1]*255)}, {int(cmap(i/(len(hist)-1))[2]*255)}, 1)' for i, month in enumerate(hist.keys())}
+    
+    colors = [month_colors['Sem Data'] for i in range(len(grid_df.loc[grid_df['data_de_aquisicao'] == 0]))]
+    for _, month in months.items():
+        colors.append(month_colors[num_to_month[month]])
     
     # Creating back arrow button
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=[-0.8, -0.45],
+        x=[-0.8, -0.57],
         y=[0, 0],
         mode='markers',
-        marker=dict(size=30, color='#062a57', symbol=['arrow-left', 'line-ew'], line=dict(width=7, color='#062a57')),
+        marker=dict(size=25, color='#062a57', symbol=['arrow-left', 'line-ew'], line=dict(width=7, color='#062a57')),
         hoverinfo='none',
         name='back_button'
     ))
 
-    # Creating grid figure
+    # Creating grid figure with images
+    for i, (_, row) in enumerate(grid_df.iterrows()):
+        # if not pd.isna(row['image_path']):
+        fig.add_layout_image(
+            dict(source=row['temporary_br_url'], x=X[i], y=Y[i], xref="x", yref="y", sizex=5/math.sqrt(num_points), sizey=5/math.sqrt(num_points), xanchor="center",yanchor="middle")
+        )
+
+    # Creating color "legend" for images
     fig.add_trace(go.Scatter(
-        x=X.ravel()[:num_points],
-        y=Y.ravel()[:num_points],
+        x=X,
+        y=Y-2.7/math.sqrt(num_points),
         mode='markers',
-        marker=dict(size=marker_size, color=colors, line=dict(width=4, color="#f2f2f2")),
+        marker=dict(size=marker_size, color=colors, symbol='line-ew', line=dict(width=5, color=colors)),
         hoverinfo='none',
         name='year_timeline'
+    ))
+
+    # Creating histogram
+    fig.add_trace(go.Bar(
+        x=list(hist.keys()),
+        y=list(hist.values()),
+        marker=dict(color=list(month_colors.values())),
+        name='year_histogram',
+        xaxis='x2',
+        yaxis='y2'
     ))
 
     # Updating figure layout
@@ -434,20 +481,47 @@ def timeline_figure_grid(df):
 
         dragmode=None,
         hoverdistance = 5,
+
+        # X and Y for grid
+        xaxis=dict(
+            range=[-1, 8],
+            fixedrange=True,
+            visible=False,
+            domain=[0, 1]
+        ),
+        yaxis=dict(
+            range=[-9, 1],
+            fixedrange=True,
+            visible=False,
+            domain=[0, 1]
+        ),
+
+        # X and Y for histogram
+        xaxis2=dict(
+            domain=[0.1, 0.95],
+            anchor='y2',
+            visible=True,
+            tickangle=-45
+        ),
+        yaxis2=dict(
+            domain=[0.05, 0.4],
+            anchor='x2',
+            visible=True
+        )
     )
  
-    fig.update_xaxes(
-        range=[-1, 8],
-        fixedrange=True,
-        visible=False
-    )
+    # fig.update_xaxes(
+    #     range=[-1, 8],
+    #     fixedrange=True,
+    #     visible=False
+    # )
 
-    fig.update_yaxes(
-        range=[-9, 1],
-        fixedrange=True,
-        visible=False,
-        # autorange='reversed'
-    )
+    # fig.update_yaxes(
+    #     range=[-9, 1],
+    #     fixedrange=True,
+    #     visible=False,
+    #     # autorange='reversed'
+    # )
 
     return fig
 

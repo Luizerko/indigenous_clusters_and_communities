@@ -43,7 +43,8 @@ storage_client = storage.Client.from_service_account_json('data/master-thesis-45
 
 # Creating temporary URL for lazy loading images
 plot_df['temporary_br_url'] = pd.NA
-plot_df.loc[plot_df['image_path'].notna(), 'temporary_br_url'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: generate_signed_url(storage_client, 'background-removed-tainacan-images', f"{path.split('/')[-1].split('.')[0]}.png", expiration_minutes=5))
+plot_df.loc[plot_df['image_path'].notna(), 'temporary_br_url'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: generate_signed_url(storage_client, 'background-removed-tainacan-images', f"{path.split('/')[-1].split('.')[0]}.png", expiration_minutes=1))
+plot_df.loc[plot_df['temporary_br_url'].isna(), 'temporary_br_url'] = generate_signed_url(storage_client, 'background-removed-tainacan-images', 'placeholder_square.png', expiration_minutes=1)
 
 plot_df['image_path_br'] = ind_df['image_path'].values
 plot_df.loc[plot_df['image_path_br'].notna(), 'image_path_br'] = plot_df.loc[plot_df['image_path_br'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")
@@ -634,7 +635,7 @@ def update_scatter_plot(view_type, relayout_data, zoom_update, grouping):
     inliers = collapse_df[collapse_df['cluster'] != -1]
     centroids_df = inliers.groupby('cluster').agg({'x': 'mean', 'y': 'mean'})
     centroids_df['count'] = inliers.groupby('cluster').size().values
-    centroids_df['marker_size'] = centroids_df['count'].apply(lambda c: min(60, max(30, 15*np.log(c))))
+    centroids_df['marker_size'] = centroids_df['count'].apply(lambda c: min(70, max(28, 15*np.log(c))))
 
     # Computing dominant collapse clusters and colors
     centroids_cluster_names = inliers.groupby('cluster')['cluster_names'].agg(lambda x: x.mode()[0])
@@ -662,9 +663,9 @@ def update_scatter_plot(view_type, relayout_data, zoom_update, grouping):
             fig = plot_with_images(visible_outliers, num_points, x_range, y_range)
     else:
         if len(color_df) > 0 and grouping != 'cluster_4' and grouping != 'cluster_5':
-            fig = empty_figure_legend(color_df, x_range, y_range, len(collapse_df))
+            fig = empty_figure_legend(color_df, x_range, y_range, len(collapse_df), grouping!='cluster_3')
         else:
-            fig = empty_figure(x_range, y_range, len(collapse_df))
+            fig = empty_figure(x_range, y_range, len(collapse_df), grouping!='cluster_3')
 
     # Plotting collapsed points
     fig.add_trace(go.Scatter(
