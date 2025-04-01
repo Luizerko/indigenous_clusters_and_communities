@@ -67,6 +67,7 @@ plot_df['ano_de_aquisicao'] = plot_df['ano_de_aquisicao'].astype(int)
 
 plot_df['data_de_aquisicao'] = ind_df['data_de_aquisicao'].values
 plot_df.fillna({'data_de_aquisicao': '0001-01-01'}, inplace=True)
+plot_df.loc[plot_df['data_de_aquisicao'].str[:4] != plot_df['ano_de_aquisicao'].astype(str), 'data_de_aquisicao'] = '0001-01-01'
 
 plot_df['estado_de_origem'] = ind_df['estado_de_origem'].values
 
@@ -167,7 +168,16 @@ app.layout = html.Div([
                                 html.Div(
                                     className='sidebar',
                                     children=[
-                                        html.Label("Opções de Exibição", style={'fontWeight': 'bold'}),
+                                        html.Label("Opções de Exibição", id='exhibition-options', style={'fontWeight': 'bold'}),
+                                        dbc.Tooltip(
+                                            "Essa opção permite que o usuário escolha o tipo de visualização do acervo: numve de pontos no espaço associados a itens ou nuvem imagens dos itens. Note que a nuvem de imagem oferece menos interatividade, sendo designada apenas para visualização.",
+                                            target="exhibition-options",
+                                            trigger='click',
+                                            id="tooltip-info-exhibition-options",
+                                            placement="right-start",
+                                            is_open=False,
+                                            className='filter-tooltip',
+                                        ),
                                         dcc.RadioItems(
                                             id='toggle-view',
                                             options=[
@@ -177,7 +187,16 @@ app.layout = html.Div([
                                             value='markers',
                                         ),
 
-                                        html.Label("Filtragem de Dados", style={'fontWeight': 'bold', 'marginTop': '20px'}),
+                                        html.Label("Filtragem de Dados", id='data-filtering', style={'fontWeight': 'bold', 'marginTop': '20px'}),
+                                        dbc.Tooltip(
+                                            'As opções dessa seção permitem que o usuário filtre os dados a serem observados de maneira tal a granularizar a pesquisa e visualização pensando no seu objeto de pesquisa alvo. Note que, para os filtros numéricos, o valor "0" indica ausência do dado, então um item de Comprimento 0cm, por exemplo, é um item para o qual não existe informação de Comprimento.',
+                                            target="data-filtering",
+                                            trigger='click',
+                                            id="tooltip-info-data-filtering",
+                                            placement="right-start",
+                                            is_open=False,
+                                            className='filter-tooltip',
+                                        ),
                                         html.Div(
                                             className='filter-dropdown',
                                             children=[
@@ -370,7 +389,16 @@ app.layout = html.Div([
                                             ]
                                         ),
 
-                                        html.Label('Opções de Agrupamento', style={'fontWeight': 'bold', 'marginTop': '20px'}),
+                                        html.Label('Opções de Agrupamento', id='grouping-options', style={'fontWeight': 'bold', 'marginTop': '20px', 'marginBottom': '5px'}),
+                                        dbc.Tooltip(
+                                            'Essa opção permite ao usuário decidir como explorar a nuvem de pontos em relação a seus agrupamentos: por similaridade imagética, similaridade descritiva ou por similaridade de algum outro atributo. Esses agrupamentos, produzidos através da ajuda de inteligência artificial, vêm em diversas modalidades, podendo ressaltar ou não categorias contidas nos dados.',
+                                            target="grouping-options",
+                                            trigger='click',
+                                            id="tooltip-info-grouping-options",
+                                            placement="top-start",
+                                            is_open=False,
+                                            className='filter-tooltip',
+                                        ),
                                         dcc.Dropdown(
                                             id='cluster-options',
                                             options=[
@@ -413,7 +441,7 @@ app.layout = html.Div([
             className='tab-option',
             children=[
                 dbc.Tooltip(
-                    "Essa aba permite que o usuário navegue pela coleção através de sua linha do tempo, selecionando itens por seu ano de aquisição pelo museu.",
+                    "Essa aba permite que o usuário navegue pela coleção através de sua linha do tempo, selecionando coleções de itens por seu ano de aquisição pelo museu.",
                     target="aba-timeline",
                     trigger='click',
                     id="tooltip-info-timeline",
@@ -524,7 +552,6 @@ def display_hover(hover_data, fig):
     fig.data[0].marker.line.color = color
 
     # Getting hovering information for box display
-    df_row = plot_df.iloc[fig.data[0].customdata[num]]
     img_src = df_row['image_path']
     nome_do_item = df_row['nome_do_item']
     povo = df_row['povo']
@@ -863,7 +890,7 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
     )
 
     if turn_grid == 1:
-        # Resetting markers on hover-out
+        # Resetting markers when hovering another point
         old_sizes = list(np.full((len(fig.data[1].x)), 30))
         old_line_widths = list(np.full((len(fig.data[1].x)), 6))
         fig.data[1].marker.size = old_sizes
@@ -882,79 +909,107 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
         return fig, False, no_update, no_update
     
     else:
-        print(fig.data)
-        print(hover_data)
-
-        # Resetting markers on hover-out
+        # Resetting markers when hovering another point
         old_widths = list(np.full((len(fig.data[1].x)), 5))
         fig.data[1].marker.line.width = old_widths
-        # fig.data[1].marker.opacity = 0.8
+        
+        colors = list(fig.data[1].marker.line.color)
+        for i, color in enumerate(colors):
+            colors[i] = color.replace('0.4)', '1)')
+        fig.data[1].marker.line.color = colors
 
+        month_colors = list(fig.data[2].marker.color)
+        for i, month_color in enumerate(month_colors):
+            month_colors[i] = month_color.replace('0.4)', '1)')
+        fig.data[2].marker.color = month_colors
+
+        # Grid plot
         if hover_data and hover_data["points"][0]["curveNumber"] == 1:
             # Extracting plotly dash information and changing size on hover
             num = hover_data["points"][0]["pointNumber"]
             
-            old_widths[num] = 7
+            old_widths[num] = 15
             fig.data[1].marker.line.width = old_widths
-            fig.data[1].marker.line.color[num] = fig.data[1].marker.line.color[num].replace('0.8)', '1)')
+
+            for i, color in enumerate(colors):
+                if i != num:
+                    colors[i] = color.replace('1)', '0.4)')
+            fig.data[1].marker.line.color = colors
 
             # Building hover tooltip
             bbox = hover_data['points'][0]['bbox']
 
             # Acessing the dataframe to get the data we actually want to display
-            df_row = plot_df.iloc[fig.data[1].customdata[num]] 
+            df_row = plot_df.iloc[fig.data[1].customdata[num]]
             nome_do_item = df_row['nome_do_item']
             povo = df_row['povo']
+
             if df_row['data_de_aquisicao'] == '0001-01-01':
                 data_de_aquisicao = 'Sem Data'
             else:
                 data_de_aquisicao = df_row['data_de_aquisicao']
-            if df_row['colecao'].isna():
+                data_de_aquisicao = data_de_aquisicao[-2:] + '-' + data_de_aquisicao[-5:-3] + '-' + data_de_aquisicao[:4]
+            
+            if pd.isna(df_row['colecao']):
                 colecao = 'Sem Coleção'
             else:
                 colecao = df_row['colecao']
-            if df_row['coletor'].isna():
+            
+            if pd.isna(df_row['coletor']):
                 coletor = 'Sem Coletor'
             else:
                 coletor = df_row['coletor']
 
-
-            children = []
-
-    # # Getting hovering information for box display
-    # df_row = plot_df.iloc[fig.data[0].customdata[num]]
-    # img_src = df_row['image_path']
-    # nome_do_item = df_row['nome_do_item']
-    # povo = df_row['povo']
-    # ano_de_aquisicao = df_row['ano_de_aquisicao']
-    # if ano_de_aquisicao == 0:
-    #     ano_de_aquisicao = '----'
-
-    # # Hovering box with image only for points with image
-    # if img_src == 'data/placeholder_square.png':
-    #     children = [
-    #     html.Div(
-    #         className='hover-box',
-    #         children=[
-    #             html.P(f'{nome_do_item.title()}', className='hover-box-text'),
-    #             html.P(f'{povo.title()}, {ano_de_aquisicao}', className='hover-box-text')
-    #         ], style={'width': '160px'})
-    # ]
-
-    # else:
-    #     children = [
-    #         html.Div(
-    #             className='hover-box',
-    #             children=[
-    #                 html.Img(src=Image.open(img_src), className='hover-box-image'),
-    #                 html.P(f'{nome_do_item.title()}', className='hover-box-text'),
-    #                 html.P(f'{povo.title()}, {ano_de_aquisicao}', className='hover-box-text')
-    #             ], style={'width': '160px'})
-    #     ]
-
-    # return True, bbox, children, fig
+            # Plotting the hovering card with item information
+            children = [
+                html.Div(
+                    className='hover-box',
+                    children=[
+                        html.P(f'{nome_do_item.title()}', className='hover-box-text'),
+                        html.P(f'{povo.title()}, {data_de_aquisicao}', className='hover-box-text'),
+                        html.P(f'{colecao.title()}', className='hover-box-text'),
+                        html.P(f'{coletor.title()}', className='hover-box-text')
+                    ], style={'width': '150px'})
+            ]
 
             return fig, True, bbox, children
+    
+        # Histogram (bar) plot
+        elif hover_data and hover_data["points"][0]["curveNumber"] == 2:
+            month = hover_data["points"][0]["pointNumber"]
+
+            # Changing colors for hovered bar plot
+            for i, month_color in enumerate(month_colors):
+                if i != month:
+                    month_colors[i] = month_color.replace('1)', '0.4)')
+            fig.data[2].marker.color = month_colors
+
+            # Changing colors for grid points that belong to the hovered month
+            df_rows = plot_df.loc[list(fig.data[1].customdata)]
+            df_rows = df_rows.sort_values(by='data_de_aquisicao')
+            indices = list(df_rows.index)
+            if month == 0:
+                interval = [i for i in range(len(df_rows.loc[df_rows['data_de_aquisicao'] == '0001-01-01']))]
+            else:
+                safe_df = df_rows.loc[df_rows['data_de_aquisicao'] != '0001-01-01']
+                safe_rows = safe_df[pd.to_datetime(safe_df['data_de_aquisicao']).dt.month == month]
+                interval = list(safe_rows.index)
+                interval = [i for i, ind in enumerate(indices) if ind in interval]
+
+            for i in interval:
+                old_widths[i] = 10
+            fig.data[1].marker.line.width = old_widths
+
+            for i, color in enumerate(colors):
+                if i not in interval:
+                    colors[i] = color.replace('1)', '0.4)')
+            fig.data[1].marker.line.color = colors
+
+
+            return fig, False, no_update, no_update
+
+
+    return fig, False, no_update, no_update
 
 # Callback to switch between the zigzag timeline and the grid
 @app.callback(

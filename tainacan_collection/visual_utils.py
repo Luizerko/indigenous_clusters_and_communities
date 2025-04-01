@@ -392,7 +392,6 @@ def timeline_figure_zigzag(years):
 def timeline_figure_grid(df):
     # Filtering out wrong data and sorting dataframe by 'data_de_aquisicao'
     grid_df = df.copy()
-    grid_df.loc[grid_df['data_de_aquisicao'].str[:4] != grid_df['ano_de_aquisicao'].astype(str), 'data_de_aquisicao'] = '0001-01-01'
     grid_df = grid_df.sort_values(by='data_de_aquisicao')
     df_indices = list(grid_df.index)
 
@@ -406,7 +405,7 @@ def timeline_figure_grid(df):
     Y = Y.ravel()[:num_points]
 
     min_marker_size = 5
-    marker_size = max(min_marker_size, 250/math.sqrt(num_points))
+    marker_size = max(min_marker_size, 280/math.sqrt(num_points))
 
     # Generating histogram data
     num_no_date = len(grid_df.loc[grid_df['data_de_aquisicao'] == '0001-01-01'])
@@ -420,7 +419,7 @@ def timeline_figure_grid(df):
 
     # Generating colormaps
     cmap = LinearSegmentedColormap.from_list('truncated_cmap', plt.cm.hot(np.linspace(0.0, 0.6, len(hist))))
-    month_colors = {month: f'rgba({int(cmap(i/(len(hist)-1))[0]*255)}, {int(cmap(i/(len(hist)-1))[1]*255)}, {int(cmap(i/(len(hist)-1))[2]*255)}, 0.8)' for i, month in enumerate(hist.keys())}
+    month_colors = {month: f'rgba({int(cmap(i/(len(hist)-1))[0]*255)}, {int(cmap(i/(len(hist)-1))[1]*255)}, {int(cmap(i/(len(hist)-1))[2]*255)}, 1)' for i, month in enumerate(hist.keys())}
     
     colors = [month_colors['Sem Data'] for i in range(len(grid_df.loc[grid_df['data_de_aquisicao'] == 0]))]
     for _, month in months.items():
@@ -452,7 +451,7 @@ def timeline_figure_grid(df):
         customdata=df_indices,
         marker=dict(size=marker_size, color=colors, symbol='line-ew', line=dict(width=5, color=colors)),
         hoverinfo='none',
-        name='year_timeline'
+        name='year_timeline',
     ))
 
     # Creating histogram
@@ -463,7 +462,14 @@ def timeline_figure_grid(df):
         name='year_histogram',
         xaxis='x2',
         yaxis='y2',
-        hoverinfo='skip'
+        hoverinfo='y',
+        hoverlabel=dict(
+            font=dict(
+                weight='bold',
+                size=22,
+                color='#f2f2f2'
+            ),
+        )
     ))
 
     # Updating figure layout
@@ -512,19 +518,6 @@ def timeline_figure_grid(df):
             visible=True
         )
     )
- 
-    # fig.update_xaxes(
-    #     range=[-1, 8],
-    #     fixedrange=True,
-    #     visible=False
-    # )
-
-    # fig.update_yaxes(
-    #     range=[-9, 1],
-    #     fixedrange=True,
-    #     visible=False,
-    #     # autorange='reversed'
-    # )
 
     return fig
 
