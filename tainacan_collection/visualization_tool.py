@@ -70,6 +70,9 @@ plot_df.fillna({'data_de_aquisicao': '0001-01-01'}, inplace=True)
 
 plot_df['estado_de_origem'] = ind_df['estado_de_origem'].values
 
+plot_df['colecao'] = ind_df['colecao'].values
+plot_df['coletor'] = ind_df['coletor'].values
+
 plot_df['thumbnail'] = ind_df['thumbnail'].values
 plot_df.fillna({'thumbnail': 'https://tainacan.museudoindio.gov.br/wp-content/plugins/tainacan/assets/images/placeholder_square.png'}, inplace=True)
 
@@ -423,6 +426,7 @@ app.layout = html.Div([
                     children=[
                         dcc.Graph(id='timeline', config=config, clear_on_unhover=True, figure=timeline_figure_zigzag(ind_df['ano_de_aquisicao'].dropna().unique().astype(np.int16))),
                         dcc.Store(id='turn-grid', data=1),
+                        dcc.Tooltip(id='timeline-tooltip')
                     ]
                 ),
             ],
@@ -842,6 +846,9 @@ def filter_data(selected_categoria, selected_povo, selected_estado, selected_mat
 # Callback for hovering in both possibilities of timeline tab
 @app.callback(
     Output('timeline', 'figure'),
+    Output("timeline-tooltip", "show"),
+    Output("timeline-tooltip", "bbox"),
+    Output("timeline-tooltip", "children"),
     Input('timeline', 'hoverData'),
     State('turn-grid', 'data'),
     State('timeline', 'figure'),
@@ -872,7 +879,82 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
             fig.data[1].marker.size = old_sizes
             fig.data[1].marker.line.width = old_line_widths
 
-    return fig
+        return fig, False, no_update, no_update
+    
+    else:
+        print(fig.data)
+        print(hover_data)
+
+        # Resetting markers on hover-out
+        old_widths = list(np.full((len(fig.data[1].x)), 5))
+        fig.data[1].marker.line.width = old_widths
+        # fig.data[1].marker.opacity = 0.8
+
+        if hover_data and hover_data["points"][0]["curveNumber"] == 1:
+            # Extracting plotly dash information and changing size on hover
+            num = hover_data["points"][0]["pointNumber"]
+            
+            old_widths[num] = 7
+            fig.data[1].marker.line.width = old_widths
+            fig.data[1].marker.line.color[num] = fig.data[1].marker.line.color[num].replace('0.8)', '1)')
+
+            # Building hover tooltip
+            bbox = hover_data['points'][0]['bbox']
+
+            # Acessing the dataframe to get the data we actually want to display
+            df_row = plot_df.iloc[fig.data[1].customdata[num]] 
+            nome_do_item = df_row['nome_do_item']
+            povo = df_row['povo']
+            if df_row['data_de_aquisicao'] == '0001-01-01':
+                data_de_aquisicao = 'Sem Data'
+            else:
+                data_de_aquisicao = df_row['data_de_aquisicao']
+            if df_row['colecao'].isna():
+                colecao = 'Sem Coleção'
+            else:
+                colecao = df_row['colecao']
+            if df_row['coletor'].isna():
+                coletor = 'Sem Coletor'
+            else:
+                coletor = df_row['coletor']
+
+
+            children = []
+
+    # # Getting hovering information for box display
+    # df_row = plot_df.iloc[fig.data[0].customdata[num]]
+    # img_src = df_row['image_path']
+    # nome_do_item = df_row['nome_do_item']
+    # povo = df_row['povo']
+    # ano_de_aquisicao = df_row['ano_de_aquisicao']
+    # if ano_de_aquisicao == 0:
+    #     ano_de_aquisicao = '----'
+
+    # # Hovering box with image only for points with image
+    # if img_src == 'data/placeholder_square.png':
+    #     children = [
+    #     html.Div(
+    #         className='hover-box',
+    #         children=[
+    #             html.P(f'{nome_do_item.title()}', className='hover-box-text'),
+    #             html.P(f'{povo.title()}, {ano_de_aquisicao}', className='hover-box-text')
+    #         ], style={'width': '160px'})
+    # ]
+
+    # else:
+    #     children = [
+    #         html.Div(
+    #             className='hover-box',
+    #             children=[
+    #                 html.Img(src=Image.open(img_src), className='hover-box-image'),
+    #                 html.P(f'{nome_do_item.title()}', className='hover-box-text'),
+    #                 html.P(f'{povo.title()}, {ano_de_aquisicao}', className='hover-box-text')
+    #             ], style={'width': '160px'})
+    #     ]
+
+    # return True, bbox, children, fig
+
+            return fig, True, bbox, children
 
 # Callback to switch between the zigzag timeline and the grid
 @app.callback(
@@ -885,11 +967,6 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
 )
 def switch_timeline_grid(click_data, turn_grid, fig):
     fig = go.Figure(fig)
-
-    # Adding small transition from hover callback
-    # fig.update_layout(
-    #     transition=dict(duration=25)
-    # )
 
     if turn_grid == 0:
         # Clicking back arrow on the year grid
