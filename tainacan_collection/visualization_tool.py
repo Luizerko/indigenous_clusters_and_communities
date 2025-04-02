@@ -185,6 +185,33 @@ app.layout = html.Div([
                                                 {'label': 'Imagens', 'value': 'images'}
                                             ],
                                             value='markers',
+                                            className='toggle-view'
+                                        ),
+
+                                        html.Label('Opções de Agrupamento', id='grouping-options', style={'fontWeight': 'bold', 'marginTop': '20px', 'marginBottom': '5px'}),
+                                        dbc.Tooltip(
+                                            'Essa opção permite ao usuário decidir como explorar a nuvem de pontos em relação a seus agrupamentos: por similaridade imagética, similaridade descritiva ou por similaridade de algum outro atributo. Esses agrupamentos, produzidos através da ajuda de inteligência artificial, vêm em diversas modalidades, podendo ressaltar ou não categorias contidas nos dados.',
+                                            target="grouping-options",
+                                            trigger='click',
+                                            id="tooltip-info-grouping-options",
+                                            placement="right-start",
+                                            is_open=False,
+                                            className='filter-tooltip',
+                                        ),
+                                        dcc.Dropdown(
+                                            id='cluster-options',
+                                            options=[
+                                                {'label': 'Similaridade Imagética por Categoria (ViT)', 'value': 'cluster_1'},
+                                                {'label': 'Similaridade Imagética por Povo (ViT)', 'value': 'cluster_2'},
+                                                {'label': 'Tipo de Materia Prima', 'value': 'cluster_3'},
+                                                {'label': 'Similaridade Imagética (ViT)', 'value': 'cluster_4'},
+                                                {'label': 'Similaridade Imagética por Categoria e Povo (ViT)', 'value': 'cluster_5'},
+                                            ],
+                                            multi=False,
+                                            placeholder='Selecione uma opção de agrupamento',
+                                            value='cluster_1',
+                                            clearable=False,
+                                            # className='cluster-dropup'
                                         ),
 
                                         html.Label("Filtragem de Dados", id='data-filtering', style={'fontWeight': 'bold', 'marginTop': '20px'}),
@@ -204,9 +231,9 @@ app.layout = html.Div([
                                                 dcc.Dropdown(
                                                     id='categoria-filter',
                                                     options=get_dropdown_options(ind_df, 'categoria'),
-                                                    multi=False,
+                                                    multi=True,
                                                     placeholder='Filtrar por categoria',
-                                                    value='all',
+                                                    value=['all'],
                                                     clearable=False
                                                 ),
                                             ]
@@ -218,9 +245,9 @@ app.layout = html.Div([
                                                 dcc.Dropdown(
                                                     id='povo-filter',
                                                     options=get_dropdown_options(ind_df, 'povo'),
-                                                    multi=False,
+                                                    multi=True,
                                                     placeholder='Filtrar por povo',
-                                                    value='all',
+                                                    value=['all'],
                                                     clearable=False
                                                 ),
                                             ]
@@ -232,9 +259,9 @@ app.layout = html.Div([
                                                 dcc.Dropdown(
                                                     id='estado-filter',
                                                     options=get_dropdown_options(ind_df, 'estado_de_origem'),
-                                                    multi=False,
+                                                    multi=True,
                                                     placeholder='Filtrar por estado de origem',
-                                                    value='all',
+                                                    value=['all'],
                                                     clearable=False
                                                 ),
                                             ]
@@ -246,9 +273,9 @@ app.layout = html.Div([
                                                 dcc.Dropdown(
                                                     id='materia-filter',
                                                     options=get_dropdown_options(plot_df, 'tipo_materia_prima'),
-                                                    multi=False,
+                                                    multi=True,
                                                     placeholder='Filtrar por tipo de matéria prima',
-                                                    value='all',
+                                                    value=['all'],
                                                     clearable=False
                                                 ),
                                             ]
@@ -389,30 +416,22 @@ app.layout = html.Div([
                                             ]
                                         ),
 
-                                        html.Label('Opções de Agrupamento', id='grouping-options', style={'fontWeight': 'bold', 'marginTop': '20px', 'marginBottom': '5px'}),
+                                        html.Label('Granularidade da Nuvem', id='granularity-slider', style={'fontWeight': 'bold', 'marginTop': '20px', 'marginBottom': '5px'}),
                                         dbc.Tooltip(
-                                            'Essa opção permite ao usuário decidir como explorar a nuvem de pontos em relação a seus agrupamentos: por similaridade imagética, similaridade descritiva ou por similaridade de algum outro atributo. Esses agrupamentos, produzidos através da ajuda de inteligência artificial, vêm em diversas modalidades, podendo ressaltar ou não categorias contidas nos dados.',
-                                            target="grouping-options",
+                                            'Esse controle permite ajustar o nível de detalhe com que os pontos da nuvem são agrupados. Quando a granularidade está baixa, os pontos próximos são agrupados em blocos maiores e mais espaçados — isso melhora o desempenho e é ideal quando você quer focar em uma área específica e pode dar bastante zoom para ver os detalhes. Já com a granularidade alta, os agrupamentos são menores e mais numerosos, o que mostra a nuvem com mais detalhes em regiões maiores ou até no geral. No entanto, isso pode deixar o sistema mais pesado, já que mais pontos precisam ser exibidos ao mesmo tempo.',
+                                            target="granularity-slider",
                                             trigger='click',
-                                            id="tooltip-info-grouping-options",
-                                            placement="top-start",
+                                            id="tooltip-info-granularity-slider",
+                                            placement="bottom-start",
                                             is_open=False,
-                                            className='filter-tooltip',
+                                            className='filter-tooltip-scroll',
                                         ),
-                                        dcc.Dropdown(
-                                            id='cluster-options',
-                                            options=[
-                                                {'label': 'Similaridade Imagética por Categoria (ViT)', 'value': 'cluster_1'},
-                                                {'label': 'Similaridade Imagética por Povo (ViT)', 'value': 'cluster_2'},
-                                                {'label': 'Tipo de Materia Prima', 'value': 'cluster_3'},
-                                                {'label': 'Similaridade Imagética (ViT)', 'value': 'cluster_4'},
-                                                {'label': 'Similaridade Imagética por Categoria e Povo (ViT)', 'value': 'cluster_5'},
-                                            ],
-                                            multi=False,
-                                            placeholder='Selecione uma opção de agrupamento',
-                                            value='cluster_1',
-                                            clearable=False,
-                                            className='cluster-dropup'
+                                        dcc.Slider(0, 4,
+                                            step=None,
+                                            marks={0: 'Muito\nBaixa', 1: 'Baixa', 2: 'Média', 3: 'Alta', 4: 'Muito\nAlta'},
+                                            value=2,
+                                            className='filter-slider',
+                                            id='granularity-filter'
                                         ),
 
                                         dcc.Store(id='zoom-update')
@@ -612,9 +631,10 @@ def open_click(click_data, fig):
     Input('toggle-view', 'value'),
     Input('cluster-plot', 'relayoutData'),
     Input('zoom-update', 'data'),
-    State('cluster-options', 'value')
+    Input('granularity-filter', 'value'),
+    State('cluster-options', 'value'),
 )
-def update_scatter_plot(view_type, relayout_data, zoom_update, grouping):
+def update_scatter_plot(view_type, relayout_data, zoom_update, granularity, grouping):
     # Handling (potential) constant trigerring and app crashing
     if relayout_data is None:
         return no_update, False, False
@@ -632,10 +652,16 @@ def update_scatter_plot(view_type, relayout_data, zoom_update, grouping):
 
     # Computing collapses
     coords = filtered_plot_df[['x', 'y']].to_numpy()
-    if grouping != 'cluster_3' and grouping != 'cluster_4' and grouping != 'cluster_5':
+    if granularity == 0:
+        labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.065)
+    elif granularity == 1:
+        labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.055)
+    elif granularity == 2:
+        labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.045)
+    elif granularity == 3:
         labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.035)
-    else:
-        labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.05)
+    elif granularity == 4:
+        labels = collapse_cluster_points(coords, x_range, y_range, threshold=0.025)
 
     # Splitting clusters (inliers) and outliers for collapsing
     collapse_df = pd.DataFrame(coords, columns=["x", "y"], index=filtered_plot_df.index)
@@ -821,7 +847,7 @@ def update_cluster(selected_option):
     Input('diametro-max', 'value'),
     State('cluster-options', 'value')
 )
-def filter_data(selected_categoria, selected_povo, selected_estado, selected_materia, ano_min, ano_max, comprimento_min, comprimento_max, largura_min, largura_max, altura_min, altura_max, diametro_min, diametro_max, grouping):
+def filter_data(selected_categorias, selected_povos, selected_estados, selected_materias, ano_min, ano_max, comprimento_min, comprimento_max, largura_min, largura_max, altura_min, altura_max, diametro_min, diametro_max, grouping):
     # Preserving visibility indices
     if grouping == 'cluster_1':
         filtered_df = plot_df[plot_df['ind_index'].isin(povo_vit_df.index)].copy()
@@ -835,17 +861,19 @@ def filter_data(selected_categoria, selected_povo, selected_estado, selected_mat
         filtered_df = plot_df[plot_df['ind_index'].isin(multihead_vit_df.index)].copy()
 
     # Applying filters if a selection is made
-    if selected_categoria != 'all':
-        filtered_df = filtered_df[filtered_df['categoria'] == selected_categoria]
+    if len(selected_categorias) > 0 and 'all' not in selected_categorias:
+        filtered_df = filtered_df[filtered_df['categoria'].isin(selected_categorias)]
     
-    if selected_povo != 'all':
-        filtered_df = filtered_df[filtered_df['povo'] == selected_povo]
+    if len(selected_povos) > 0 and 'all' not in selected_povos:
+        filtered_df = filtered_df[filtered_df['povo'].isin(selected_povos)]
         
-    if selected_estado != 'all':
-        filtered_df = filtered_df[filtered_df['estado_de_origem'].str.contains(selected_estado, na=False)]
+    if len(selected_estados) > 0 and 'all' not in selected_estados:
+        selected_estados = '|'.join(selected_estados)
+        filtered_df = filtered_df[filtered_df['estado_de_origem'].str.contains(selected_estados, na=False)]
 
-    if selected_materia != 'all':
-        filtered_df = filtered_df[filtered_df['tipo_materia_prima'].str.contains(selected_materia, na=False)]
+    if len(selected_materias) > 0 and 'all' not in selected_materias:
+        selected_materias = '|'.join(selected_materias)
+        filtered_df = filtered_df[filtered_df['tipo_materia_prima'].str.contains(selected_materias, na=False)]
 
     # Filtering by year of acquisition
     filtered_df = filtered_df[(filtered_df['ano_de_aquisicao'] >= ano_min) & (filtered_df['ano_de_aquisicao'] <= ano_max)]

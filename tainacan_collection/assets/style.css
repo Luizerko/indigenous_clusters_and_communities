@@ -162,8 +162,29 @@ body {
     left: 0.3vh !important;
 }
 
+/* Configuring filter info-tooltips for scrolling case */
+.filter-tooltip-scroll {
+    top: -30.8vh !important;
+    left: 23.5vh !important;
+}
+
 /* Adding icon to 'Opções de Exibição' filter */
 #exhibition-options::after {
+    content: "";
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-left: 6px;
+    padding-top: 6px;
+    cursor: pointer;
+    background-image: url("https://cdn.jsdelivr.net/npm/bootstrap-icons/icons/info-circle-fill.svg");
+    background-size: contain;
+    background-repeat: no-repeat;
+    filter: invert(11%) sepia(62%) saturate(2398%) hue-rotate(197deg) brightness(97%) contrast(94%);
+}
+
+/* Adding icon to 'Opções de Exibição' filter */
+#grouping-options::after {
     content: "";
     display: inline-block;
     width: 14px;
@@ -193,7 +214,7 @@ body {
 }
 
 /* Adding icon to 'Opções de Exibição' filter */
-#grouping-options::after {
+#granularity-slider::after {
     content: "";
     display: inline-block;
     width: 14px;
@@ -212,6 +233,22 @@ input[type="radio"] {
     margin-right: 5px;
 }
 
+/* Stylying radio buttons color */
+.toggle-view input[type="radio"] {
+    accent-color: #062a57; /* For most modern browsers */
+}
+
+.toggle-view label {
+    color: black;
+    padding: 5px;
+    margin-right: 10px;
+}
+
+.toggle-view input[type="radio"]:checked + label {
+    color: #062a57;
+    font-weight: bold;
+}
+
 /* Stylying filter label+dropdown */
 .filter-dropdown {
     display: flex;
@@ -221,6 +258,11 @@ input[type="radio"] {
     margin-top: 2px;
     margin-bottom: 10px;
     padding-left: 10px;
+}
+
+/* Stylying dropdown text color */
+.Select-value {
+    color: #062a57 !important;
 }
 
 /* Removing spinners from filter input */
@@ -283,6 +325,56 @@ input[type=number]::-webkit-outer-spin-button {
     border-bottom-left-radius: 0px;
     border: 1px solid #ccc;
     border-bottom: none;
+}
+
+/* Stylying granularity slider */
+.filter-slider {
+    width: 90%;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.filter-slider .rc-slider-mark-text {
+    white-space: pre-line;
+}
+
+.rc-slider-track {
+    background-color: #062a57;
+}
+
+.rc-slider-dot-active {  
+    border-color: #062a57;
+    border: solid 2px #062a57;
+}
+
+.rc-slider-handle {
+    background-color: white;
+    border-color: #062a57;
+    border: solid 2px #062a57;
+}
+
+.rc-slider-handle:active {
+    border-color: #062a57;
+    border: solid 2px #062a57;
+}
+
+.rc-slider-handle:hover {
+    border-color: #062a57;
+}
+
+.rc-slider-handle-active {
+    border-color: #062a57;
+    border: solid 2px #062a57;
+}
+
+.rc-slider-handle-active:active {
+    border-color: #062a57 !important;
+    border: solid 2px #062a57;
+}
+
+.rc-slider-handle-click-focused {
+    border-color: #062a57 !important;
+    border: solid 2px #062a57;
 }
 
 /* Div for the graph */
