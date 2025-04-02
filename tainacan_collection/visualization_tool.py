@@ -27,10 +27,15 @@ plot_df = pd.DataFrame({"x": x[:, 0], "y": x[:, 1], "cluster": y})
 # Loading clusters
 tipo_materia_prima_baseline_df = pd.read_csv('data/clusters/tipo_materia_prima_baseline.csv', index_col='id')
 
-vanilla_vit_df = pd.read_csv('data/clusters/vanilla_vit.csv', index_col='id')
+# vanilla_vit_df = pd.read_csv('data/clusters/vanilla_vit.csv', index_col='id')
 povo_vit_df = pd.read_csv('data/clusters/povo_vit.csv', index_col='id')
 categoria_vit_df = pd.read_csv('data/clusters/categoria_vit.csv', index_col='id')
-multihead_vit_df = pd.read_csv('data/clusters/multihead_vit.csv', index_col='id')
+# multihead_vit_df = pd.read_csv('data/clusters/multihead_vit.csv', index_col='id')
+
+vanilla_dino_df = pd.read_csv('data/clusters/vanilla_dino.csv', index_col='id')
+# povo_dino_df = pd.read_csv('data/clusters/povo_dino.csv', index_col='id')
+# categoria_dino_df = pd.read_csv('data/clusters/categoria_dino.csv', index_col='id')
+multihead_dino_df = pd.read_csv('data/clusters/multihead_dino.csv', index_col='id')
 
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index
@@ -44,7 +49,7 @@ storage_client = storage.Client.from_service_account_json('data/master-thesis-45
 # Creating temporary URL for lazy loading images
 plot_df['temporary_br_url'] = pd.NA
 plot_df.loc[plot_df['image_path'].notna(), 'temporary_br_url'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: generate_signed_url(storage_client, 'background-removed-tainacan-images', f"{path.split('/')[-1].split('.')[0]}.png", expiration_minutes=1))
-plot_df.loc[plot_df['temporary_br_url'].isna(), 'temporary_br_url'] = generate_signed_url(storage_client, 'background-removed-tainacan-images', 'placeholder_square.png', expiration_minutes=1)
+plot_df.loc[plot_df['temporary_br_url'].isna(), 'temporary_br_url'] = generate_signed_url(storage_client, 'background-removed-tainacan-images', 'placeholder_square.png', expiration_minutes=5)
 
 plot_df['image_path_br'] = ind_df['image_path'].values
 plot_df.loc[plot_df['image_path_br'].notna(), 'image_path_br'] = plot_df.loc[plot_df['image_path_br'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")
@@ -201,20 +206,38 @@ app.layout = html.Div([
                                         dcc.Dropdown(
                                             id='cluster-options',
                                             options=[
-                                                {'label': 'Similaridade Imagética por Categoria (ViT)', 'value': 'cluster_1'},
-                                                {'label': 'Similaridade Imagética por Povo (ViT)', 'value': 'cluster_2'},
-                                                {'label': 'Tipo de Materia Prima', 'value': 'cluster_3'},
-                                                {'label': 'Similaridade Imagética (ViT)', 'value': 'cluster_4'},
-                                                {'label': 'Similaridade Imagética por Categoria e Povo (ViT)', 'value': 'cluster_5'},
+                                                {'label': 'Tipo de Materia Prima', 'value': 'cluster_1'},
+                                                {'label': 'Similaridade Imagética', 'value': 'cluster_2'},
+                                                {'label': 'Similaridade Imagética (por Categoria)', 'value': 'cluster_3'},
+                                                {'label': 'Similaridade Imagética (por Povo)', 'value': 'cluster_4'},
+                                                {'label': 'Similaridade Imagética (por Categoria e Povo)', 'value': 'cluster_5'},
                                             ],
                                             multi=False,
                                             placeholder='Selecione uma opção de agrupamento',
-                                            value='cluster_1',
+                                            value='cluster_3',
                                             clearable=False,
                                             # className='cluster-dropup'
                                         ),
 
-                                        html.Label("Filtragem de Dados", id='data-filtering', style={'fontWeight': 'bold', 'marginTop': '20px'}),
+                                        html.Label('Granularidade da Nuvem', id='granularity-slider', style={'fontWeight': 'bold', 'marginTop': '30px', 'marginBottom': '5px'}),
+                                        dbc.Tooltip(
+                                            'Esse controle permite ajustar o nível de detalhe com que os pontos da nuvem são agrupados. Quando a granularidade está baixa, os pontos próximos são agrupados em blocos maiores e mais espaçados — isso melhora o desempenho e é ideal quando você quer focar em uma área específica e pode dar bastante zoom para ver os detalhes. Já com a granularidade alta, os agrupamentos são menores e mais numerosos, o que mostra a nuvem com mais detalhes em regiões maiores ou até no geral. No entanto, isso pode deixar o sistema mais pesado, já que mais pontos precisam ser exibidos ao mesmo tempo.',
+                                            target="granularity-slider",
+                                            trigger='click',
+                                            id="tooltip-info-granularity-slider",
+                                            placement="right-start",
+                                            is_open=False,
+                                            className='filter-tooltip',
+                                        ),
+                                        dcc.Slider(0, 4,
+                                            step=None,
+                                            marks={0: 'Muito\nBaixa', 1: 'Baixa', 2: 'Média', 3: 'Alta', 4: 'Muito\nAlta'},
+                                            value=2,
+                                            className='filter-slider',
+                                            id='granularity-filter'
+                                        ),
+
+                                        html.Label("Filtragem de Dados", id='data-filtering', style={'fontWeight': 'bold', 'marginTop': '40px'}),
                                         dbc.Tooltip(
                                             'As opções dessa seção permitem que o usuário filtre os dados a serem observados de maneira tal a granularizar a pesquisa e visualização pensando no seu objeto de pesquisa alvo. Note que, para os filtros numéricos, o valor "0" indica ausência do dado, então um item de Comprimento 0cm, por exemplo, é um item para o qual não existe informação de Comprimento.',
                                             target="data-filtering",
@@ -414,24 +437,6 @@ app.layout = html.Div([
                                                     ],
                                                 ),
                                             ]
-                                        ),
-
-                                        html.Label('Granularidade da Nuvem', id='granularity-slider', style={'fontWeight': 'bold', 'marginTop': '20px', 'marginBottom': '5px'}),
-                                        dbc.Tooltip(
-                                            'Esse controle permite ajustar o nível de detalhe com que os pontos da nuvem são agrupados. Quando a granularidade está baixa, os pontos próximos são agrupados em blocos maiores e mais espaçados — isso melhora o desempenho e é ideal quando você quer focar em uma área específica e pode dar bastante zoom para ver os detalhes. Já com a granularidade alta, os agrupamentos são menores e mais numerosos, o que mostra a nuvem com mais detalhes em regiões maiores ou até no geral. No entanto, isso pode deixar o sistema mais pesado, já que mais pontos precisam ser exibidos ao mesmo tempo.',
-                                            target="granularity-slider",
-                                            trigger='click',
-                                            id="tooltip-info-granularity-slider",
-                                            placement="bottom-start",
-                                            is_open=False,
-                                            className='filter-tooltip-scroll',
-                                        ),
-                                        dcc.Slider(0, 4,
-                                            step=None,
-                                            marks={0: 'Muito\nBaixa', 1: 'Baixa', 2: 'Média', 3: 'Alta', 4: 'Muito\nAlta'},
-                                            value=2,
-                                            className='filter-slider',
-                                            id='granularity-filter'
                                         ),
 
                                         dcc.Store(id='zoom-update')
@@ -714,15 +719,15 @@ def update_scatter_plot(view_type, relayout_data, zoom_update, granularity, grou
     # Replotting outliers
     if len(visible_outliers) > 0:
         if view_type == 'markers':
-            fig = plot_with_markers(visible_outliers, len(collapse_df), color_df, x_range, y_range, grouping!='cluster_3', grouping=='cluster_4' or grouping=='cluster_5')
+            fig = plot_with_markers(visible_outliers, len(collapse_df), color_df, x_range, y_range, grouping!='cluster_1', grouping=='cluster_2' or grouping=='cluster_5')
         else:
             num_points = len(filtered_plot_df.loc[filtered_plot_df['image_path_br'] != 'data/placeholder_square.png'])
             fig = plot_with_images(visible_outliers, num_points, x_range, y_range)
     else:
-        if len(color_df) > 0 and grouping != 'cluster_4' and grouping != 'cluster_5':
-            fig = empty_figure_legend(color_df, x_range, y_range, len(collapse_df), grouping!='cluster_3')
+        if len(color_df) > 0 and grouping != 'cluster_2' and grouping != 'cluster_5':
+            fig = empty_figure_legend(color_df, x_range, y_range, len(collapse_df), grouping!='cluster_1')
         else:
-            fig = empty_figure(x_range, y_range, len(collapse_df), grouping!='cluster_3')
+            fig = empty_figure(x_range, y_range, len(collapse_df), grouping!='cluster_1')
 
     # Plotting collapsed points
     fig.add_trace(go.Scatter(
@@ -812,19 +817,19 @@ def update_cluster(selected_option):
 
     # Updating cluster values, positions and colors depending on the chosen clustering option 
     if selected_option == 'cluster_1':
-        update_cluster_selection(plot_df, categoria_vit_df)
-
-    elif selected_option == 'cluster_2':
-        update_cluster_selection(plot_df, povo_vit_df)
-
-    elif selected_option == 'cluster_3':
         update_cluster_selection(plot_df, tipo_materia_prima_baseline_df)
 
+    elif selected_option == 'cluster_2':
+        update_cluster_selection(plot_df, vanilla_dino_df, no_clusters=True)
+
+    elif selected_option == 'cluster_3':
+        update_cluster_selection(plot_df, categoria_vit_df)
+
     elif selected_option == 'cluster_4':
-        update_cluster_selection(plot_df, vanilla_vit_df, no_clusters=True)
+        update_cluster_selection(plot_df, povo_vit_df)
 
     elif selected_option == 'cluster_5':
-        update_cluster_selection(plot_df, multihead_vit_df, no_clusters=True)
+        update_cluster_selection(plot_df, multihead_dino_df, no_clusters=True)
 
     return True, 'all', 'all', 'all', 'all', plot_df['ano_de_aquisicao'].min(), plot_df['ano_de_aquisicao'].max(), plot_df['comprimento'].min(), plot_df['comprimento'].max(), plot_df['largura'].min(), plot_df['largura'].max(), plot_df['altura'].min(), plot_df['altura'].max(), plot_df['diametro'].min(), plot_df['diametro'].max()
 
@@ -850,15 +855,15 @@ def update_cluster(selected_option):
 def filter_data(selected_categorias, selected_povos, selected_estados, selected_materias, ano_min, ano_max, comprimento_min, comprimento_max, largura_min, largura_max, altura_min, altura_max, diametro_min, diametro_max, grouping):
     # Preserving visibility indices
     if grouping == 'cluster_1':
-        filtered_df = plot_df[plot_df['ind_index'].isin(povo_vit_df.index)].copy()
-    elif grouping == 'cluster_2':
-        filtered_df = plot_df[plot_df['ind_index'].isin(categoria_vit_df.index)].copy()
-    elif grouping == 'cluster_3':
         filtered_df = plot_df[plot_df['ind_index'].isin(tipo_materia_prima_baseline_df.index)].copy()
+    elif grouping == 'cluster_2':
+        filtered_df = plot_df[plot_df['ind_index'].isin(vanilla_dino_df.index)].copy()
+    elif grouping == 'cluster_3':
+        filtered_df = plot_df[plot_df['ind_index'].isin(categoria_vit_df.index)].copy()
     elif grouping == 'cluster_4':
-        filtered_df = plot_df[plot_df['ind_index'].isin(vanilla_vit_df.index)].copy()
+        filtered_df = plot_df[plot_df['ind_index'].isin(povo_vit_df.index)].copy()
     elif grouping == 'cluster_5':
-        filtered_df = plot_df[plot_df['ind_index'].isin(multihead_vit_df.index)].copy()
+        filtered_df = plot_df[plot_df['ind_index'].isin(multihead_dino_df.index)].copy()
 
     # Applying filters if a selection is made
     if len(selected_categorias) > 0 and 'all' not in selected_categorias:

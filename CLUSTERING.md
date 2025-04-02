@@ -125,7 +125,7 @@ For that, we added a **classification head** to the network’s backbone - a **s
 
 ##### Training Models and Results
 
-We trained several models to achieve the best possible results and assess the effectiveness of each adjustment we were implementing. Going into the implementation details, the dataset was split into 80% training, 10% validation, 10% test, and the original collection contained approximately **11,000 images**.
+We trained several models until convergence (normally 20 to 30 epochs) to achieve the best possible results and assess the effectiveness of each adjustment we were implementing. Going into the implementation details, the dataset was split into 80% training, 10% validation, 10% test, and the original collection contained approximately **11,000 images**.
 
 For each model, we tracked:  
   - **Loss**  
@@ -151,6 +151,8 @@ Even after balancing, class disparities remained though. Because of that, we **a
 
 For `categoria`, the procedure was nearly identical to `povo`, with one key difference: only one class (*"etnobotânica"*) was significantly underrepresented. Hence, instead of a full quantile study, we filtered this single class. The remaining balancing steps followed the same augmentation, undersampling, and weight adjustment process.
 
+<!-- Images showing classes after balancing for 'povo' and 'categoria' -->
+
 The tables below summarizes the parameters for different models and the corresponding quantitative results.
 
 | Dataset | Learning Rate | Weight Decay | Frozen Layers (%) | Weighted Loss | Test Accuracy (%) | Avg. Precision | Avg. Recall | Avg. Precision on Selected Classes | Avg. Recall on Selected Classes | 
@@ -173,7 +175,9 @@ The tables below summarizes the parameters for different models and the correspo
   Parameters and results for ViT models fine-tuned on `categoria`.
 </p>
 
-As tabelas acima mostram que o modelo 
+<!-- Comparison of model results. Comment on how we got better metrics when working with the balanced dataset and that freezing ended up affecting the results negatively here, something that will be different for the next architecture. Also show images of the results and comment on insights that we found out (communities that havi similarities with other communities). -->
+
+<!-- Images showing UMAP projections for best model on 'povo' and 'categoria' -->
 
 In addition to the previously mentioned models, we developed a multi-head model to explore the semantics of the network’s image projections when optimizing both features simultaneously. We implemented two classification heads - one for `povo` and another for `categoria` - with the loss being the weighted average of both losses.
 
@@ -190,7 +194,13 @@ The table below summarizes the parameters for different head weights and the cor
   Parameters and results for multi-head ViT models fine-tuned on both `povo` and `categoria`. The columns <i>Dataset</i>, <i>Frozen Layers (%)</i>, <i>Weighted Loss</i>, <i>Avg. Precision</i> and <i>Avg. Recall</i> are not found in this table because we trained all models with the same (balanced) dataset, no frozen layers, always with weighted loss for both heads and only on the selected categories.
 </p>
 
+<!-- Comment on the difference in results when using multihead, specially the gains for 'povo', indicating that multihead training enriches the data. Comment on the not so great quality of the embedding spread because it's still very hard to separate 'povo', but it's interesting to observe that we can still find some 'categoria' structure (clusters) in the mess -->
+
+<!-- Images of the multihead resulting embeddings considering both 'povo' and 'categoria' -->
+
 #### DINOv2
+
+<!-- Comment that we moved on to a more modern architecture to study its potential and see the difference in the results. Comment that we it's clear that this architecture struggles a little bit more with the data, but benefits much more with the rebalancing step, reaching better metrics than ViT. Also comment on the fact that frozen layers here help, indicating that the early layers probably offer better generalization than ViT. Comment on the effects of multihead here -->
 
 | Dataset | Learning Rate | Weight Decay | Frozen Layers (%) | Weighted Loss | Test Accuracy (%) | Avg. Precision | Avg. Recall | Avg. Precision on Selected Classes | Avg. Recall on Selected Classes | 
 |-|-|-|-|-|-|-|-|-|-|
@@ -211,6 +221,19 @@ The table below summarizes the parameters for different head weights and the cor
 <p align="center" style="margin-bottom: 25px;">
   Parameters and results for DINOv2 models fine-tuned on `categoria`.
 </p>
+
+| Learning Rate | Weight Decay | Head Weights (`povo`/`categoria`) | `povo` Head Test Accuracy (%) | `povo` Head Avg. Precision on Selected Classes | `povo` Head Avg. Recall on Selected Classes | `categoria` Head Test Accuracy (%) | `categoria` Head Avg. Precision on Selected Classes | `categoria` Head Avg. recall on Selected Classes |
+|-|-|-|-|-|-|-|-|-|
+| 1e-5 | 3e-6 | 50/50 | 68.82 ± 3.46 | 0.68 ± 0.02 | 0.67 ± 0.02 | 86.87 ± 1.95 | 0.85 ± 0.03 | 0.83 ± 0.05 |
+| 1e-5 | 3e-6 | 70/30 | 71.11 ± 2.06 | 0.72 ± 0.03 | 0.70 ± 0.02 | 87.74 ± 2.34 | 0.88 ± 0.02 | 0.87 ± 0.03 |
+| 1e-5 | 3e-6 | 30/70 | 67.91 ± 3.46 | 0.25 ± 0.02 | 0.27 ± 0.02 | 68.73 ± 1.95 | 0.60 ± 0.03 | 0.67 ± 0.05 |
+<p align="center" style="margin-bottom: 25px;">
+  Parameters and results for multi-head ViT models fine-tuned on both `povo` and `categoria`. The columns <i>Dataset</i>, <i>Frozen Layers (%)</i>, <i>Weighted Loss</i>, <i>Avg. Precision</i> and <i>Avg. Recall</i> are not found in this table because we trained all models with the same (balanced) dataset, no frozen layers, always with weighted loss for both heads and only on the selected categories.
+</p>
+
+<!-- Comment on the fact that, even though we got better results, they were not execptionally better and they generally did not provide us better projections in terms of clustering. This means that, for the final user to have the best visual experience, we decided to pick the vanilla and multihead projections (no categories shown for these two) from the DINOv2 model, oferring a nicer spread and more general point cloud, but picked the 'povo' and 'categoria' projections from the ViT since they offered a little bit more proper grouping for the user -->
+
+<!-- Images of all results comming from the DINOv2 -->
 
 ### Text-Based Clustering
 

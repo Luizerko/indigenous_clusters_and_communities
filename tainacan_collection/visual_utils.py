@@ -125,8 +125,8 @@ def empty_figure_legend(color_df, x_range=(-norm_factor,norm_factor), y_range=(-
         color_dict[str(row['cluster_names'])] = row['color']
     dummy_fig = px.scatter(
         df_copy,
-        x=[-100 for i in range(len(df_copy))],
-        y=[-100 for i in range(len(df_copy))],
+        x=[-10000 for i in range(len(df_copy))],
+        y=[-10000 for i in range(len(df_copy))],
         color='cluster_names',
         labels={'cluster_names': 'Cluster Names'},
         color_discrete_map=color_dict,
@@ -187,8 +187,8 @@ def plot_with_markers(df, num_points, color_df, x_range=(-norm_factor,norm_facto
             color_dict[str(row['cluster_names'])] = row['color']
         dummy_fig = px.scatter(
             df_copy,
-            x=[-100 for i in range(len(df_copy))],
-            y=[-100 for i in range(len(df_copy))],
+            x=[-10000 for i in range(len(df_copy))],
+            y=[-10000 for i in range(len(df_copy))],
             color='cluster_names',
             labels={'cluster_names': 'Cluster Names'},
             color_discrete_map=color_dict,
@@ -223,7 +223,7 @@ def plot_with_images(df, num_points, x_range=(-norm_factor,norm_factor), y_range
     for index, row in df.iterrows():
         fig.add_layout_image(
             # dict(source=Image.open(row['image_path_br']), x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/8, sizey=(y_range[1]-y_range[0])/8, xanchor="center",yanchor="middle")
-            dict(source=row['temporary_br_url'], x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/8, sizey=(y_range[1]-y_range[0])/8, xanchor="center",yanchor="middle")
+            dict(source=row['temporary_br_url'], x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/10, sizey=(y_range[1]-y_range[0])/10, xanchor="center",yanchor="middle")
         )
     
     fig_update_layout(fig, num_points, x_range, y_range)
