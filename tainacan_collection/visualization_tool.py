@@ -48,8 +48,8 @@ storage_client = storage.Client.from_service_account_json('data/master-thesis-45
 
 # Creating temporary URL for lazy loading images
 plot_df['temporary_br_url'] = pd.NA
-plot_df.loc[plot_df['image_path'].notna(), 'temporary_br_url'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: generate_signed_url(storage_client, 'background-removed-tainacan-images', f"{path.split('/')[-1].split('.')[0]}.png", expiration_minutes=1))
-plot_df.loc[plot_df['temporary_br_url'].isna(), 'temporary_br_url'] = generate_signed_url(storage_client, 'background-removed-tainacan-images', 'placeholder_square.png', expiration_minutes=5)
+plot_df.loc[plot_df['image_path'].notna(), 'temporary_br_url'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: generate_signed_url(storage_client, 'background-removed-tainacan-images', f"{path.split('/')[-1].split('.')[0]}.png", expiration_minutes=10))
+plot_df.loc[plot_df['temporary_br_url'].isna(), 'temporary_br_url'] = generate_signed_url(storage_client, 'background-removed-tainacan-images', 'placeholder_square.png', expiration_minutes=10)
 
 plot_df['image_path_br'] = ind_df['image_path'].values
 plot_df.loc[plot_df['image_path_br'].notna(), 'image_path_br'] = plot_df.loc[plot_df['image_path_br'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")
@@ -156,7 +156,7 @@ app.layout = html.Div([
             className='tab-option',
             children=[
                 dbc.Tooltip(
-                    "Essa aba permite que o usuário explore diferentes agrupamentos nos dados do acervo, baseados tanto em similaridade imagética dos itens como em semelhanças textuais em suas descrições. Além disso, o usuário pode filtrar os dados a serem visualizados como bem entender, fazendo da página basicamente uma versão interativa do Tainacan",
+                    "Essa aba permite que o usuário explore diferentes agrupamentos nos dados do acervo, baseados tanto em similaridade imagética dos itens como em semelhanças textuais em suas descrições. Além disso, o usuário pode filtrar os dados a serem visualizados como bem entender, fazendo da página basicamente uma versão interativa do Tainacan.",
                     target="aba-agrupamentos",
                     trigger='click',
                     id="tooltip-info-agrupamentos",
@@ -175,7 +175,7 @@ app.layout = html.Div([
                                     children=[
                                         html.Label("Opções de Exibição", id='exhibition-options', style={'fontWeight': 'bold'}),
                                         dbc.Tooltip(
-                                            "Essa opção permite que o usuário escolha o tipo de visualização do acervo: numve de pontos no espaço associados a itens ou nuvem imagens dos itens. Note que a nuvem de imagem oferece menos interatividade, sendo designada apenas para visualização.",
+                                            "Essa opção permite que o usuário escolha o tipo de visualização do acervo: nuvem de pontos no espaço associados a itens ou nuvem imagens dos itens. Note que a nuvem de imagens oferece menos interatividade, sendo designada apenas para visualização.",
                                             target="exhibition-options",
                                             trigger='click',
                                             id="tooltip-info-exhibition-options",
@@ -195,7 +195,7 @@ app.layout = html.Div([
 
                                         html.Label('Opções de Agrupamento', id='grouping-options', style={'fontWeight': 'bold', 'marginTop': '20px', 'marginBottom': '5px'}),
                                         dbc.Tooltip(
-                                            'Essa opção permite ao usuário decidir como explorar a nuvem de pontos em relação a seus agrupamentos: por similaridade imagética, similaridade descritiva ou por similaridade de algum outro atributo. Esses agrupamentos, produzidos através da ajuda de inteligência artificial, vêm em diversas modalidades, podendo ressaltar ou não categorias contidas nos dados.',
+                                            'Essa opção permite ao usuário decidir como explorar a nuvem de pontos em relação a seus agrupamentos: por similaridade imagética, similaridade descritiva ou por similaridade de algum outro atributo. Esses agrupamentos, produzidos através da ajuda de inteligência artificial, vêm em diversas modalidades, podendo ressaltar, ou não, categorias contidas nos dados.',
                                             target="grouping-options",
                                             trigger='click',
                                             id="tooltip-info-grouping-options",
@@ -221,7 +221,7 @@ app.layout = html.Div([
 
                                         html.Label('Granularidade da Nuvem', id='granularity-slider', style={'fontWeight': 'bold', 'marginTop': '30px', 'marginBottom': '5px'}),
                                         dbc.Tooltip(
-                                            'Esse controle permite ajustar o nível de detalhe com que os pontos da nuvem são agrupados. Quando a granularidade está baixa, os pontos próximos são agrupados em blocos maiores e mais espaçados — isso melhora o desempenho e é ideal quando você quer focar em uma área específica e pode dar bastante zoom para ver os detalhes. Já com a granularidade alta, os agrupamentos são menores e mais numerosos, o que mostra a nuvem com mais detalhes em regiões maiores ou até no geral. No entanto, isso pode deixar o sistema mais pesado, já que mais pontos precisam ser exibidos ao mesmo tempo.',
+                                            'Esse controle permite ajustar o nível de detalhe com que os pontos da nuvem são agrupados. Quando a granularidade está baixa, os pontos próximos são agrupados em blocos maiores e mais espaçados - isso melhora o desempenho e é ideal quando você quer focar em uma área específica e pode dar bastante zoom para ver os detalhes. Já com a granularidade alta, os agrupamentos são menores e mais numerosos, o que mostra a nuvem com mais detalhes em regiões maiores ou até no geral. No entanto, isso pode deixar o sistema mais pesado, já que mais pontos precisam ser exibidos ao mesmo tempo.',
                                             target="granularity-slider",
                                             trigger='click',
                                             id="tooltip-info-granularity-slider",
@@ -239,7 +239,7 @@ app.layout = html.Div([
 
                                         html.Label("Filtragem de Dados", id='data-filtering', style={'fontWeight': 'bold', 'marginTop': '40px'}),
                                         dbc.Tooltip(
-                                            'As opções dessa seção permitem que o usuário filtre os dados a serem observados de maneira tal a granularizar a pesquisa e visualização pensando no seu objeto de pesquisa alvo. Note que, para os filtros numéricos, o valor "0" indica ausência do dado, então um item de Comprimento 0cm, por exemplo, é um item para o qual não existe informação de Comprimento.',
+                                            'As opções dessa seção permitem que o usuário filtre os dados a serem observados de maneira tal a granularizar a pesquisa e visualização pensando no seu objeto alvo. Note que, para os filtros numéricos, o valor "0" indica ausência do dado, então um item de Comprimento 0cm, por exemplo, é um item para o qual não existe informação de Comprimento.',
                                             target="data-filtering",
                                             trigger='click',
                                             id="tooltip-info-data-filtering",
@@ -256,7 +256,7 @@ app.layout = html.Div([
                                                     options=get_dropdown_options(ind_df, 'categoria'),
                                                     multi=True,
                                                     placeholder='Filtrar por categoria',
-                                                    value=['all'],
+                                                    value=[],
                                                     clearable=False
                                                 ),
                                             ]
@@ -270,7 +270,7 @@ app.layout = html.Div([
                                                     options=get_dropdown_options(ind_df, 'povo'),
                                                     multi=True,
                                                     placeholder='Filtrar por povo',
-                                                    value=['all'],
+                                                    value=[],
                                                     clearable=False
                                                 ),
                                             ]
@@ -284,7 +284,7 @@ app.layout = html.Div([
                                                     options=get_dropdown_options(ind_df, 'estado_de_origem'),
                                                     multi=True,
                                                     placeholder='Filtrar por estado de origem',
-                                                    value=['all'],
+                                                    value=[],
                                                     clearable=False
                                                 ),
                                             ]
@@ -298,7 +298,7 @@ app.layout = html.Div([
                                                     options=get_dropdown_options(plot_df, 'tipo_materia_prima'),
                                                     multi=True,
                                                     placeholder='Filtrar por tipo de matéria prima',
-                                                    value=['all'],
+                                                    value=[],
                                                     clearable=False
                                                 ),
                                             ]
@@ -722,7 +722,7 @@ def update_scatter_plot(view_type, relayout_data, zoom_update, granularity, grou
             fig = plot_with_markers(visible_outliers, len(collapse_df), color_df, x_range, y_range, grouping!='cluster_1', grouping=='cluster_2' or grouping=='cluster_5')
         else:
             num_points = len(filtered_plot_df.loc[filtered_plot_df['image_path_br'] != 'data/placeholder_square.png'])
-            fig = plot_with_images(visible_outliers, num_points, x_range, y_range)
+            fig = plot_with_images(visible_outliers, num_points, color_df, x_range, y_range, grouping=='cluster_2' or grouping=='cluster_5')
     else:
         if len(color_df) > 0 and grouping != 'cluster_2' and grouping != 'cluster_5':
             fig = empty_figure_legend(color_df, x_range, y_range, len(collapse_df), grouping!='cluster_1')
@@ -866,17 +866,17 @@ def filter_data(selected_categorias, selected_povos, selected_estados, selected_
         filtered_df = plot_df[plot_df['ind_index'].isin(multihead_dino_df.index)].copy()
 
     # Applying filters if a selection is made
-    if len(selected_categorias) > 0 and 'all' not in selected_categorias:
+    if len(selected_categorias) > 0:
         filtered_df = filtered_df[filtered_df['categoria'].isin(selected_categorias)]
     
-    if len(selected_povos) > 0 and 'all' not in selected_povos:
+    if len(selected_povos) > 0:
         filtered_df = filtered_df[filtered_df['povo'].isin(selected_povos)]
         
-    if len(selected_estados) > 0 and 'all' not in selected_estados:
+    if len(selected_estados) > 0:
         selected_estados = '|'.join(selected_estados)
         filtered_df = filtered_df[filtered_df['estado_de_origem'].str.contains(selected_estados, na=False)]
 
-    if len(selected_materias) > 0 and 'all' not in selected_materias:
+    if len(selected_materias) > 0:
         selected_materias = '|'.join(selected_materias)
         filtered_df = filtered_df[filtered_df['tipo_materia_prima'].str.contains(selected_materias, na=False)]
 
@@ -948,17 +948,38 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
         
         colors = list(fig.data[1].marker.line.color)
         for i, color in enumerate(colors):
-            colors[i] = color.replace('0.4)', '1)')
+            if '0)' in color:
+                colors[i] = color.replace('0)', '1)')
+            else:
+                colors[i] = color.replace('0.3)', '1)')
         fig.data[1].marker.line.color = colors
 
-        month_colors = list(fig.data[2].marker.color)
+        min_marker_size = 5
+        square_sizes = list(np.full((len(fig.data[1].x)), max(min_marker_size, 300/math.sqrt(len(fig.data[1].x)))))
+        fig.data[2].marker.size = square_sizes
+
+        square_colors = list(fig.data[2].marker.color)
+        for i, square_color in enumerate(square_colors):
+            square_colors[i] = square_color.replace('1)', '0)')
+        fig.data[2].marker.color = square_colors
+        
+        month_colors = list(fig.data[3].marker.color)
         for i, month_color in enumerate(month_colors):
-            month_colors[i] = month_color.replace('0.4)', '1)')
-        fig.data[2].marker.color = month_colors
+            month_colors[i] = month_color.replace('0.3)', '1)')
+        fig.data[3].marker.color = month_colors
+
+        image_opacities = list(np.full((len(fig.layout.images)), 1))
+        for i, image_opacity in enumerate(image_opacities):
+            fig.layout.images[i].opacity = image_opacity
+
+        image_sizes = list(np.full((len(fig.layout.images)), 5/math.sqrt(len(fig.layout.images))))
+        for i, image_size in enumerate(image_sizes):
+            fig.layout.images[i].sizex = image_size
+            fig.layout.images[i].sizey = image_size
 
         # Grid plot
         if hover_data and hover_data["points"][0]["curveNumber"] == 1:
-            # Extracting plotly dash information and changing size on hover
+            # Extracting plotly dash information and highlighting on hover
             num = hover_data["points"][0]["pointNumber"]
             
             old_widths[num] = 15
@@ -966,11 +987,28 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
 
             for i, color in enumerate(colors):
                 if i != num:
-                    colors[i] = color.replace('1)', '0.4)')
+                    colors[i] = color.replace('1)', '0.3)')
+                else:
+                    colors[i] = color.replace('1)', '0)')
             fig.data[1].marker.line.color = colors
+
+            square_sizes[num] *= 2.5
+            fig.data[2].marker.size = square_sizes
+
+            square_colors[num] = square_colors[num].replace('0)', '1)')
+            fig.data[2].marker.color = square_colors
+
+            for i, image_opacity in enumerate(image_opacities):
+                if i != num:
+                    fig.layout.images[i].opacity = 0.3
+
+            fig.layout.images[num].sizex *= 1.4
+            fig.layout.images[num].sizey *= 1.4
 
             # Building hover tooltip
             bbox = hover_data['points'][0]['bbox']
+            bbox['x0'] += 2000/len(fig.layout.images)
+            bbox['x1'] += 2000/len(fig.layout.images)
 
             # Acessing the dataframe to get the data we actually want to display
             df_row = plot_df.iloc[fig.data[1].customdata[num]]
@@ -978,7 +1016,7 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
             povo = df_row['povo']
 
             if df_row['data_de_aquisicao'] == '0001-01-01':
-                data_de_aquisicao = 'Sem Data'
+                data_de_aquisicao = 'Sem Data Exata'
             else:
                 data_de_aquisicao = df_row['data_de_aquisicao']
                 data_de_aquisicao = data_de_aquisicao[-2:] + '-' + data_de_aquisicao[-5:-3] + '-' + data_de_aquisicao[:4]
@@ -1002,20 +1040,20 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
                         html.P(f'{povo.title()}, {data_de_aquisicao}', className='hover-box-text'),
                         html.P(f'{colecao.title()}', className='hover-box-text'),
                         html.P(f'{coletor.title()}', className='hover-box-text')
-                    ], style={'width': '150px'})
+                    ], style={'width': '130px'})
             ]
 
             return fig, True, bbox, children
     
         # Histogram (bar) plot
-        elif hover_data and hover_data["points"][0]["curveNumber"] == 2:
+        elif hover_data and hover_data["points"][0]["curveNumber"] == 3:
             month = hover_data["points"][0]["pointNumber"]
 
             # Changing colors for hovered bar plot
             for i, month_color in enumerate(month_colors):
                 if i != month:
-                    month_colors[i] = month_color.replace('1)', '0.4)')
-            fig.data[2].marker.color = month_colors
+                    month_colors[i] = month_color.replace('1)', '0.3)')
+            fig.data[3].marker.color = month_colors
 
             # Changing colors for grid points that belong to the hovered month
             df_rows = plot_df.loc[list(fig.data[1].customdata)]
@@ -1035,9 +1073,26 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
 
             for i, color in enumerate(colors):
                 if i not in interval:
-                    colors[i] = color.replace('1)', '0.4)')
+                    colors[i] = color.replace('1)', '0.3)')
+                else:
+                    colors[i] = color.replace('1)', '0)')
             fig.data[1].marker.line.color = colors
 
+            for i in interval:
+                square_sizes[i] *= 1.9
+            fig.data[2].marker.size = square_sizes
+
+            for i in interval:
+                square_colors[i] = square_colors[i].replace('0)', '1)')
+            fig.data[2].marker.color = square_colors
+
+            for i, image_opacity in enumerate(image_opacities):
+                if i not in interval:
+                    fig.layout.images[i].opacity = 0.3
+
+            for i in interval:
+                fig.layout.images[i].sizex *= 1.2
+                fig.layout.images[i].sizey *= 1.2
 
             return fig, False, no_update, no_update
 

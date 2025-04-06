@@ -217,16 +217,41 @@ def plot_with_markers(df, num_points, color_df, x_range=(-norm_factor,norm_facto
     return fig
 
 # Create scatter plot with the images themselves
-def plot_with_images(df, num_points, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor)):
+def plot_with_images(df, num_points, color_df, x_range=(-norm_factor,norm_factor), y_range=(-norm_factor,norm_factor), no_legend=False):
     df = df.loc[df['image_path_br'] != 'data/placeholder_square.png']
     fig = go.Figure()
     for index, row in df.iterrows():
         fig.add_layout_image(
             # dict(source=Image.open(row['image_path_br']), x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/8, sizey=(y_range[1]-y_range[0])/8, xanchor="center",yanchor="middle")
-            dict(source=row['temporary_br_url'], x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/10, sizey=(y_range[1]-y_range[0])/10, xanchor="center",yanchor="middle")
+            dict(source=row['temporary_br_url'], x=row['x'], y=row['y'], xref="x", yref="y", sizex=(x_range[1]-x_range[0])/12, sizey=(y_range[1]-y_range[0])/12, xanchor="center",yanchor="middle")
         )
     
     fig_update_layout(fig, num_points, x_range, y_range)
+
+    # Plotting legend
+    if not no_legend:
+        df_copy = color_df.copy()
+        df_copy['cluster_names'] = df_copy['cluster_names'].apply(lambda x: x.capitalize() if isinstance(x, str) else x)
+        unique_clusters = df_copy[['color', 'cluster_names']].drop_duplicates()
+        unique_clusters = unique_clusters.sort_values(by=['cluster_names'], ascending=True).sort_values(by='cluster_names', key=lambda x: x.str.len())
+        legend_order = unique_clusters['cluster_names'].tolist()
+        
+        color_dict = {}
+        for _, row in unique_clusters.iterrows():
+            color_dict[str(row['cluster_names'])] = row['color']
+        dummy_fig = px.scatter(
+            df_copy,
+            x=[-10000 for i in range(len(df_copy))],
+            y=[-10000 for i in range(len(df_copy))],
+            color='cluster_names',
+            labels={'cluster_names': 'Cluster Names'},
+            color_discrete_map=color_dict,
+            category_orders={'cluster_names': legend_order}
+        )
+        for trace in dummy_fig.data:
+            trace.showlegend = True
+            trace.marker.size = 15
+            fig.add_trace(trace)
 
     # Observation for image option
     fig.add_annotation(
@@ -405,14 +430,14 @@ def timeline_figure_grid(df):
     Y = Y.ravel()[:num_points]
 
     min_marker_size = 5
-    marker_size = max(min_marker_size, 280/math.sqrt(num_points))
+    marker_size = max(min_marker_size, 300/math.sqrt(num_points))
 
     # Generating histogram data
     num_no_date = len(grid_df.loc[grid_df['data_de_aquisicao'] == '0001-01-01'])
-    hist = {'Sem Data': num_no_date, 'Janeiro': 0, 'Fevereiro': 0, 'Março': 0, 'Abril': 0, 'Maio': 0, 'Junho': 0, 'Julho': 0, 'Agosto': 0, 'Setembro': 0, 'Outubro': 0, 'Novembro': 0, 'Dezembro': 0}
+    hist = {'Sem Data<br>Exata': num_no_date, 'Janeiro': 0, 'Fevereiro': 0, 'Março': 0, 'Abril': 0, 'Maio': 0, 'Junho': 0, 'Julho': 0, 'Agosto': 0, 'Setembro': 0, 'Outubro': 0, 'Novembro': 0, 'Dezembro': 0}
     grid_df.loc[grid_df['data_de_aquisicao'] == '0001-01-01', 'data_de_aquisicao'] = 0
 
-    num_to_month = {0: 'Sem Data', 1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
+    num_to_month = {0: 'Sem Data<br>Exata', 1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
     months = grid_df.loc[grid_df['data_de_aquisicao'] != 0, 'data_de_aquisicao'] = pd.to_datetime(grid_df.loc[grid_df['data_de_aquisicao'] != 0, 'data_de_aquisicao']).dt.month
     for month, count in dict(sorted(months.value_counts().to_dict().items())).items():
         hist[num_to_month[month]] = count
@@ -421,20 +446,41 @@ def timeline_figure_grid(df):
     cmap = LinearSegmentedColormap.from_list('truncated_cmap', plt.cm.hot(np.linspace(0.0, 0.6, len(hist))))
     month_colors = {month: f'rgba({int(cmap(i/(len(hist)-1))[0]*255)}, {int(cmap(i/(len(hist)-1))[1]*255)}, {int(cmap(i/(len(hist)-1))[2]*255)}, 1)' for i, month in enumerate(hist.keys())}
     
-    colors = [month_colors['Sem Data'] for i in range(len(grid_df.loc[grid_df['data_de_aquisicao'] == 0]))]
+    colors = [month_colors['Sem Data<br>Exata'] for i in range(len(grid_df.loc[grid_df['data_de_aquisicao'] == 0]))]
     for _, month in months.items():
         colors.append(month_colors[num_to_month[month]])
+
+    square_colors = [color.replace('1)', '0)') for color in colors]
     
-    # Creating back arrow button
     fig = go.Figure()
+
+    # Adding Year annotation
+    fig.add_annotation(
+        x=-0.64,
+        y=0.4,
+        text=str(grid_df['ano_de_aquisicao'].unique()[-1]),
+        showarrow=False,
+        font=dict(size=32, color="#062a57", weight='bold'),
+        align="center",
+    )
+
+    # Creating back arrow button
     fig.add_trace(go.Scatter(
         x=[-0.8, -0.57],
-        y=[0, 0],
+        y=[-0.5, -0.5],
         mode='markers',
         marker=dict(size=25, color='#062a57', symbol=['arrow-left', 'line-ew'], line=dict(width=7, color='#062a57')),
         hoverinfo='none',
         name='back_button'
     ))
+    fig.add_annotation(
+        x=-0.62,
+        y=-0.85,
+        text="Voltar",
+        showarrow=False,
+        font=dict(size=18, color="#062a57", weight='bold'),
+        align="center",
+    )
 
     # Creating grid figure with images
     for i, (_, row) in enumerate(grid_df.iterrows()):
@@ -452,6 +498,17 @@ def timeline_figure_grid(df):
         marker=dict(size=marker_size, color=colors, symbol='line-ew', line=dict(width=5, color=colors)),
         hoverinfo='none',
         name='year_timeline',
+    ))
+
+    # Creating invisible squares to better highlight images later
+    fig.add_trace(go.Scatter(
+        x=X,
+        y=Y,
+        mode='markers',
+        # customdata=df_indices,
+        marker=dict(size=marker_size, color=square_colors, symbol='square-open', line=dict(width=4)),
+        hoverinfo='none',
+        name='square_year_timeline',
     ))
 
     # Creating histogram
@@ -513,7 +570,7 @@ def timeline_figure_grid(df):
             tickangle=-45
         ),
         yaxis2=dict(
-            domain=[0.05, 0.4],
+            domain=[0.05, 0.38],
             anchor='x2',
             visible=True
         )
@@ -657,6 +714,6 @@ def get_dropdown_options(df, column_name):
     if column_name == 'estado_de_origem' or column_name == 'tipo_materia_prima':
         unique_values = get_multi_column(unique_values)
 
-    options = [{'label': 'Sem Filtro', 'value': 'all'}] + [{'label': val[0].upper() + val[1:], 'value': val} for val in sorted(unique_values)]
+    options = [{'label': val[0].upper() + val[1:], 'value': val} for val in sorted(unique_values)]
 
     return options
