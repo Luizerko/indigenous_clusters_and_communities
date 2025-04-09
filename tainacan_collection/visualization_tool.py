@@ -445,7 +445,9 @@ app.layout = html.Div([
                                 html.Div(
                                     className='graph',
                                     children=[
-                                        dcc.Location(id='url', refresh=True),
+                                        dcc.Store(id='url-store', data=[]),
+                                        html.Div(id='dummy'),
+                                        
                                         dcc.Graph(id='cluster-plot', config=config, figure=empty_figure(), clear_on_unhover=True),
 
                                         dcc.Interval(id='fade-in', interval=100, n_intervals=0, disabled=True),
@@ -476,9 +478,12 @@ app.layout = html.Div([
                 html.Div(
                     className='timeline-container',
                     children=[
+                        dcc.Store(id='timeline-url-store', data=[]),
+                        html.Div(id='timeline-dummy'),
+
                         dcc.Graph(id='timeline', config=config, clear_on_unhover=True, figure=timeline_figure_zigzag(ind_df['ano_de_aquisicao'].dropna().unique().astype(np.int16))),
                         dcc.Store(id='turn-grid', data=1),
-                        dcc.Tooltip(id='timeline-tooltip')
+                        dcc.Tooltip(id='timeline-tooltip'),
                     ]
                 ),
             ],
@@ -609,7 +614,7 @@ def display_hover(hover_data, fig):
 
 # Callback for clicking on 'Agrupamentos do Acervo'
 @app.callback(
-    Output("url", "href"),
+    Output("url-store", "data"),
     Input("cluster-plot", "clickData"),
     State('cluster-plot', 'figure')
 )
@@ -627,6 +632,25 @@ def open_click(click_data, fig):
     url = df_row['url']
 
     return url
+
+# Helper client-side callback so we can open the item on a new tab
+app.clientside_callback(
+    """
+    function(url) {
+        if (!url) {
+            return "";
+        }
+        try {
+            window.open(url, '_blank');
+        } catch(e) {
+            console.error("Error opening new tab:", e);
+        }
+        return "";
+    }
+    """,
+    Output('dummy', 'children'),
+    Input('url-store', 'data')
+)
 
 # Callback for collapsing points that are close together and to switch between points and images
 @app.callback(
@@ -946,36 +970,35 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
         old_widths = list(np.full((len(fig.data[1].x)), 5))
         fig.data[1].marker.line.width = old_widths
         
-        colors = list(fig.data[1].marker.line.color)
-        for i, color in enumerate(colors):
-            if '0)' in color:
-                colors[i] = color.replace('0)', '1)')
-            else:
-                colors[i] = color.replace('0.3)', '1)')
-        fig.data[1].marker.line.color = colors
-
         min_marker_size = 5
         square_sizes = list(np.full((len(fig.data[1].x)), max(min_marker_size, 300/math.sqrt(len(fig.data[1].x)))))
         fig.data[2].marker.size = square_sizes
 
+        colors = list(fig.data[1].marker.line.color)
         square_colors = list(fig.data[2].marker.color)
-        for i, square_color in enumerate(square_colors):
+        image_opacities = list(np.full((len(fig.layout.images)), 1))
+        image_sizes = list(np.full((len(fig.layout.images)), 5/math.sqrt(len(fig.layout.images))))
+
+        for (i, color), square_color, image_opacity, image_size in zip(enumerate(colors), square_colors, image_opacities, image_sizes):
+            if '0)' in color:
+                colors[i] = color.replace('0)', '1)')
+            else:
+                colors[i] = color.replace('0.3)', '1)')
+
             square_colors[i] = square_color.replace('1)', '0)')
+
+            fig.layout.images[i].opacity = image_opacity
+
+            fig.layout.images[i].sizex = image_size
+            fig.layout.images[i].sizey = image_size
+
+        fig.data[1].marker.line.color = colors
         fig.data[2].marker.color = square_colors
-        
+
         month_colors = list(fig.data[3].marker.color)
         for i, month_color in enumerate(month_colors):
             month_colors[i] = month_color.replace('0.3)', '1)')
         fig.data[3].marker.color = month_colors
-
-        image_opacities = list(np.full((len(fig.layout.images)), 1))
-        for i, image_opacity in enumerate(image_opacities):
-            fig.layout.images[i].opacity = image_opacity
-
-        image_sizes = list(np.full((len(fig.layout.images)), 5/math.sqrt(len(fig.layout.images))))
-        for i, image_size in enumerate(image_sizes):
-            fig.layout.images[i].sizex = image_size
-            fig.layout.images[i].sizey = image_size
 
         # Grid plot
         if hover_data and hover_data["points"][0]["curveNumber"] == 1:
@@ -985,25 +1008,22 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
             old_widths[num] = 15
             fig.data[1].marker.line.width = old_widths
 
-            for i, color in enumerate(colors):
-                if i != num:
-                    colors[i] = color.replace('1)', '0.3)')
-                else:
-                    colors[i] = color.replace('1)', '0)')
-            fig.data[1].marker.line.color = colors
-
             square_sizes[num] *= 2.5
             fig.data[2].marker.size = square_sizes
 
             square_colors[num] = square_colors[num].replace('0)', '1)')
             fig.data[2].marker.color = square_colors
 
-            for i, image_opacity in enumerate(image_opacities):
-                if i != num:
-                    fig.layout.images[i].opacity = 0.3
-
             fig.layout.images[num].sizex *= 1.4
             fig.layout.images[num].sizey *= 1.4
+
+            for (i, color), image_opacity in zip(enumerate(colors), image_opacities):
+                if i != num:
+                    colors[i] = color.replace('1)', '0.3)')
+                    fig.layout.images[i].opacity = 0.3
+                else:
+                    colors[i] = color.replace('1)', '0)')
+            fig.data[1].marker.line.color = colors
 
             # Building hover tooltip
             bbox = hover_data['points'][0]['bbox']
@@ -1069,30 +1089,22 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
 
             for i in interval:
                 old_widths[i] = 10
-            fig.data[1].marker.line.width = old_widths
+                square_sizes[i] *= 1.9
+                square_colors[i] = square_colors[i].replace('0)', '1)')
+                fig.layout.images[i].sizex *= 1.2
+                fig.layout.images[i].sizey *= 1.2
 
-            for i, color in enumerate(colors):
+            fig.data[1].marker.line.width = old_widths
+            fig.data[2].marker.size = square_sizes
+            fig.data[2].marker.color = square_colors
+
+            for (i, color), image_opacity in zip(enumerate(colors), image_opacities):
                 if i not in interval:
                     colors[i] = color.replace('1)', '0.3)')
+                    fig.layout.images[i].opacity = 0.3
                 else:
                     colors[i] = color.replace('1)', '0)')
             fig.data[1].marker.line.color = colors
-
-            for i in interval:
-                square_sizes[i] *= 1.9
-            fig.data[2].marker.size = square_sizes
-
-            for i in interval:
-                square_colors[i] = square_colors[i].replace('0)', '1)')
-            fig.data[2].marker.color = square_colors
-
-            for i, image_opacity in enumerate(image_opacities):
-                if i not in interval:
-                    fig.layout.images[i].opacity = 0.3
-
-            for i in interval:
-                fig.layout.images[i].sizex *= 1.2
-                fig.layout.images[i].sizey *= 1.2
 
             return fig, False, no_update, no_update
 
@@ -1103,6 +1115,7 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
 @app.callback(
     Output('turn-grid', 'data'),
     Output('timeline', 'figure'),
+    Output('timeline-url-store', 'data'),
     Input('timeline', 'clickData'),
     State('turn-grid', 'data'),
     State('timeline', 'figure'),
@@ -1118,6 +1131,17 @@ def switch_timeline_grid(click_data, turn_grid, fig):
             fig = timeline_figure_zigzag(ind_df['ano_de_aquisicao'].dropna().unique().astype(np.int16))
             
             turn_grid = 1
+        
+        # Clicking an item on the grid
+        elif click_data and click_data["points"][0]["curveNumber"] == 1:
+            # Extracting plotly dash information
+            num = click_data["points"][0]['pointIndex']
+            
+            # Acessing the dataframe to get the URL we want
+            df_row = plot_df.iloc[fig.data[1].customdata[num]]
+            url = df_row['url']
+
+            return no_update, no_update, url
 
     else:
         # Clicking an year
@@ -1129,7 +1153,26 @@ def switch_timeline_grid(click_data, turn_grid, fig):
             
             turn_grid = 0
 
-    return turn_grid, fig
+    return turn_grid, fig, no_update
+
+# Helper client-side callback so we can open the item on a new tab for the timeline grid
+app.clientside_callback(
+    """
+    function(url) {
+        if (!url) {
+            return "";
+        }
+        try {
+            window.open(url, '_blank');
+        } catch(e) {
+            console.error("Error opening new tab:", e);
+        }
+        return "";
+    }
+    """,
+    Output('timeline-dummy', 'children'),
+    Input('timeline-url-store', 'data')
+)
 
 # Callback for map state-items modal
 @app.callback(

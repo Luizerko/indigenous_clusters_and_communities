@@ -556,7 +556,7 @@ def timeline_figure_grid(df):
             domain=[0, 1]
         ),
         yaxis=dict(
-            range=[-9, 1],
+            range=[-9, 1.1],
             fixedrange=True,
             visible=False,
             domain=[0, 1]
