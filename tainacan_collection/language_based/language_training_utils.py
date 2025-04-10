@@ -83,3 +83,52 @@ class VanillaWrappedModel(nn.Module):
         cls_scalar = cls_embedding.norm(p=2, dim=1)
         
         return cls_scalar
+    
+# Function to compute [CLS] token embeddings
+def get_embeddings(model, tokenizer, input_ids, device):
+    # Computing attention mask
+    attention_mask = (input_ids != tokenizer.pad_token_id).to(device).long()
+    
+    # And now the [CLS] token embeddings
+    with torch.no_grad():
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        cls_embeddings = outputs.last_hidden_state[:, 0]
+
+    return cls_embeddings
+
+# Function to compute attributions via integrated gradients torwards the [CLS] token
+def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, verbose=False, sample_num=0):
+    # Computing attributions and then summing over the embedding dimensions (because we compute attributions for every dimension of the tokens' embeddings, so we need some kind of aggregation to idedntify tokens individually)
+    attributions, delta = lig.attribute(inputs=input_ids, baselines=baseline_input_ids, return_convergence_delta=True, n_steps=50)
+    attributions = attributions.sum(dim=-1)
+    attributions = attributions.cpu().detach()
+
+    # Normalizing to output easier to interpret and because we are more interested in the absolute importance of tokens rather then their signal
+    attributions = torch.abs(attributions)
+    try:
+        attributions = attributions/attributions.sum(axis=1).unsqueeze(1)
+    except:
+        print('Check for a zero division on one of the samples! Maybe an empty string?')
+
+    # If verbose, decoding tokens and getting attributions for the [CLS] token for the first sample
+    if verbose:
+        sample_input_ids = input_ids[min(sample_num, len(input_ids)-1)]
+        tokens = tokenizer.convert_ids_to_tokens(sample_input_ids.cpu().tolist())
+        sample_attribution = attributions[min(sample_num, len(input_ids)-1)]
+
+        new_tokens, new_scores = [], []
+        counter = -1
+        for i, (token, score) in enumerate(zip(tokens[1:-1], sample_attribution[1:-1])):
+            if token[0] == '#':
+                new_tokens[counter] += token[2:]
+                new_scores[counter] += score
+            else:
+                new_tokens.append(token)
+                new_scores.append(score)
+                counter += 1
+
+        print("Token importances:")
+        for token, score in zip(new_tokens, new_scores):
+            print(f"{token:20} -> {score:.4f}")
+
+    return attributions, delta
