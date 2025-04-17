@@ -107,7 +107,7 @@ Beyond simple projections, we experimented with fine-tuning models to improve it
 
 We now proceed to describe the technical pipelines implemented, report the obtained results and show some of the generated images for clarity. For this stage, we used two main feature extraction models, both based on transformers. Transformer-based architectures are currently state-of-the-art for feature extraction, as they leverage pretrained backbones with the best results when optimized on large-scale classification tasks (such as ImageNet21K in our case).
 
-#### ViT Base (Patch 16x16)  
+#### ViT Base (Patch 16x16)
 
 We started with the *ViT Base* model with 16x16 patches, trained on *ImageNet21K*, available on [Hugging Face](https://huggingface.co/google/vit-base-patch16-224-in21k). Although no longer cutting-edge, *ViT* remains a foundational model in the field and serves as a solid reference point for transformer-based architectures. Many state-of-the-art models, including the next one we discuss (*DINOv2*), build upon it.
 
@@ -130,15 +130,15 @@ Using only the pretrained backbone, we projected the images into a high-dimensio
   <br>
 </p>
 
-The resulting projection reveals a dense point cloud due to the lack of a specific training category. However, a continuous manifold emerges, where visually similar objects are positioned close together. This reflects the model’s ability to capture diverse visual similarities, including shape, colors, texture and details. This manifold alone offers a unique and interactive way to navigate the collection. But what happens when we introduce more structured knowledge into the data?
+The resulting projection reveals a dense point cloud due to the lack of a specific fine-tunning category. However, a continuous manifold emerges, where visually similar objects are positioned close together. This reflects the model’s ability to capture diverse visual similarities, including shape, colors, texture and details. This manifold alone offers a unique and interactive way to navigate the collection. But what happens when we introduce more structured knowledge into the data?
 
 To refine clustering, we performed fine-tuning using the `povo` and `categoria` features, aiming for semantically distinct object groupings. This allows for categorical exploration and a more nuanced understanding of relationships between indigenous communities and their artistic traditions.
 
-For that, we added a classification head to the network’s backbone - a single linear layer with 768-dimensional output from the backbone as the input size and the number of classes in the chosen feature as the output size. While common fine-tuning methods involve adding a small fully connected network, *ViT* fine-tuning is typically performed by adding a single linear layer at the top of the network. This approach is supported by section **3.1** of the [*ViT* original paper](https://ar5iv.labs.arxiv.org/html/2010.11929) and section **3.2** of [this paper](https://openreview.net/pdf?id=4nPswr1KcP), which explores *ViT* training strategies.
+For that, we added a classification head to the network’s backbone - a single linear layer with 768-dimensional output from the backbone as the input size and the number of classes in the chosen feature as the output size. While common fine-tuning methods involve adding a small fully connected network, *ViT* fine-tuning is typically performed by adding a single linear layer at the top of the network. This approach is supported by section **3.1** of the [*ViT* original paper](https://ar5iv.labs.arxiv.org/html/2010.11929) and section **3.2** of [this paper](https://openreview.net/pdf?id=4nPswr1KcP), which explores *ViT* training and fine-tunning strategies.
 
-##### Training Models and Results
+##### Fine-Tunning Models
 
-We trained several models until convergence (normally 20 to 30 epochs) to achieve the best possible results and assess the effectiveness of each adjustment we were implementing. Going into the implementation details, the dataset was split into 80% training, 10% validation, 10% test, and the original collection contained approximately 11,000 images.
+We fine-tuned several models until convergence (normally 20 to 30 epochs) to achieve the best possible results and assess the effectiveness of each adjustment we were implementing. Going into the implementation details, the dataset was split into 80% training, 10% validation, 10% test, and the original collection contained approximately 11,000 images.
 
 For each model, we tracked:  
   - **Loss**  
@@ -146,13 +146,13 @@ For each model, we tracked:
   - **Average class precision**  
   - **Average class recall**  
 
-All models were trained on a 8GB RTX 4070 until convergence (typically between 20 and 30 epochs) using:  
+All models were fine-tuned on a 8GB RTX 4070 until convergence (typically between 20 and 30 epochs) using:  
 - **Adam optimizer** (with weight decay)  
 - **Cross-entropy loss** (either with or without weights)  
 - **Early stopping** (1% accuracy tolerance, 3-iteration patience)  
 - **Five runs per model** (for mean and standard deviation analysis)  
 
-Most models, however, were not trained directly on the original dataset due to severe class imbalance for `povo` and, to a lesser extent, `categoria`. To address this, we developed a rebalancing pipeline, which significantly improved model performance.  
+Most models, however, were not fine-tuned directly on the original dataset due to severe class imbalance for `povo` and, to a lesser extent, `categoria`. To address this, we developed a rebalancing pipeline, which significantly improved model performance.  
 
 For `povo`, we started by understanding the distribution. We analyzed the quantiles of class sizes. `povo` contains 187 classes, but 25% of these (~47 classes) have only 4 images - insufficient for training. Even after removing these 25% least populated classes, around 99% of the dataset remains intact. We ultimately removed 75% of the least populated classes (~138 classes), keeping only classes with more than 65 images, preserving around 85% of the original data.
 
@@ -194,9 +194,9 @@ The tables below summarizes the parameters for different models and the correspo
   Parameters and results for <i>ViT</i> models fine-tuned on <code>categoria</code>.
 </p>
 
-Before diving into the interpretation of these results, it's important to clarify a few details about the evaluation process. The metrics for average precision and recall in the original dataset case for `povo` are significantly lower than in the balanced case - not only because of model performance, but also due to the vast number of classes included. The `povo` column includes nearly 200 communities, many of which have very little data, making accurate classification extremely challenging. To make the comparison fair, we introduced two extra columns: *Avg. Precision on Selected Classes* and *Avg. Recall on Selected Classes*. These are computed only on the subset of classes retained after rebalancing, allowing for a more direct comparison between models trained on the original dataset and those trained on the balanced version. This helps isolate the effects of balancing and training strategy, instead of having the metric dominated by dozens of poorly represented classes.
+Before diving into the interpretation of these results, it's important to clarify a few details about the evaluation process. The metrics for average precision and recall in the original dataset case for `povo` are significantly lower than in the balanced case - not only because of model performance, but also due to the vast number of classes included. The `povo` column includes nearly 200 communities, many of which have very little data, making accurate classification extremely challenging. To make the comparison fair, we introduced two extra columns: *Avg. Precision on Selected Classes* and *Avg. Recall on Selected Classes*. These are computed only on the subset of classes retained after rebalancing, allowing for a more direct comparison between models fine-tuned on the original dataset and those fine-tuned on the balanced version. This helps isolate the effects of balancing and training strategy, instead of having the metric dominated by dozens of poorly represented classes.
 
-These results highlight a few important trends. First, models trained on the balanced datasets consistently outperformed those trained on the original, imbalanced data - both in terms of overall accuracy and especially in precision and recall for selected classes. This underscores the importance of dataset curation and balancing when working with real-world, imbalanced collections.
+These results highlight a few important trends. First, models fine-tuned on the balanced datasets consistently outperformed those fine-tuned on the original, imbalanced data - both in terms of overall accuracy and especially in precision and recall for selected classes. This underscores the importance of dataset curation and balancing when working with real-world, imbalanced collections.
 
 Second, we observed that freezing layers negatively impacted performance, particularly when freezing more than 50% of the model. This suggests that the generalization capacity of the pre-trained *ViT* model is limited, at least when it comes to our specific dataset, and that more extensive fine-tuning is required for the model to adapt meaningfully to our task. This behavior differs from what we’ll later observe with another architecture, and we’ll explore that in the following section.
 
@@ -266,10 +266,10 @@ The table below summarizes the parameters for different head weights and the cor
 | 1e-5 | 3e-6 | 70/30 | <ins>71.16 ± 1.86</ins> | **0.72 ± 0.02** | **0.68 ± 0.02** | <ins>89.26 ± 1.20</ins> | **0.89 ± 0.01** | **0.88 ± 0.02** |
 | 1e-5 | 3e-6 | 30/70 | 70.28 ± 0.95 | 0.69 ± 0.01 | **0.68 ± 0.01** | **89.40 ± 1.09** | **0.89 ± 0.02** | <ins>0.87 ± 0.02</ins> |
 <p align="center" style="margin-bottom: 25px;">
-  Parameters and results for multi-head <i>ViT</i> models fine-tuned on both <code>povo</code> and <code>categoria</code>. The columns <i>Dataset</i>, <i>Frozen Layers (%)</i>, <i>Weighted Loss</i>, <i>Avg. Precision</i> and <i>Avg. Recall</i> are not found in this table because we trained all models with the same (balanced) dataset, no frozen layers, always with weighted loss for both heads and only on the selected categories.
+  Parameters and results for multi-head <i>ViT</i> models fine-tuned on both <code>povo</code> and <code>categoria</code>. The columns <i>Dataset</i>, <i>Frozen Layers (%)</i>, <i>Weighted Loss</i>, <i>Avg. Precision</i> and <i>Avg. Recall</i> are not found in this table because we fine-tuned all models with the same (balanced) dataset, no frozen layers, always with weighted loss for both heads and only on the selected categories.
 </p>
 
-Training the model in a multi-head configuration resulted in small but consistent performance improvements over the single-task baselines. Comparing the best multi-head models to the best single-head models trained on the balanced dataset (no frozen layers), we see slightly higher accuracy and better precision/recall scores for both heads. This indicates that the model is able to leverage shared representations across tasks, enriching its internal features and learning complementary patterns from both `povo` and `categoria` labels.
+Training the model in a multi-head configuration resulted in small but consistent performance improvements over the single-task baselines. Comparing the best multi-head models to the best single-head models fine-tuned on the balanced dataset (no frozen layers), we see slightly higher accuracy and better precision/recall scores for both heads. This indicates that the model is able to leverage shared representations across tasks, enriching its internal features and learning complementary patterns from both `povo` and `categoria` labels.
 
 It is worth noting, however, that the gain is relatively modest. This likely reflects the greater complexity of the `povo` task, which still suffers from data scarcity and class imbalance, even in the rebalanced version. Additionally, optimizing for both heads simultaneously introduces a trade-off, where improvements on one head may slightly constrain the other. Even so, the ability to train a single unified model for both classification tasks is advantageous for efficiency and introduces a new type of embedding space - one that theoretically captures combined semantics from both labels.
 
@@ -279,18 +279,26 @@ This behavior reinforces previous observations: `categoria` benefits from greate
 
 <p align="center">
   <br>
-  <img src="assets/vit_multihead_categoria.png" alt="ViT multihead trained model showing `categoria` clusters" width="60%">
+  <img src="assets/vit_multihead_categoria.png" alt="ViT multihead fine-tuned model showing `categoria` clusters" width="60%">
   <p align="center" style="margin-top: 10px; margin-bottom: 5px;">
-    Embedding space of the multi-head <i>ViT</i> model trained on both <code>povo</code> and <code>categoria</code> and colored based on <code>categoria</code>. Despite the diffuse spread for <code>povo</code>, clearer cluster structures for <code>categoria</code> can still be observed, demonstrating that joint training can retain meaningful representations for visually coherent classes.
+    Embedding space of the multi-head <i>ViT</i> model fine-tuned on both <code>povo</code> and <code>categoria</code> and colored based on <code>categoria</code>. Despite the diffuse spread for <code>povo</code>, clearer cluster structures for <code>categoria</code> can still be observed, demonstrating that joint training can retain meaningful representations for visually coherent classes.
   </p>
   <br>
 </p>
 
 #### DINOv2
 
-<!-- Comment that we moved on to a more modern architecture to study its potential and see the difference in the results. Comment that we it's clear that this architecture struggles a little bit more with the data, but benefits much more with the rebalancing step, reaching better metrics than ViT. Also comment on the fact that frozen layers here help, indicating that the early layers probably offer better generalization than ViT. Comment on the effects of multihead here -->
+After exploring the performance of the *ViT* architecture, we moved on to a more modern model (*DINOv2*) to evaluate its potential and investigate how a self-supervised backbone might differ in both quantitative results and visual embedding structure. *DINOv2* has been shown to generalize well across multiple visual tasks without requiring large-scale supervised fine-tuning, making it a promising candidate for clustering goals.
 
-After exploring the performance of the *ViT* architecture, we moved on to a more modern model (*DINOv2*) to evaluate its potential and investigate how a self-supervised backbone might differ in both quantitative results and visual embedding structure. *DINOv2* has been shown to generalize well across multiple visual tasks without requiring large-scale supervised fine-tuning, making it a promising candidate for our classification and clustering goals.
+Unlike *ViT*, which is trained in a supervised manner, *DINOv2* is pre-trained using a self-supervised learning objective based on knowledge distillation. It uses a teacher-student setup where the student model learns to match the output of a (slowly evolving non-gradients based) teacher model across multiple augmented views of the same image. This allows *DINOv2* to train with much more data (around 10 times more than ViT) and learn more robust semantic visual representations that generalize well across downstream tasks.
+
+We used the base version of *DINOv2* (available on [Hugging Face](https://huggingface.co/facebook/dinov2-base)) and applied a similar preprocessing pipeline to that used with *ViT*, but with minor adjustments: images were resized so that the shorter side was 256 pixels, then center-cropped to 224×224, and normalized using the standard *ImageNet* statistics (`[0.485, 0.456, 0.406]` means and `[0.229, 0.224, 0.225]` standard deviations).
+
+Like before, we extracted embeddings using the pretrained backbone and projected them into 2D using the *UMAP* technique, which had previously shown the best performance in capturing meaningful structure. Even in its vanilla form, *DINOv2* generated a smooth and semantically rich manifold, offering a compelling visual spread where visually similar objects naturally clustered together.
+
+To better structure this space semantically, we fine-tuned *DINOv2* using both `povo` and `categoria` as classification targets again. As with *ViT*, we added a single linear classification head to the model - taking the 768-dimensional output from the backbone and projecting it to the number of target classes. This simple architecture was chosen to ensure a fair comparison to the *ViT* models we fine-tuned.
+
+##### Fine-Tunning Models
 
 The tables below present results from fine-tuning *DINOv2* models on both `povo` and `categoria`, using similar experimental setups as before.
 
@@ -314,7 +322,7 @@ The tables below present results from fine-tuning *DINOv2* models on both `povo`
   Parameters and results for <i>DINOv2</i> models fine-tuned on <code>categoria</code>.
 </p>
 
-For `povo`, we observed that *DINOv2* struggled more than *ViT* on the original, imbalanced dataset, achieving lower accuracy and weaker recall and precision. However, it benefited more dramatically from the rebalancing step. Once trained on the balanced dataset, *DINOv2* not only caught up with *ViT*’s performance, it surpassed it. The model reached a test accuracy of nearly 4 points higher than *ViT*’s best result on the same task. Similarly, the precision and recall scores also improved.
+For `povo`, we observed that *DINOv2* struggled more than *ViT* on the original, imbalanced dataset, achieving lower accuracy and weaker recall and precision. However, it benefited more dramatically from the rebalancing step. Once fine-tuned on the balanced dataset, *DINOv2* not only caught up with *ViT*’s performance, it surpassed it. The model reached a test accuracy of nearly 4 points higher than *ViT*’s best result on the same task. Similarly, the precision and recall scores also improved.
 
 An interesting trend emerged when we introduced layer freezing. Unlike *ViT*, where freezing harmed performance, *DINOv2* models benefited from freezing a significant portion of their layers. With 80% of the layers frozen, we achieved the best results on `povo`. This strongly suggests that *DINOv2*'s early layers encode features that generalize more effectively, and that the model can adapt well to our dataset with minimal fine-tuning - focusing only on higher-level representations. This is a notable distinction from *ViT*, where full fine-tuning was important to achieve the best results.
 
@@ -322,9 +330,16 @@ For `categoria`, *DINOv2* also achieved the highest accuracy overall. Precision 
 
 However, despite these promising results, the visual projections generated on top of *DINOv2* did not improve proportionally. When analyzing the 2D embeddings of the entire dataset, the clusters were not always more distinct or interpretable than those produced by *ViT*. In fact, while *DINOv2* captured a broader and smoother spread of the collection in its raw, vanilla embedding, grouping behaviors were generally clearer in the *ViT* model. As a result, we made a deliberate trade-off in our platform design: we chose to use *ViT*-based projections for `povo` and `categoria`, where grouping was more distinct.
 
-This decision is somewhat counter-intuitive. In both cases, the projections shown to the end-user do not come from the best-performing models, strictly in terms of metrics. Instead, we prioritized interpretability and visual coherence over a small gain in classification performance. It's important to note, however, that the trade-off is not gigantic - we’re not sacrificing 20% accuracy to get better visuals. The differences are typically just 2-3% in accuracy, and between 0.02-0.03 in precision and recall. Given this context, the improved visual experience and interpretability were valued more than the marginal performance bump.
+<p align="center">
+  <br>
+  <img src="assets/vit_x_dino_povo_categoria.png" alt="ViT and DINOv2 point-cloud spread comparison for models fine-tuned on both `povo` and `categoria`" width="20%">
+  <p align="center" style="margin-top: 10px; margin-bottom: 5px;">
+      Comparison between the projected embedding spaces of <i>ViT</i> and <i>DINOv2</i> models single-task fine-tuned both on <code>povo</code> and <code>categoria</code>.
+  </p>
+  <br>
+</p>
 
-<!-- Images of povo and categoria models here -->
+This decision is somewhat counter-intuitive. In both cases, the projections shown to the end-user do not come from the best-performing models, strictly in terms of metrics. Instead, we prioritized interpretability and visual coherence over a small gain in classification performance. It's important to note, however, that the trade-off is not gigantic - we’re not sacrificing 20% accuracy to get better visuals. The differences are typically just 2-3% in accuracy, and between 0.02-0.03 in precision and recall. Given this context, the improved visual experience and interpretability were valued more than the marginal performance bump.
 
 | Learning Rate | Weight Decay | Head Weights (`povo`/`categoria`) | `povo` Head Test Accuracy (%) | `povo` Head Avg. Precision on Selected Classes | `povo` Head Avg. Recall on Selected Classes | `categoria` Head Test Accuracy (%) | `categoria` Head Avg. Precision on Selected Classes | `categoria` Head Avg. recall on Selected Classes |
 |-|-|-|-|-|-|-|-|-|
@@ -332,16 +347,23 @@ This decision is somewhat counter-intuitive. In both cases, the projections show
 | 3e-7 | 1e-7 | 70/30 | 68.91 ± 1.12 | **0.68 ± 0.01** | <ins>0.66 ± 0.00</ins> | 87.69 ± 1.38 | 0.85 ± 0.02 | 0.85 ± 0.02 |
 | 3e-7 | 1e-7 | 30/70 | **70.86 ± 1.34** | **0.68 ± 0.01** | **0.67 ± 0.02** | <ins>89.05 ± 0.53</ins> | **0.87 ± 0.01** | <ins>0.86 ± 0.02</ins> |
 <p align="center" style="margin-bottom: 25px;">
-  Parameters and results for multi-head <i>DINOv2</i> models fine-tuned on both <code>povo</code> and <code>categoria</code>. The columns <i>Dataset</i>, <i>Frozen Layers (%)</i>, <i>Weighted Loss</i>, <i>Avg. Precision</i> and <i>Avg. Recall</i> are not found in this table because we trained all models with the same (balanced) dataset, no frozen layers, always with weighted loss for both heads and only on the selected categories.
+  Parameters and results for multi-head <i>DINOv2</i> models fine-tuned on both <code>povo</code> and <code>categoria</code>. The columns <i>Dataset</i>, <i>Frozen Layers (%)</i>, <i>Weighted Loss</i>, <i>Avg. Precision</i> and <i>Avg. Recall</i> are not found in this table because we fine-tuned all models with the same (balanced) dataset, no frozen layers, always with weighted loss for both heads and only on the selected categories.
 </p>
 
-We also evaluated multi-head configurations using *DINOv2*. Interestingly, the multi-head setup did not provide significant benefits over the balanced single-task models. In contrast to *ViT*, where we observed small but consistent gains, *DINOv2*'s performance in multi-task training remained essentially on par or slightly worse than the best single-head fine-tuned models. It’s also worth noting that the multi-head models were trained with no frozen layers, making a fair comparison most appropriate against the unfrozen balanced *DINOv2* runs (not the best performing ones). In this context, multi-head training offered no clear advantage.
+We also evaluated multi-head configurations using *DINOv2*. Interestingly, the multi-head setup did not provide significant benefits over the balanced single-task models. In contrast to *ViT*, where we observed small but consistent gains, *DINOv2*'s performance in multi-task training remained essentially on par or slightly worse than the best single-head fine-tuned models. It’s also worth noting that the multi-head models were fine-tuned with no frozen layers, making a fair comparison most appropriate against the unfrozen balanced *DINOv2* runs (not the best performing ones). In this context, multi-head training offered no clear advantage.
 
 That said, the multi-head *DINOv2* projection was still selected for visualization. Just like the vanilla *DINOv2* projection, the multi-head model provided a smoother point cloud with better continuity across data points - a quality we found valuable for exploration, filtering, and semantic-based search.
 
-In short, *DINOv2* proved to be a stronger model in terms of raw classification performance, especially after balancing and partial freezing. But when it came to visual quality of the embeddings, *ViT* still held an edge in the grouping structure for our key labels, leading to a hybrid model selection strategy tailored to our end-user goals.
+<p align="center">
+  <br>
+  <img src="assets/dino_multihead_categoria.png" alt="DINOv2 multi-head point-cloud colored with `categoria`" width="60%">
+  <p align="center" style="margin-top: 10px; margin-bottom: 5px;">
+      Embedding space of the multi-head <i>DINOv2</i> model fine-tuned on both <code>povo</code> and <code>categoria</code>, with points colored by <code>categoria</code>. Compared to the equivalent <i>ViT</i> model, the clusters are more clearly defined, and the overall data distribution appears smoother and more continuous when looking at the visualization tool.
+  </p>
+  <br>
+</p>
 
-<!-- Images of the vanilla and multi-head manifolds generated by the DINOv2 -->
+In short, *DINOv2* proved to be a stronger model in terms of raw classification performance, especially after balancing and partial freezing. But when it came to visual quality of the embeddings, *ViT* still held an edge in the grouping structure for our key labels, leading to a hybrid model selection strategy tailored to our end-user goals.
 
 ### Text-Based Clustering
 
