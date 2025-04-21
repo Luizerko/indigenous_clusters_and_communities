@@ -10,6 +10,8 @@ The system is organized into three main sections, each offering a distinct way t
 
 <!-- Image of tabs -->
 
+To help users better understand the tool's features, we've also added info buttons throughout the interface. These small buttons are placed next to filters, visual elements, and even at the top of entire tabs. Clicking one opens a short description explaining what the element does, offering quick, in-context guidance wherever it might be needed.
+
 Below, we describe each of these components in more detail.
 
 ## Collection Semantic Space and Groupings
@@ -110,24 +112,54 @@ The timeline tab is split into two main parts: an interactive timeline overview 
 
 The first view presents a zig-zag timeline, where each marker represents a year in which the museum acquired items. The position of the markers forms a zig-zag layout for better visual spacing, and the size of each marker is computed based on the number of items acquired that year - larger markers signal more acquisitions.
 
+<!-- Image of the zig-zag timeline -->
+
 When you hover over a marker, it subtly enlarges to highlight the year. Clicking on a marker takes the user to the year distribution view for that specific year, providing a closer look at the acquisitions made during that period.
 
 ### Year Distribution
 
 The second part of the tab provides a detailed view of a specific year, designed to give users a month-by-month breakdown of item acquisition.
 
+<!-- Image of the year distribution page -->
+
 At the top-left, the selected year is displayed alongside a back button, allowing users to return to the zig-zag timeline and choose another year.
 
-The main element is a grid of item thumbnails, sorted chronologically by their acquisition date. Items with a known date are arranged accordingly, while those with only a known year appear first (as *no specific date* items). Below each thumbnail is a colored line, part of a gradient that visually encodes the month of acquisition. These lines are connected directly to a histogram (bar plot) beneath the grid, which shows the number of items acquired in each month of that year, along with a special bar for those items that have no exact date.
+One of the main elements is a grid of item thumbnails, sorted chronologically by their acquisition date. Items with a known date are arranged accordingly, while those with only a known year appear first (as *no specific date* items). Below each thumbnail is a colored line, part of a gradient that visually encodes the month of acquisition. These lines are connected directly to a histogram (bar plot) beneath the grid, the other main element, which shows the number of items acquired in each month of that year, along with a special bar for those items that have no exact date.
 
 The interface supports rich interactivity:
 
 - Hovering over an item line highlights that item by enlarging its thumbnail, adding a border in the same color as the month gradient, and dimming all other items for focus. A tooltip also appears with detailed metadata: the item's name, exact acquisition date (if available), its community, the collection it belongs to (if any), and the name of the collector or donor (if applicable).
 
+<!-- Image of the highlighted item -->
+
 - Hovering over a bar in the histogram shows the exact quantity of items acquired on that month and highlights all these items on the grid using the same visual effect (larger image, border), but this time applies it to all relevant items. Other items in the grid fade out to allow better focus on the selected month. No tooltip is shown in this case, since the selection involves multiple items. There’s also a bar for items with no exact date, allowing those to be explored and highlighted similarly.
+
+<!-- Image of the highlighted bar -->
 
 This layout offers users a compelling way to navigate through time, identify patterns in acquisition, and explore how specific years and months shaped the collection as it stands today.
 
 ## Collection on Brazil
 
-<!-- asd -->
+This tab provides a geographic visualization of the collection across Brazil, allowing users to explore where different items and communities are located throughout the country. The map displays two types of interactive markers:
+
+- Red markers represent specific indigenous communities. Each one is placed at the center of the community’s territory, and when clicked, reveals all items in the collection attributed to that community.
+
+- Blue markers are broader. They represent Brazilian states and aggregate items from all communities located within that state. These markers are placed either at the state capital or roughly at the geographic center of the state.
+
+Hovering over any marker displays its name - either the name of the community (for red markers) or the state (for blue markers) - providing quick geographic context.
+
+<!-- Image of the entire map -->
+
+Ideally, only red markers would be needed, offering precise localization of each community. However, due to challenges in indigenous data organization and standardization, this wasn’t fully possible. While Brazil has many experts and institutions dedicated to Indigenous studies, there is currently no centralized and structured national database mapping every known community to a fixed location. To work around this, we used the (territory demarcation map data)[https://mapa.socioambiental.org/pages/?lang=pt-br] from the (Instituto Socioambiental (ISA))[https://www.socioambiental.org/] - widely regarded as the most comprehensive source for indigenous territory information in Brazil.
+
+That said, not all territories could be mapped directly to specific communities. In many cases, a single territory encompasses multiple communities, or the territory is named differently than the community it includes. To avoid incorrect associations, we only assigned a community to a red marker when the territory demarcation matched the community name directly. As a result, we were able to map only about 40% of the communities with confidence. To ensure full data coverage, we introduced the blue state markers as a fallback, allowing users to still explore items from communities that could not be precisely geolocated.
+
+### Interaction and Browsing
+
+Clicking on any marker (red or blue) opens a modal window listing all the items associated with that marker. The modal begins by indicating the total number of items accessible through that marker and then displays the items in cards organized in a structured grid. Each card includes the item's image, the item's name, the community, acquisition year and a small information button to reveal a short item description.
+
+<!-- Image of the modal with the card grid -->
+
+The layout supports up to 3 items per row, with a maximum of 99 items per page (33 rows). If more than 99 items are present, buttons on the bottom of the modal allow users to browse through additional pages. To ensure a smooth and real-time experience, we implemented this pagination combined with image lazy loading. This allows the interface to remain fast and interactive even when browsing large collections tied to a single marker.
+
+This map-based view adds another dimension to the collection, connecting items to their geographic origins and offering yet another valuable way to explore how different regions and communities are represented in the museum's archive.
