@@ -855,7 +855,7 @@ def update_cluster(selected_option):
     elif selected_option == 'cluster_5':
         update_cluster_selection(plot_df, multihead_dino_df, no_clusters=True)
 
-    return True, 'all', 'all', 'all', 'all', plot_df['ano_de_aquisicao'].min(), plot_df['ano_de_aquisicao'].max(), plot_df['comprimento'].min(), plot_df['comprimento'].max(), plot_df['largura'].min(), plot_df['largura'].max(), plot_df['altura'].min(), plot_df['altura'].max(), plot_df['diametro'].min(), plot_df['diametro'].max()
+    return True, [], [], [], [], plot_df['ano_de_aquisicao'].min(), plot_df['ano_de_aquisicao'].max(), plot_df['comprimento'].min(), plot_df['comprimento'].max(), plot_df['largura'].min(), plot_df['largura'].max(), plot_df['altura'].min(), plot_df['altura'].max(), plot_df['diametro'].min(), plot_df['diametro'].max()
 
 # Callback for filtering data
 @app.callback(
@@ -890,17 +890,17 @@ def filter_data(selected_categorias, selected_povos, selected_estados, selected_
         filtered_df = plot_df[plot_df['ind_index'].isin(multihead_dino_df.index)].copy()
 
     # Applying filters if a selection is made
-    if len(selected_categorias) > 0:
+    if selected_categorias is not None and len(selected_categorias) > 0:
         filtered_df = filtered_df[filtered_df['categoria'].isin(selected_categorias)]
     
-    if len(selected_povos) > 0:
+    if selected_categorias is not None and len(selected_povos) > 0:
         filtered_df = filtered_df[filtered_df['povo'].isin(selected_povos)]
         
-    if len(selected_estados) > 0:
+    if selected_categorias is not None and len(selected_estados) > 0:
         selected_estados = '|'.join(selected_estados)
         filtered_df = filtered_df[filtered_df['estado_de_origem'].str.contains(selected_estados, na=False)]
 
-    if len(selected_materias) > 0:
+    if selected_categorias is not None and len(selected_materias) > 0:
         selected_materias = '|'.join(selected_materias)
         filtered_df = filtered_df[filtered_df['tipo_materia_prima'].str.contains(selected_materias, na=False)]
 
