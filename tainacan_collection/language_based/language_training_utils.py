@@ -6,21 +6,26 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader, random_split, ConcatDataset
-from torchmetrics.classification import Accuracy, Precision, Recall
+
+import trimap
+from sklearn.manifold import TSNE
+import umap
 
 import matplotlib.pyplot as plt
-
-from transformers import AutoModel, AutoTokenizer
-# from transformers import AutoModelForPreTraining
-from captum.attr import LayerIntegratedGradients
 
 # Cleaning up memory function
 def clean_mem(tensors):
     for tensor in tensors:
         del tensor
     torch.cuda.empty_cache()
+
+# Function for normalizing projections to [-norm_factor, norm_factor] while maintaining relative distances
+def normalize(data, norm_factor=2):
+    mean = np.mean(data)
+    max_dev = np.max(np.abs(data-mean))
+    
+    return norm_factor*(data-mean)/max_dev
 
 # Class for the TextDataset and to avoid loading everything simultaneously and to better interact with toch data pipelines
 class TextDataset(Dataset):
@@ -149,6 +154,20 @@ def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggre
             print(f"{token:20} -> {score:.4f}")
 
     return attributions, delta
+
+# Function for computing data projection
+def data_projections(image_embeddings, **kwargs):
+    proj_trimap = trimap.TRIMAP(n_dims=2, n_inliers=12, n_outliers=6, n_random=3,\
+                                weight_temp=0.5, lr=0.1, apply_pca=True)
+    vanilla_vit_trimap = proj_trimap.fit_transform(image_embeddings)
+    
+    proj_tsne = TSNE(n_components=2, perplexity=5, learning_rate='auto', init='random')
+    vanilla_vit_tsne = proj_tsne.fit_transform(image_embeddings)
+    
+    proj_umap = umap.UMAP(n_neighbors=5, min_dist=0.3, metric='correlation')
+    vanilla_vit_umap = proj_umap.fit_transform(image_embeddings)
+
+    return vanilla_vit_trimap, vanilla_vit_tsne, vanilla_vit_umap
 
 # Class for the SimCSE models. The idea is to use fine-tune different models using the SimCSE approach with NT-Xent loss, which is an unsupervised contrastive loss, ideal for specializing the embedding model to our data without having to group it by categories
 class SimCSEModel(nn.Module):
