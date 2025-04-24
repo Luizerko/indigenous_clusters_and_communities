@@ -467,7 +467,7 @@ app.layout = html.Div([
             className='tab-option',
             children=[
                 dbc.Tooltip(
-                    "Essa aba permite que o usuário navegue pela coleção através de sua linha do tempo, selecionando coleções de itens por seu ano de aquisição pelo museu.",
+                    "Essa aba permite que o usuário navegue pela coleção através de sua linha do tempo, selecionando coleções de itens por seu ano de aquisição pelo museu. Note que o tamanho dos marcadores é proporcional à quantidade de itens adquiridos naquele ano.",
                     target="aba-timeline",
                     trigger='click',
                     id="tooltip-info-timeline",
@@ -481,7 +481,7 @@ app.layout = html.Div([
                         dcc.Store(id='timeline-url-store', data=[]),
                         html.Div(id='timeline-dummy'),
 
-                        dcc.Graph(id='timeline', config=config, clear_on_unhover=True, figure=timeline_figure_zigzag(ind_df['ano_de_aquisicao'].dropna().unique().astype(np.int16))),
+                        dcc.Graph(id='timeline', config=config, clear_on_unhover=True, figure=timeline_figure_zigzag(ind_df['ano_de_aquisicao'])),
                         dcc.Store(id='turn-grid', data=1),
                         dcc.Tooltip(id='timeline-tooltip'),
                     ]
@@ -947,21 +947,35 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
     )
 
     if turn_grid == 1:
+        # Getting counts to compute proper marker sizes
+        counts = ind_df['ano_de_aquisicao'].value_counts()
+        key_sorted_counts = counts.sort_index(ascending=False)
+        year_counts = np.array(key_sorted_counts.tolist())
+        marker_sizes = np.maximum(25, 1.3*np.sqrt(year_counts))
+        line_sizes = np.maximum(5, 0.2*np.sqrt(year_counts))
+
         # Resetting markers when hovering another point
-        old_sizes = list(np.full((len(fig.data[1].x)), 30))
-        old_line_widths = list(np.full((len(fig.data[1].x)), 6))
+        old_sizes = list(marker_sizes)
+        old_line_widths = list(line_sizes)
         fig.data[1].marker.size = old_sizes
         fig.data[1].marker.line.width = old_line_widths
         fig.data[1].marker.opacity = 1
+
+        # Resetting hidden text on markers when hovering another point
+        text_labels = ['']*len(old_sizes)
+        fig.data[2].text = text_labels
 
         if hover_data and hover_data["points"][0]["curveNumber"] == 1:
             # Extracting plotly dash information and changing size on hover
             num = hover_data["points"][0]["pointNumber"]
 
-            old_sizes[num] = 40
-            old_line_widths[num] = 3
+            old_sizes[num] = np.max(old_sizes)+2
+            old_line_widths[num] = 1
             fig.data[1].marker.size = old_sizes
             fig.data[1].marker.line.width = old_line_widths
+
+            text_labels[num] = year_counts[num]
+            fig.data[2].text = text_labels
 
         return fig, False, no_update, no_update
     
@@ -1128,7 +1142,7 @@ def switch_timeline_grid(click_data, turn_grid, fig):
         # Clicking back arrow on the year grid
         if click_data and click_data["points"][0]["curveNumber"] == 0:
             # Replotting zigzag figure
-            fig = timeline_figure_zigzag(ind_df['ano_de_aquisicao'].dropna().unique().astype(np.int16))
+            fig = timeline_figure_zigzag(ind_df['ano_de_aquisicao'])
             
             turn_grid = 1
         

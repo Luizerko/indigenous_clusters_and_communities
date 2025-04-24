@@ -3,6 +3,8 @@ import random
 from tqdm import tqdm
 
 import numpy as np
+import pandas as pd
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -287,3 +289,35 @@ def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader
                 break
 
     return all_indices, all_embeddings, train_losses, val_losses
+
+# Function to safe outputs for visualization tool
+def saving_outputs(df, labels, projections, image_indices, column_name='povo', save_file='povo_vit.csv', no_clusters=False):
+
+    # Getting unique cluster values
+    if not no_clusters:
+        unique_values = df[df[column_name].notna()][column_name].unique()
+        cluster_dict = {c: i for i, c in enumerate(unique_values)}
+
+    # Computing indices and reordering projections to match the original dataframe order
+    indices = []
+    for index in np.array(list(labels.keys())):
+        indices.append(int(index.split('/')[-1].split('.')[0]))
+    pos_xy = projections[np.argsort(image_indices)]
+
+    # Computing clusters and cluster_names columns
+    clusters = np.full(len(pos_xy), -1)
+    cluster_names = np.full(len(pos_xy), '', dtype=object)
+
+    if not no_clusters:
+        for cluster, cluster_num in cluster_dict.items():
+            mask = df.index[df[column_name] == cluster].tolist()
+            sequential_indices = np.array([df.index.get_loc(idx) for idx in mask])
+            
+            clusters[sequential_indices] = cluster_num
+            cluster_names[sequential_indices] = cluster
+
+    visualization_df = pd.DataFrame(index=indices, data={'x': pos_xy[:, 0], 'y': pos_xy[:, 1], 'cluster': clusters, 'cluster_names': cluster_names})
+    visualization_df.index.name='id'
+    visualization_df.to_csv('../data/clusters/' + save_file)
+
+    return visualization_df

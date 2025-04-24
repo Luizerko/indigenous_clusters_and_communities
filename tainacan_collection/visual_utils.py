@@ -292,7 +292,17 @@ def make_turn_arc(x0, y0, side="right", radius=0.5, steps=20):
     return arc_pts
 
 # Create timeline figure with clickable markers for years 
-def timeline_figure_zigzag(years):
+def timeline_figure_zigzag(df_years):
+
+    # Getting counts to compute proper marker sizes
+    counts = df_years.value_counts()
+    key_sorted_counts = counts.sort_index(ascending=False)
+    year_counts = np.array(key_sorted_counts.tolist())
+    marker_sizes = np.maximum(25, 1.3*np.sqrt(year_counts))
+    line_sizes = np.maximum(5, 0.2*np.sqrt(year_counts))
+
+    # Extracting unique years
+    years = df_years.dropna().unique().astype(np.int16)
 
     # Computing zigzag coordinates
     years = -np.sort(-years)
@@ -320,10 +330,10 @@ def timeline_figure_zigzag(years):
             # Add annotation for the year under the marker
             annotations.append(dict(
                 x=x,
-                y=y+0.2,
+                y=y+0.32,
                 text=str(year),
                 showarrow=False,
-                font=dict(weight='bold'),
+                font=dict(size=18, weight='bold'),
                 xanchor='center',
                 yanchor='top'
             ))
@@ -368,13 +378,26 @@ def timeline_figure_zigzag(years):
             x=xs_year,
             y=ys_year,
             mode='markers',
-            marker=dict(size=30, color='#062a57', line=dict(width=6, color="#f2f2f2")),
+            marker=dict(size=marker_sizes, color='#062a57', opacity=1, line=dict(width=line_sizes, color="#f2f2f2")),
             text=[str(y) for y in txt_years],
             hoverinfo='none',
+            showlegend=False,
             name='years'
         )
     )
 
+    fig.add_trace(
+        go.Scatter(
+            x=xs_year,
+            y=ys_year,
+            mode='text',
+            text=['' for _ in year_counts],
+            textfont=dict(size=16, weight='bold', color="#f2f2f2"),
+            opacity=1,
+            hoverinfo='none',
+            showlegend=False,
+        )
+    )
 
     # Updating figure layout
     fig.update_layout(
@@ -393,7 +416,7 @@ def timeline_figure_zigzag(years):
         coloraxis_showscale=False,
 
         dragmode=None,
-        hoverdistance = 5,
+        hoverdistance=5,
 
         annotations=annotations
     )
