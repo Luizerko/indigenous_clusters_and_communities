@@ -446,19 +446,16 @@ def timeline_figure_grid(df, page_size=90):
     # Generating dynamic shaped and marker size grid for aspect ratio 4:3
     num_points = len(grid_df)
     n_pages = math.ceil(num_points/page_size)
-    
-    # ar_unit = math.sqrt(num_points/7)
+
     ar_unit = math.sqrt(page_size/7)
     num_rows, num_cols = math.floor(3*ar_unit), math.ceil(4*ar_unit)
-    # page_size = num_rows*num_cols
     
     x_coords, y_coords = np.linspace(0, 7.5, num_cols), np.linspace(0.5, -7.5, num_rows)
     X, Y = np.meshgrid(x_coords, y_coords)
-    X = X.ravel()[:num_points]
-    Y = Y.ravel()[:num_points]
+    X = X.ravel()[:min(num_points, page_size)]
+    Y = Y.ravel()[:min(num_points, page_size)]
 
-    min_marker_size = 5
-    marker_size = max(min_marker_size, 300/math.sqrt(num_points))
+    marker_size = 35
 
     # Generating histogram data
     num_no_date = len(grid_df.loc[grid_df['data_de_aquisicao'] == '0001-01-01'])
@@ -510,34 +507,77 @@ def timeline_figure_grid(df, page_size=90):
         align="center",
     )
 
-    # Creating grid figure with images
-    for i, (_, row) in enumerate(grid_df.iterrows()):
-        # if not pd.isna(row['image_path']):
-        fig.add_layout_image(
-            dict(source=row['temporary_br_url'], x=X[i], y=Y[i], xref="x", yref="y", sizex=5/math.sqrt(num_points), sizey=5/math.sqrt(num_points), xanchor="center",yanchor="middle")
-        )
+    # Creating pages
+    image_pages = []
+    for p in range(n_pages):
+        # Indexing page and elements in it
+        start, end = p*page_size, (p+1)*page_size
+        try:
+            page_df = grid_df.iloc[start:end]
+        except:
+            page_df = grid_df.iloc[start:]
 
-    # Creating color "legend" for images
-    fig.add_trace(go.Scatter(
-        x=X,
-        y=Y-2.7/math.sqrt(num_points),
-        mode='markers',
-        customdata=df_indices,
-        marker=dict(size=marker_size, color=colors, symbol='line-ew', line=dict(width=5, color=colors)),
-        hoverinfo='none',
-        name='year_timeline',
-    ))
+        # Creating grid figure with images
+        images = []
+        for i, (_, row) in enumerate(page_df.iterrows()):
+            images.append(dict(source=row['temporary_br_url'], x=X[i], y=Y[i], xref="x", yref="y", sizex=0.6, sizey=0.6, xanchor="center",yanchor="middle"))
+            # fig.add_layout_image(
+            #     dict(source=row['temporary_br_url'], x=X[i], y=Y[i], xref="x", yref="y", sizex=5/math.sqrt(num_points), sizey=5/math.sqrt(num_points), xanchor="center",yanchor="middle")
+            # )
+        image_pages.append(images)
 
-    # Creating invisible squares to better highlight images later
-    fig.add_trace(go.Scatter(
-        x=X,
-        y=Y,
-        mode='markers',
-        # customdata=df_indices,
-        marker=dict(size=marker_size, color=square_colors, symbol='square-open', line=dict(width=4)),
-        hoverinfo='none',
-        name='square_year_timeline',
-    ))
+        # Dealing with the last page corner case
+        if p == n_pages-1:
+            X = X[:len(page_df)]
+            Y = Y[:len(page_df)]
+            colors_aux = colors[start:start+len(page_df)]
+            square_colors_aux = square_colors[start:start+len(page_df)]
+
+        # Dealing with colors in general
+        else:
+            colors_aux = colors[start:end]
+            square_colors_aux = square_colors[start:end]
+
+        # Creating color "legend" for images
+        fig.add_trace(go.Scatter(
+            x=X,
+            y=Y-2.7/math.sqrt(num_points/n_pages),
+            mode='markers',
+            customdata=df_indices[start:end],
+            marker=dict(size=marker_size, color=colors_aux, symbol='line-ew', line=dict(width=5, color=colors_aux)),
+            hoverinfo='none',
+            name=f'year_timeline_{p}',
+            visible=(p==0)
+        ))
+
+        # Creating invisible squares to better highlight images later
+        fig.add_trace(go.Scatter(
+            x=X,
+            y=Y,
+            mode='markers',
+            marker=dict(size=marker_size, color=square_colors_aux, symbol='square-open', line=dict(width=4)),
+            hoverinfo='none',
+            name=f'square_year_timeline_{p}',
+            visible=(p==0)
+        ))
+    
+    # Creating visibility mask: making back button and histogram always visible, and legend and square traces visible depending on the slider step (chosen page)
+    steps = [] 
+    for p in range(n_pages):
+        mask = [True]
+        for i in range(n_pages):
+            mask.append(i==p)
+            mask.append(i==p)
+        mask.append(True)
+
+        steps.append(dict(
+            label=str(p+1),
+            method="update",
+            args=[
+                {"visible": mask},
+                {"images": image_pages[p]}
+            ]
+        ))
 
     # Creating histogram
     fig.add_trace(go.Bar(
@@ -601,7 +641,37 @@ def timeline_figure_grid(df, page_size=90):
             domain=[0.05, 0.38],
             anchor='x2',
             visible=True
-        )
+        ),
+
+        # Starting with page 0 for images
+        images=image_pages[0],
+
+        # # Adding slider for grid pagination
+        sliders=[dict(
+            active=0,
+            pad={"t": 10},
+            currentvalue=dict(visible=False),
+            # currentvalue=dict(
+            #     visible=True,
+            #     prefix="Página ", suffix="",
+            #     xanchor="center",
+            #     offset=5,
+            #     font=dict(
+            #         size=20,
+            #         color="#062a57",
+            #         family="Roboto, sans-serif",
+            #         weight="bold"
+            #     )
+            # ),
+            steps=steps,
+            x=0.52, xanchor="center", y=0.39, yanchor='bottom', len=0.8,
+            bgcolor="#e3e3e3",
+            bordercolor="#062a57",
+            activebgcolor="#062a57",
+            borderwidth=1.5,
+            font=dict(color="#f2f2f2", size=14),
+            ticklen=0,
+        )],
     )
 
     return fig

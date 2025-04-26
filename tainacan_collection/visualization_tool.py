@@ -980,18 +980,26 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
         return fig, False, no_update, no_update
     
     else:
-        # Resetting markers when hovering another point
-        old_widths = list(np.full((len(fig.data[1].x)), 5))
-        fig.data[1].marker.line.width = old_widths
-        
-        min_marker_size = 5
-        square_sizes = list(np.full((len(fig.data[1].x)), max(min_marker_size, 300/math.sqrt(len(fig.data[1].x)))))
-        fig.data[2].marker.size = square_sizes
+        # Finding current page on slider
+        for i, trace in enumerate (fig.data):
+            try:
+                if 'year_timeline' in trace['name'] and trace['visible']:
+                    page = i
+                    break
+            except:
+                continue
 
-        colors = list(fig.data[1].marker.line.color)
-        square_colors = list(fig.data[2].marker.color)
+        # Resetting markers when hovering another point
+        old_widths = list(np.full((len(fig.data[page].x)), 5))
+        fig.data[page].marker.line.width = old_widths
+        
+        square_sizes = list(np.full((len(fig.data[page].x)), 35))
+        fig.data[page+1].marker.size = square_sizes
+
+        colors = list(fig.data[page].marker.line.color)
+        square_colors = list(fig.data[page+1].marker.color)
         image_opacities = list(np.full((len(fig.layout.images)), 1))
-        image_sizes = list(np.full((len(fig.layout.images)), 5/math.sqrt(len(fig.layout.images))))
+        image_sizes = list(np.full((len(fig.layout.images)), 0.6))
 
         for (i, color), square_color, image_opacity, image_size in zip(enumerate(colors), square_colors, image_opacities, image_sizes):
             if '0)' in color:
@@ -1006,30 +1014,30 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
             fig.layout.images[i].sizex = image_size
             fig.layout.images[i].sizey = image_size
 
-        fig.data[1].marker.line.color = colors
-        fig.data[2].marker.color = square_colors
+        fig.data[page].marker.line.color = colors
+        fig.data[page+1].marker.color = square_colors
 
-        month_colors = list(fig.data[3].marker.color)
+        month_colors = list(fig.data[-1].marker.color)
         for i, month_color in enumerate(month_colors):
             month_colors[i] = month_color.replace('0.3)', '1)')
-        fig.data[3].marker.color = month_colors
+        fig.data[-1].marker.color = month_colors
 
         # Grid plot
-        if hover_data and hover_data["points"][0]["curveNumber"] == 1:
+        if hover_data and hover_data["points"][0]["curveNumber"] == page:
             # Extracting plotly dash information and highlighting on hover
             num = hover_data["points"][0]["pointNumber"]
             
             old_widths[num] = 15
-            fig.data[1].marker.line.width = old_widths
+            fig.data[page].marker.line.width = old_widths
 
-            square_sizes[num] *= 2.5
-            fig.data[2].marker.size = square_sizes
+            square_sizes[num] *= 2.4
+            fig.data[page+1].marker.size = square_sizes
 
             square_colors[num] = square_colors[num].replace('0)', '1)')
-            fig.data[2].marker.color = square_colors
+            fig.data[page+1].marker.color = square_colors
 
-            fig.layout.images[num].sizex *= 1.4
-            fig.layout.images[num].sizey *= 1.4
+            fig.layout.images[num].sizex *= 1.3
+            fig.layout.images[num].sizey *= 1.3
 
             for (i, color), image_opacity in zip(enumerate(colors), image_opacities):
                 if i != num:
@@ -1037,15 +1045,15 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
                     fig.layout.images[i].opacity = 0.3
                 else:
                     colors[i] = color.replace('1)', '0)')
-            fig.data[1].marker.line.color = colors
+            fig.data[page].marker.line.color = colors
 
             # Building hover tooltip
             bbox = hover_data['points'][0]['bbox']
-            bbox['x0'] += 2000/len(fig.layout.images)
-            bbox['x1'] += 2000/len(fig.layout.images)
+            bbox['x0'] += 30
+            bbox['x1'] += 30
 
             # Acessing the dataframe to get the data we actually want to display
-            df_row = plot_df.iloc[fig.data[1].customdata[num]]
+            df_row = plot_df.iloc[fig.data[page].customdata[num]]
             nome_do_item = df_row['nome_do_item']
             povo = df_row['povo']
 
@@ -1080,17 +1088,17 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
             return fig, True, bbox, children
     
         # Histogram (bar) plot
-        elif hover_data and hover_data["points"][0]["curveNumber"] == 3:
+        elif hover_data and hover_data["points"][0]["curveNumber"] == len(fig.data)-1:
             month = hover_data["points"][0]["pointNumber"]
 
             # Changing colors for hovered bar plot
             for i, month_color in enumerate(month_colors):
                 if i != month:
                     month_colors[i] = month_color.replace('1)', '0.3)')
-            fig.data[3].marker.color = month_colors
+            fig.data[-1].marker.color = month_colors
 
             # Changing colors for grid points that belong to the hovered month
-            df_rows = plot_df.loc[list(fig.data[1].customdata)]
+            df_rows = plot_df.loc[list(fig.data[page].customdata)]
             df_rows = df_rows.sort_values(by='data_de_aquisicao')
             indices = list(df_rows.index)
             if month == 0:
@@ -1108,9 +1116,9 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
                 fig.layout.images[i].sizex *= 1.2
                 fig.layout.images[i].sizey *= 1.2
 
-            fig.data[1].marker.line.width = old_widths
-            fig.data[2].marker.size = square_sizes
-            fig.data[2].marker.color = square_colors
+            fig.data[page].marker.line.width = old_widths
+            fig.data[page+1].marker.size = square_sizes
+            fig.data[page+1].marker.color = square_colors
 
             for (i, color), image_opacity in zip(enumerate(colors), image_opacities):
                 if i not in interval:
@@ -1118,7 +1126,7 @@ def resize_timeline_marker_on_hover(hover_data, turn_grid, fig):
                     fig.layout.images[i].opacity = 0.3
                 else:
                     colors[i] = color.replace('1)', '0)')
-            fig.data[1].marker.line.color = colors
+            fig.data[page].marker.line.color = colors
 
             return fig, False, no_update, no_update
 
@@ -1163,7 +1171,7 @@ def switch_timeline_grid(click_data, turn_grid, fig):
             # Extracting plotly dash information and plotting grid figure
             pt = click_data["points"][0]
             year = int(pt['text'])
-            fig = timeline_figure_grid(plot_df[plot_df['ano_de_aquisicao'] == year])
+            fig = timeline_figure_grid(plot_df[plot_df['ano_de_aquisicao'] == year], page_size=90)
             
             turn_grid = 0
 
