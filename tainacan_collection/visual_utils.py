@@ -437,7 +437,7 @@ def timeline_figure_zigzag(df_years):
     return fig
 
 # Create timeline figure with clickable markers for years 
-def timeline_figure_grid(df):
+def timeline_figure_grid(df, page_size=90):
     # Filtering out wrong data and sorting dataframe by 'data_de_aquisicao'
     grid_df = df.copy()
     grid_df = grid_df.sort_values(by='data_de_aquisicao')
@@ -445,8 +445,13 @@ def timeline_figure_grid(df):
 
     # Generating dynamic shaped and marker size grid for aspect ratio 4:3
     num_points = len(grid_df)
-    ar_unit = math.sqrt(num_points/7)
+    n_pages = math.ceil(num_points/page_size)
+    
+    # ar_unit = math.sqrt(num_points/7)
+    ar_unit = math.sqrt(page_size/7)
     num_rows, num_cols = math.floor(3*ar_unit), math.ceil(4*ar_unit)
+    # page_size = num_rows*num_cols
+    
     x_coords, y_coords = np.linspace(0, 7.5, num_cols), np.linspace(0.5, -7.5, num_rows)
     X, Y = np.meshgrid(x_coords, y_coords)
     X = X.ravel()[:num_points]

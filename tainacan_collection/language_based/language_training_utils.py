@@ -114,7 +114,7 @@ def get_embeddings(model, tokenizer, input_ids, device, fine_tuned=False):
     return cls_embeddings
 
 # Function to compute attributions via integrated gradients torwards the [CLS] token
-def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggreg_type='sum', verbose=False, sample_num=0):
+def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggreg_type='sum', return_tokens=True, verbose=False, sample_num=0):
     # Computing attributions and then summing over the embedding dimensions (because we compute attributions for every dimension of the tokens' embeddings, so we need some kind of aggregation to idedntify tokens individually)
     attributions, delta = lig.attribute(inputs=input_ids, baselines=baseline_input_ids, return_convergence_delta=True, n_steps=50)
     if attrib_aggreg_type == 'sum':
@@ -131,29 +131,32 @@ def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggre
         print('Check for a zero division on one of the samples! Maybe an empty string?')
 
     # If verbose, decoding tokens and getting attributions for the [CLS] token for the first sample
-    if verbose:
+    if return_tokens:
         sample_input_ids = input_ids[min(sample_num, len(input_ids)-1)]
         tokens = tokenizer.convert_ids_to_tokens(sample_input_ids.cpu().tolist())
         sample_attribution = attributions[min(sample_num, len(input_ids)-1)]
 
-        new_tokens, new_scores = [], []
+        new_tokens, new_attributions = [], []
         counter = -1
-        for i, (token, score) in enumerate(zip(tokens[1:-1], sample_attribution[1:-1])):
+        for token, attribution in zip(tokens[1:-1], sample_attribution[1:-1]):
             if token == '[PAD]':
                 new_tokens = new_tokens[:-1]
                 break
 
             if token[0] == '#':
                 new_tokens[counter] += token[2:]
-                new_scores[counter] += score
+                new_attributions[counter] += attribution
             else:
                 new_tokens.append(token)
-                new_scores.append(score)
+                new_attributions.append(attribution)
                 counter += 1
 
-        print("Token importances:")
-        for token, score in zip(new_tokens, new_scores):
-            print(f"{token:20} -> {score:.4f}")
+        if verbose:
+            print("Token importances:")
+            for token, attribution in zip(new_tokens, new_attributions):
+                print(f"{token:20} -> {attribution:.4f}")
+
+        return tokens, attributions, delta
 
     return attributions, delta
 
@@ -181,7 +184,7 @@ class SimCSEModel(nn.Module):
         self.device = device
         self.pad_token_id = pad_token_id
         
-    def forward(self, input_ids):
+    def forward(self, input_ids, train=True):
         # Moving (or guaranteeing) input_ids to proper device
         input_ids = input_ids.to(self.device)
 
@@ -191,7 +194,8 @@ class SimCSEModel(nn.Module):
         # Extracting [CLS] token embedding and passing it through dropout to late compute NT-Xent loss
         outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
         cls_embedding = outputs.last_hidden_state[:, 0]
-        cls_embedding = self.dropout(cls_embedding)
+        if train:
+            cls_embedding = self.dropout(cls_embedding)
         
         return cls_embedding
     
@@ -218,7 +222,7 @@ def nt_xent_loss(embeddings, device, temperature=0.05):
     return loss
 
 # Training loop for the SimCSE
-def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.05, patience=3):
+def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.05, patience=3, model_name='simcse_bertimbau'):
     # Varibales for saving the best model and early-stopping
     best_val_loss = float('inf')
     patience_counter = 0
@@ -281,7 +285,7 @@ def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             patience_counter = 0
-            torch.save(model.state_dict(), "simcse_bertimbau.pt")
+            torch.save({'epoch': epoch+1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, '../data/models_weights/'+model_name+'.pth')
         else:
             patience_counter += 1
             if patience_counter >= patience:
@@ -290,34 +294,59 @@ def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader
 
     return all_indices, all_embeddings, train_losses, val_losses
 
+# Function to plot losses obtained during training
+def plot_training_curves(train_losses, val_losses, model_name):
+    plt.figure(figsize=(8,4))
+    plt.suptitle(f'Training Loss and Validation Loss for {model_name}')
+    
+    # Plotting loss curve
+    plt.subplot(1, 2, 1)
+    plt.plot([i+1 for i in range(len(train_losses))], train_losses, 'x-', c='b')
+    plt.title("Training Loss x Epoch")
+    plt.xlabel("")
+    plt.ylabel("")
+    
+    # Plotting accuracy curve
+    plt.subplot(1, 2, 2)
+    plt.plot([i+1 for i in range(len(val_losses))], val_losses, 'x-', c='r')
+    plt.title("Validation Loss x Epoch")
+    plt.xlabel("")
+    plt.ylabel("")
+    
+    plt.tight_layout()
+    plt.show()
+
 # Function to safe outputs for visualization tool
-def saving_outputs(df, labels, projections, image_indices, column_name='povo', save_file='povo_vit.csv', no_clusters=False):
+def saving_outputs(projections, tokens, attributions, text_indices, save_file='vanilla_bertimbau_umap.csv'):
+    # Processing attributions to go back to more understandable tokens for visual tool
+    new_tokens, new_attributions = [[] for i in tokens], [[] for i in attributions]
+    for i, (sentence_tokens, sentence_attributions) in enumerate(zip(tokens, attributions)):
+        counter = -1
+        for token, attribution in zip(sentence_tokens[1:-1], sentence_attributions[1:-1]):
+            if token == '[PAD]':
+                new_tokens[i] = new_tokens[i][:-1]
+                break
 
-    # Getting unique cluster values
-    if not no_clusters:
-        unique_values = df[df[column_name].notna()][column_name].unique()
-        cluster_dict = {c: i for i, c in enumerate(unique_values)}
+            if token[0] == '#':
+                new_tokens[i][counter] += token[2:]
+                new_attributions[i][counter] += attribution
+            else:
+                new_tokens[i].append(token)
+                new_attributions[i].append(attribution)
+                counter += 1
 
-    # Computing indices and reordering projections to match the original dataframe order
-    indices = []
-    for index in np.array(list(labels.keys())):
-        indices.append(int(index.split('/')[-1].split('.')[0]))
-    pos_xy = projections[np.argsort(image_indices)]
+    # Getting dictionary of tokens and attributions
+    token_attribution_map = [[] for i in range(len(new_tokens))]
+    for i in range(len(new_tokens)):
+        token_attribution_map[i] = {t: a for t, a in zip(new_tokens[i], new_attributions[i])}
+    
+    # Computing clusters and cluster_names columns (because we need to use them for the visual tool)
+    clusters = np.full(len(projections), -1)
+    cluster_names = np.full(len(projections), '', dtype=object)
 
-    # Computing clusters and cluster_names columns
-    clusters = np.full(len(pos_xy), -1)
-    cluster_names = np.full(len(pos_xy), '', dtype=object)
-
-    if not no_clusters:
-        for cluster, cluster_num in cluster_dict.items():
-            mask = df.index[df[column_name] == cluster].tolist()
-            sequential_indices = np.array([df.index.get_loc(idx) for idx in mask])
-            
-            clusters[sequential_indices] = cluster_num
-            cluster_names[sequential_indices] = cluster
-
-    visualization_df = pd.DataFrame(index=indices, data={'x': pos_xy[:, 0], 'y': pos_xy[:, 1], 'cluster': clusters, 'cluster_names': cluster_names})
+    # Creating dataframe and saving projections
+    visualization_df = pd.DataFrame(index=text_indices, data={'x': projections[:, 0], 'y': projections[:, 1], 'cluster': clusters, 'cluster_names': cluster_names, 'token_attribution_map': token_attribution_map})
     visualization_df.index.name='id'
-    visualization_df.to_csv('../data/clusters/' + save_file)
+    visualization_df.to_csv('../data/projections/' + save_file)
 
     return visualization_df

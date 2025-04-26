@@ -24,18 +24,18 @@ ind_df = pd.read_csv('data/indigenous_collection_processed.csv', index_col='id')
 x, y = make_blobs(n_samples=len(ind_df), centers=10, random_state=42, center_box=(-norm_factor,norm_factor))
 plot_df = pd.DataFrame({"x": x[:, 0], "y": x[:, 1], "cluster": y})
 
-# Loading clusters
-tipo_materia_prima_baseline_df = pd.read_csv('data/clusters/tipo_materia_prima_baseline.csv', index_col='id')
+# Loading projections
+tipo_materia_prima_baseline_df = pd.read_csv('data/projections/tipo_materia_prima_baseline.csv', index_col='id')
 
-# vanilla_vit_df = pd.read_csv('data/clusters/vanilla_vit.csv', index_col='id')
-povo_vit_df = pd.read_csv('data/clusters/povo_vit.csv', index_col='id')
-categoria_vit_df = pd.read_csv('data/clusters/categoria_vit.csv', index_col='id')
-# multihead_vit_df = pd.read_csv('data/clusters/multihead_vit.csv', index_col='id')
+# vanilla_vit_df = pd.read_csv('data/projections/vanilla_vit.csv', index_col='id')
+povo_vit_df = pd.read_csv('data/projections/povo_vit.csv', index_col='id')
+categoria_vit_df = pd.read_csv('data/projections/categoria_vit.csv', index_col='id')
+# multihead_vit_df = pd.read_csv('data/projections/multihead_vit.csv', index_col='id')
 
-vanilla_dino_df = pd.read_csv('data/clusters/vanilla_dino.csv', index_col='id')
-# povo_dino_df = pd.read_csv('data/clusters/povo_dino.csv', index_col='id')
-# categoria_dino_df = pd.read_csv('data/clusters/categoria_dino.csv', index_col='id')
-multihead_dino_df = pd.read_csv('data/clusters/multihead_dino.csv', index_col='id')
+vanilla_dino_df = pd.read_csv('data/projections/vanilla_dino.csv', index_col='id')
+# povo_dino_df = pd.read_csv('data/projections/povo_dino.csv', index_col='id')
+# categoria_dino_df = pd.read_csv('data/projections/categoria_dino.csv', index_col='id')
+multihead_dino_df = pd.read_csv('data/projections/multihead_dino.csv', index_col='id')
 
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index

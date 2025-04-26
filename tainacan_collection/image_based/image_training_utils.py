@@ -846,6 +846,6 @@ def saving_outputs(df, labels, projections, image_indices, column_name='povo', s
 
     visualization_df = pd.DataFrame(index=indices, data={'x': pos_xy[:, 0], 'y': pos_xy[:, 1], 'cluster': clusters, 'cluster_names': cluster_names})
     visualization_df.index.name='id'
-    visualization_df.to_csv('../data/clusters/' + save_file)
+    visualization_df.to_csv('../data/projections/' + save_file)
 
     return visualization_df
