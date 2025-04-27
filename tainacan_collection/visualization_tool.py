@@ -37,6 +37,9 @@ vanilla_dino_df = pd.read_csv('data/projections/vanilla_dino.csv', index_col='id
 # categoria_dino_df = pd.read_csv('data/projections/categoria_dino.csv', index_col='id')
 multihead_dino_df = pd.read_csv('data/projections/multihead_dino.csv', index_col='id')
 
+vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_trimap.csv', index_col='id')
+# vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_umap.csv', index_col='id')
+
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index
 
@@ -211,6 +214,7 @@ app.layout = html.Div([
                                                 {'label': 'Similaridade Imagética (por Categoria)', 'value': 'cluster_3'},
                                                 {'label': 'Similaridade Imagética (por Povo)', 'value': 'cluster_4'},
                                                 {'label': 'Similaridade Imagética (por Categoria e Povo)', 'value': 'cluster_5'},
+                                                {'label': 'Similaridade Textual', 'value': 'cluster_6'}
                                             ],
                                             multi=False,
                                             placeholder='Selecione uma opção de agrupamento',
@@ -536,9 +540,10 @@ app.layout = html.Div([
     Output('cluster-plot', 'figure'),
     Input("cluster-plot", "hoverData"),
     State('cluster-plot', 'figure'),
+    State('cluster-options', 'value'),
     prevent_initial_call=True
 )
-def display_hover(hover_data, fig):
+def display_hover(hover_data, fig, grouping):
     fig = go.Figure(fig)
 
     # (Almost) remove transition from hover callback (should we do that?)
@@ -581,34 +586,148 @@ def display_hover(hover_data, fig):
     fig.data[0].marker.line.color = color
 
     # Getting hovering information for box display
-    img_src = df_row['image_path']
     nome_do_item = df_row['nome_do_item']
     povo = df_row['povo']
     ano_de_aquisicao = df_row['ano_de_aquisicao']
     if ano_de_aquisicao == 0:
         ano_de_aquisicao = '----'
 
-    # Hovering box with image only for points with image
-    if img_src == 'data/placeholder_square.png':
-        children = [
-        html.Div(
-            className='hover-box',
-            children=[
-                html.P(f'{nome_do_item.title()}', className='hover-box-text'),
-                html.P(f'{povo.title()}, {ano_de_aquisicao}', className='hover-box-text')
-            ], style={'width': '160px'})
-    ]
+    # Building tooltip for text similarity visualization
+    if grouping == 'cluster_6':
+        card_width = 250
 
-    else:
+        # Getting specific hovering information (text)
+        ind_index = df_row['ind_index']
+        token_attribution_map = ast.literal_eval(vanilla_bertimbau_df.loc[ind_index, 'token_attribution_map'])
+
+        # getting parameters for attribution normalization (to the [0, 1] interval) for better visuals
+        attributions = list(token_attribution_map.values())
+        min_attribution, max_attribution = min(attributions), max(attributions)
+
+        # Creating a <span> for each token, with opacity of background proportional to the attribution of the respective token
+        spans = []
+        for token, attribution in token_attribution_map.items():
+            # Normalizing attribution
+            attribution = (attribution - min_attribution)/(max_attribution-min_attribution)
+            opacity = attribution*0.7
+            spans.append(
+                html.Span(
+                    token,
+                    style={
+                        'backgroundColor': f'rgba(255,40,0,{opacity})',
+                        'padding': '0 2px',
+                        'borderRadius': '2px',
+                        'margin': '0 1px',
+                        'display': 'inline-block'
+                    }
+                )
+            )
+
+        # Wrapping all spans in a Div so it flows beneath the title
+        description_div = html.Div(
+            spans,
+            className='hover-box-text',
+            style={
+                'whiteSpace': 'normal',
+                'overflowY': 'hidden',
+                'textOverflow': 'ellipsis',
+                'display': '-webkit-box',
+                'WebkitLineClamp': '8',
+                'WebkitBoxOrient': 'vertical',
+                'maxHeight': '150px',
+                'marginTop': '8px',
+                'marginLeft': '4px',
+                'marginRight': '4px',
+                'textAlign': 'center'
+            }
+        )
+
+        # Divider for the parts of the card
+        divider = html.Hr(style={
+            'borderTop': '2px dashed',
+            'marginTop': '10px',
+            'marginBottom': '10px'
+        })
+
+        # Assembling the final children like the image-card, but with text
         children = [
             html.Div(
                 className='hover-box',
                 children=[
-                    html.Img(src=Image.open(img_src), className='hover-box-image'),
+                    description_div,
+                    divider,
+                    html.P(f'{nome_do_item.title()}', className='hover-box-text'),
+                    html.P(f'{povo.title()}, {ano_de_aquisicao}', className='hover-box-text'),
+                ],
+                style={'width': f'{card_width}px', 'overflow': 'hidden'}
+            )
+        ]
+
+    # Building tooltip for image similarity visualizations
+    else:
+        card_width = 160
+        # Getting specific hovering information (image)
+        img_src = df_row['image_path']
+
+        # Hovering box with image only for points with image
+        if img_src == 'data/placeholder_square.png':
+            children = [
+            html.Div(
+                className='hover-box',
+                children=[
                     html.P(f'{nome_do_item.title()}', className='hover-box-text'),
                     html.P(f'{povo.title()}, {ano_de_aquisicao}', className='hover-box-text')
-                ], style={'width': '160px'})
+                ], style={'width': f'{card_width}px'})
         ]
+
+        else:
+            children = [
+                html.Div(
+                    className='hover-box',
+                    children=[
+                        html.Img(src=Image.open(img_src), className='hover-box-image'),
+                        html.P(f'{nome_do_item.title()}', className='hover-box-text'),
+                        html.P(f'{povo.title()}, {ano_de_aquisicao}', className='hover-box-text')
+                    ], style={'width': f'{card_width}px'})
+            ]
+
+    # Changing sied of bbox in case we are in the right side of the image to prevent page breaks
+    arrow_size = 8
+    gap = 10
+    x_data = pt['x']
+    x_min, x_max = fig.layout['xaxis']['range']
+    move_left = x_data > (x_min+x_max)/2
+    if move_left:
+        # shift the bbox to the left
+        bbox["x0"] -= card_width - arrow_size - gap
+
+        # arrow on the card’s right edge, pointing back to the point
+        arrow = html.Div(
+            style={
+                'position':       'absolute',
+                'width':          0,
+                'height':         0,
+                'borderTop':      f'{arrow_size}px solid transparent',
+                'borderBottom':   f'{arrow_size}px solid transparent',
+                'borderLeft':     f'{arrow_size}px solid #062a57',
+                'right':          f'-{arrow_size}px',
+                'top':            '20px'      # adjust to center vertically
+            }
+        )
+    else:
+        # default: keep bbox as is but add arrow on left side
+        arrow = html.Div(
+            style={
+                'position':       'absolute',
+                'width':          0,
+                'height':         0,
+                'borderTop':      f'{arrow_size}px solid transparent',
+                'borderBottom':   f'{arrow_size}px solid transparent',
+                'borderRight':    f'{arrow_size}px solid #062a57',
+                'left':           f'-{arrow_size}px',
+                'top':            '20px'
+            }
+        )
 
     return True, bbox, children, fig
 
@@ -855,6 +974,9 @@ def update_cluster(selected_option):
     elif selected_option == 'cluster_5':
         update_cluster_selection(plot_df, multihead_dino_df, no_clusters=True)
 
+    elif selected_option == 'cluster_6':
+        update_cluster_selection(plot_df, vanilla_bertimbau_df, no_clusters=True)
+
     return True, [], [], [], [], plot_df['ano_de_aquisicao'].min(), plot_df['ano_de_aquisicao'].max(), plot_df['comprimento'].min(), plot_df['comprimento'].max(), plot_df['largura'].min(), plot_df['largura'].max(), plot_df['altura'].min(), plot_df['altura'].max(), plot_df['diametro'].min(), plot_df['diametro'].max()
 
 # Callback for filtering data
@@ -888,6 +1010,8 @@ def filter_data(selected_categorias, selected_povos, selected_estados, selected_
         filtered_df = plot_df[plot_df['ind_index'].isin(povo_vit_df.index)].copy()
     elif grouping == 'cluster_5':
         filtered_df = plot_df[plot_df['ind_index'].isin(multihead_dino_df.index)].copy()
+    elif grouping == 'cluster_6':
+        filtered_df = plot_df[plot_df['ind_index'].isin(vanilla_bertimbau_df.index)].copy()
 
     # Applying filters if a selection is made
     if selected_categorias is not None and len(selected_categorias) > 0:

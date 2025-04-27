@@ -52,7 +52,7 @@ class TextDataset(Dataset):
         if self.clf_col is not None:
             label = self.df.iloc[idx][self.clf_col]
 
-        return idx, input_ids, label
+        return self.df.iloc[idx].name, input_ids, label
 
 # Function to get the dataloaders for a dataset
 def get_dataloaders(dataset, batch_size=8, splits=None):
