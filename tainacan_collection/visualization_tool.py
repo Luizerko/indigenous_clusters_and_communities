@@ -37,8 +37,8 @@ vanilla_dino_df = pd.read_csv('data/projections/vanilla_dino.csv', index_col='id
 # categoria_dino_df = pd.read_csv('data/projections/categoria_dino.csv', index_col='id')
 multihead_dino_df = pd.read_csv('data/projections/multihead_dino.csv', index_col='id')
 
-vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_trimap.csv', index_col='id')
-# vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_umap.csv', index_col='id')
+# vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_trimap.csv', index_col='id')
+vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_umap.csv', index_col='id')
 
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index
@@ -591,10 +591,11 @@ def display_hover(hover_data, fig, grouping):
     ano_de_aquisicao = df_row['ano_de_aquisicao']
     if ano_de_aquisicao == 0:
         ano_de_aquisicao = '----'
+    img_src = df_row['image_path']
 
     # Building tooltip for text similarity visualization
     if grouping == 'cluster_6':
-        card_width = 250
+        card_width = 300
 
         # Getting specific hovering information (text)
         ind_index = df_row['ind_index']
@@ -636,9 +637,9 @@ def display_hover(hover_data, fig, grouping):
                 'WebkitBoxOrient': 'vertical',
                 'maxHeight': '150px',
                 'marginTop': '8px',
-                'marginLeft': '4px',
-                'marginRight': '4px',
-                'textAlign': 'center'
+                'marginLeft': '8px',
+                'marginRight': '8px',
+                'textAlign': 'justify'
             }
         )
 
@@ -646,28 +647,52 @@ def display_hover(hover_data, fig, grouping):
         divider = html.Hr(style={
             'borderTop': '2px dashed',
             'marginTop': '10px',
-            'marginBottom': '10px'
+            'marginBottom': '-2.2px',
+            'padding': '0',
+            'position': 'relative',
+            'zIndex': 1,
         })
 
+        # Info row with tiny image + text
+        info_div = html.Div(
+            children=[
+                html.Img(
+                    src=Image.open(img_src),
+                    style={
+                        'width': '130px',
+                        'height': '80px',
+                        'objectFit': 'cover',
+                        'borderRadius': '2px',
+                        'position': 'relative',
+                        'zIndex': 3
+                    }
+                ),
+                html.Div([
+                    html.P(nome_do_item.title(), className='hover-box-text-textual', style={'margin': '0'}),
+                    html.P(f'{povo.title()}, {ano_de_aquisicao}', className='hover-box-text-textual', style={'margin': '0'})
+                ], style={'display':'flex','flexDirection':'column', 'margin': '0', 'padding': '0', 'flex': '1 1 auto'})
+            ],
+            style={
+                'display': 'flex',
+                'alignItems': 'center',
+                'padding': '0',
+                'zIndex': 2,
+                'position': 'relative',
+                'justifyContent': 'space-between'
+            },
+        )
+
         # Assembling the final children like the image-card, but with text
-        children = [
-            html.Div(
-                className='hover-box',
-                children=[
-                    description_div,
-                    divider,
-                    html.P(f'{nome_do_item.title()}', className='hover-box-text'),
-                    html.P(f'{povo.title()}, {ano_de_aquisicao}', className='hover-box-text'),
-                ],
-                style={'width': f'{card_width}px', 'overflow': 'hidden'}
-            )
-        ]
+        card = html.Div(
+            className='hover-box',
+            children=[description_div, divider, info_div],
+            style={'width': f'{card_width}px', 'overflow': 'hidden'}
+        )
+        children = [card]
 
     # Building tooltip for image similarity visualizations
     else:
-        card_width = 160
-        # Getting specific hovering information (image)
-        img_src = df_row['image_path']
+        card_width = 200
 
         # Hovering box with image only for points with image
         if img_src == 'data/placeholder_square.png':
@@ -693,41 +718,52 @@ def display_hover(hover_data, fig, grouping):
 
     # Changing sied of bbox in case we are in the right side of the image to prevent page breaks
     arrow_size = 8
-    gap = 10
+    gap = 18
     x_data = pt['x']
     x_min, x_max = fig.layout['xaxis']['range']
     move_left = x_data > (x_min+x_max)/2
-    if move_left:
-        # shift the bbox to the left
-        bbox["x0"] -= card_width - arrow_size - gap
+    
+    shift = card_width + gap + arrow_size
+    arrow_base = {
+        'position':     'absolute',
+        'width':        0,
+        'height':       0,
+        'borderTop':    f'{arrow_size}px solid transparent',
+        'borderBottom': f'{arrow_size}px solid transparent',
+        'top':          '50%',
+        'transform':    'translateY(-50%)'
+    }
 
-        # arrow on the card’s right edge, pointing back to the point
-        arrow = html.Div(
-            style={
-                'position':       'absolute',
-                'width':          0,
-                'height':         0,
-                'borderTop':      f'{arrow_size}px solid transparent',
-                'borderBottom':   f'{arrow_size}px solid transparent',
-                'borderLeft':     f'{arrow_size}px solid #062a57',
-                'right':          f'-{arrow_size}px',
-                'top':            '20px'      # adjust to center vertically
-            }
-        )
+    if move_left:
+        # Shifting bounding box to the left
+        bbox['x0'] -= shift
+        bbox['x1'] -= shift
+
+        # Arrow sitting on the right edge of our card
+        arrow_style = {
+            **arrow_base,
+            'borderLeft': f'{arrow_size}px solid white',
+            'right':      f'-{arrow_size}px'
+        }
     else:
-        # default: keep bbox as is but add arrow on left side
-        arrow = html.Div(
-            style={
-                'position':       'absolute',
-                'width':          0,
-                'height':         0,
-                'borderTop':      f'{arrow_size}px solid transparent',
-                'borderBottom':   f'{arrow_size}px solid transparent',
-                'borderRight':    f'{arrow_size}px solid #062a57',
-                'left':           f'-{arrow_size}px',
-                'top':            '20px'
-            }
-        )
+        # Arrow sitting on the left edge of our card
+        arrow_style = {
+            **arrow_base,
+            'borderRight': f'{arrow_size}px solid white',
+            'left':        f'-{arrow_size}px'
+        }
+
+    arrow = html.Div(style=arrow_style)
+
+    # Wrapping existing card and the arrow in a relative container so the arrow absolute-positions correctly:
+    card_container = html.Div(
+        [arrow, children[0]],
+        style={
+            'position': 'relative',
+            'display':  'inline-block'
+        }
+    )
+    children = [card_container]
 
     return True, bbox, children, fig
 
@@ -862,7 +898,7 @@ def update_scatter_plot(view_type, relayout_data, zoom_update, granularity, grou
     # Replotting outliers
     if len(visible_outliers) > 0:
         if view_type == 'markers':
-            fig = plot_with_markers(visible_outliers, len(collapse_df), color_df, x_range, y_range, grouping!='cluster_1', grouping=='cluster_2' or grouping=='cluster_5')
+            fig = plot_with_markers(visible_outliers, len(collapse_df), color_df, x_range, y_range, grouping!='cluster_1' and grouping!='cluster_6', grouping=='cluster_2' or grouping=='cluster_5' or grouping=='cluster_6')
         else:
             num_points = len(filtered_plot_df.loc[filtered_plot_df['image_path_br'] != 'data/placeholder_square.png'])
             fig = plot_with_images(visible_outliers, num_points, color_df, x_range, y_range, grouping=='cluster_2' or grouping=='cluster_5')
@@ -1279,15 +1315,25 @@ def switch_timeline_grid(click_data, turn_grid, fig):
             turn_grid = 1
         
         # Clicking an item on the grid
-        elif click_data and click_data["points"][0]["curveNumber"] == 1:
-            # Extracting plotly dash information
-            num = click_data["points"][0]['pointIndex']
+        elif click_data:
+            # Finding current page on slider
+            for i, trace in enumerate (fig.data):
+                try:
+                    if 'year_timeline' in trace['name'] and trace['visible']:
+                        page = i
+                        break
+                except:
+                    continue
             
-            # Acessing the dataframe to get the URL we want
-            df_row = plot_df.iloc[fig.data[1].customdata[num]]
-            url = df_row['url']
+            if click_data["points"][0]["curveNumber"] == page:
+                # Extracting plotly dash information
+                num = click_data["points"][0]['pointIndex']
 
-            return no_update, no_update, url
+                # Acessing the dataframe to get the URL we want
+                df_row = plot_df.iloc[fig.data[page].customdata[num]]
+                url = df_row['url']
+
+                return no_update, no_update, url
 
     else:
         # Clicking an year

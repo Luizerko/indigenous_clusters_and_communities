@@ -597,6 +597,24 @@ def timeline_figure_grid(df, page_size=90):
         )
     ))
 
+    # Adding annotation with total number of points on the top‐right of the histogram
+    total = sum(hist.values())
+    fig.add_annotation(
+        text=f"Número total de itens: {total}",
+        xref="x2 domain",
+        yref="y2 domain",
+        x=1, y=1,
+        xanchor="right",
+        yanchor="top",
+        showarrow=False,
+        font=dict(size=14, color="#062a57"),
+        align="right",
+        bordercolor="#062a57",
+        borderwidth=1,
+        borderpad=8,
+        bgcolor='rgba(255, 255, 255, 0.8)',
+    )
+
     # Updating figure layout
     fig.update_layout(
         plot_bgcolor="#f2f2f2",
