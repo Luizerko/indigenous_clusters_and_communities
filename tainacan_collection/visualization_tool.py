@@ -40,6 +40,9 @@ multihead_dino_df = pd.read_csv('data/projections/multihead_dino.csv', index_col
 # vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_trimap.csv', index_col='id')
 vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_umap.csv', index_col='id')
 
+# simcse_bertimbau_df = pd.read_csv('data/projections/simcse_bertimbau_trimap.csv', index_col='id')
+simcse_bertimbau_df = pd.read_csv('data/projections/simcse_bertimbau_umap.csv', index_col='id')
+
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index
 

@@ -541,7 +541,7 @@ def timeline_figure_grid(df, page_size=90):
         # Creating color "legend" for images
         fig.add_trace(go.Scatter(
             x=X,
-            y=Y-2.7/math.sqrt(num_points/n_pages),
+            y=Y-2.9/math.sqrt(num_points/n_pages),
             mode='markers',
             customdata=df_indices[start:end],
             marker=dict(size=marker_size, color=colors_aux, symbol='line-ew', line=dict(width=5, color=colors_aux)),

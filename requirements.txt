@@ -8,6 +8,10 @@ annotated-types==0.7.0
     # via pydantic
 annoy==1.17.3
     # via trimap
+anyio==4.9.0
+    # via
+    #   httpx
+    #   openai
 asttokens==3.0.0
     # via stack-data
 blinker==1.9.0
@@ -19,7 +23,10 @@ cachelib==0.9.0
 captum==0.7.0
     # via -r requirements.in
 certifi==2024.8.30
-    # via requests
+    # via
+    #   httpcore
+    #   httpx
+    #   requests
 charset-normalizer==3.4.0
     # via requests
 click==8.1.7
@@ -51,10 +58,14 @@ decorator==5.1.1
     # via
     #   ipdb
     #   ipython
+distro==1.9.0
+    # via openai
 editorconfig==0.17.0
     # via jsbeautifier
 exceptiongroup==1.2.2
-    # via ipython
+    # via
+    #   anyio
+    #   ipython
 executing==2.1.0
     # via stack-data
 filelock==3.16.1
@@ -75,13 +86,22 @@ fsspec==2024.10.0
     # via
     #   huggingface-hub
     #   torch
+h11==0.16.0
+    # via httpcore
+httpcore==1.0.9
+    # via httpx
+httpx==0.28.1
+    # via openai
 huggingface-hub==0.26.2
     # via
     #   timm
     #   tokenizers
     #   transformers
 idna==3.10
-    # via requests
+    # via
+    #   anyio
+    #   httpx
+    #   requests
 imageio==2.36.1
     # via scikit-image
 importlib-metadata==8.5.0
@@ -98,6 +118,8 @@ jinja2==3.1.4
     # via
     #   flask
     #   torch
+jiter==0.9.0
+    # via openai
 joblib==1.4.2
     # via
     #   kmodes
@@ -190,6 +212,8 @@ nvidia-nvjitlink-cu12==12.4.127
     #   torch
 nvidia-nvtx-cu12==12.4.127
     # via torch
+openai==1.76.2
+    # via -r requirements.in
 opencv-python==4.10.0.84
     # via -r requirements.in
 packaging==24.1
@@ -229,7 +253,9 @@ ptyprocess==0.7.0
 pure-eval==0.2.3
     # via stack-data
 pydantic==2.10.5
-    # via dash-extensions
+    # via
+    #   dash-extensions
+    #   openai
 pydantic-core==2.27.2
     # via pydantic
 pygments==2.18.0
@@ -283,6 +309,10 @@ six==1.16.0
     #   jsbeautifier
     #   python-dateutil
     #   retrying
+sniffio==1.3.1
+    # via
+    #   anyio
+    #   openai
 stack-data==0.6.3
     # via ipython
 sympy==1.13.1
@@ -321,6 +351,7 @@ tqdm==4.66.5
     #   -r requirements.in
     #   captum
     #   huggingface-hub
+    #   openai
     #   transformers
 traitlets==5.14.3
     # via
@@ -334,11 +365,13 @@ triton==3.1.0
     # via torch
 typing-extensions==4.12.2
     # via
+    #   anyio
     #   dash
     #   dataclass-wizard
     #   huggingface-hub
     #   ipython
     #   lightning-utilities
+    #   openai
     #   pydantic
     #   pydantic-core
     #   torch
