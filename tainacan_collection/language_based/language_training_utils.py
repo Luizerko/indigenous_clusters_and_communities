@@ -254,7 +254,7 @@ def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader
             embeddings = model(input_ids)
             all_embeddings.append(embeddings.cpu().detach())
 
-            loss = nt_xent_loss(embeddings, temperature)
+            loss = nt_xent_loss(embeddings, device, temperature)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -265,7 +265,7 @@ def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader
         train_losses.append(avg_train_loss)
 
         # Validation loss computation for early stopping and hyperparameter tunning
-        model.eval()
+        # model.eval() commented out because it turns off the dropout which makes validation loss very small on our contrastive context since it depends on the dropout noise to create different embeddings from the same input
         model.zero_grad()
         val_loss = 0
         with torch.no_grad():
@@ -274,7 +274,7 @@ def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader
                 input_ids = input_ids.to(device)
                 input_ids = torch.cat([input_ids, input_ids], dim=0)
                 embeddings = model(input_ids)
-                val_loss += nt_xent_loss(embeddings, temperature).item()
+                val_loss += nt_xent_loss(embeddings, device, temperature).item()
         
         avg_val_loss = val_loss/len(val_dataloader)
         val_losses.append(avg_val_loss)

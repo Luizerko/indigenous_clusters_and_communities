@@ -904,12 +904,12 @@ def update_scatter_plot(view_type, relayout_data, zoom_update, granularity, grou
             fig = plot_with_markers(visible_outliers, len(collapse_df), color_df, x_range, y_range, grouping!='cluster_1' and grouping!='cluster_6', grouping=='cluster_2' or grouping=='cluster_5' or grouping=='cluster_6')
         else:
             num_points = len(filtered_plot_df.loc[filtered_plot_df['image_path_br'] != 'data/placeholder_square.png'])
-            fig = plot_with_images(visible_outliers, num_points, color_df, x_range, y_range, grouping=='cluster_2' or grouping=='cluster_5')
+            fig = plot_with_images(visible_outliers, num_points, color_df, x_range, y_range, grouping=='cluster_2' or grouping=='cluster_5' or grouping=='cluster_6')
     else:
-        if len(color_df) > 0 and grouping != 'cluster_2' and grouping != 'cluster_5':
-            fig = empty_figure_legend(color_df, x_range, y_range, len(collapse_df), grouping!='cluster_1')
+        if len(color_df) > 0 and grouping != 'cluster_2' and grouping != 'cluster_5' and grouping != 'cluster_6' :
+            fig = empty_figure_legend(color_df, x_range, y_range, len(collapse_df), grouping!='cluster_1' and grouping!='cluster_6')
         else:
-            fig = empty_figure(x_range, y_range, len(collapse_df), grouping!='cluster_1')
+            fig = empty_figure(x_range, y_range, len(collapse_df), grouping!='cluster_1' and grouping!='cluster_6')
 
     # Plotting collapsed points
     fig.add_trace(go.Scatter(
