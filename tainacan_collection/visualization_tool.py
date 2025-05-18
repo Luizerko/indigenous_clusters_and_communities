@@ -168,7 +168,7 @@ app.layout = html.Div([
                     id="tooltip-info-agrupamentos",
                     placement="bottom",
                     is_open=False,
-                    className='tab-tooltip',
+                    className='tooltip',
                 ),
                 html.Div(
                     className='tool-container',

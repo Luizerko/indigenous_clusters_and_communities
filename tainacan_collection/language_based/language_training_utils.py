@@ -3,12 +3,15 @@ import random
 from tqdm import tqdm
 
 import numpy as np
+from scipy.stats import pearsonr
 import pandas as pd
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader, random_split, ConcatDataset
+from torch.utils.data import Dataset, DataLoader, random_split
+
+from datasets import load_dataset
 
 import trimap
 from sklearn.manifold import TSNE
@@ -251,11 +254,11 @@ def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader
             input_ids = torch.cat([input_ids, input_ids], dim=0)
             
             # Computing embeddings, saving them, and computing loss
+            optimizer.zero_grad()
             embeddings = model(input_ids)
             all_embeddings.append(embeddings.cpu().detach())
 
             loss = nt_xent_loss(embeddings, device, temperature)
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
@@ -264,8 +267,9 @@ def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader
         avg_train_loss = train_loss/len(train_dataloader)
         train_losses.append(avg_train_loss)
 
-        # Validation loss computation for early stopping and hyperparameter tunning
-        # model.eval() commented out because it turns off the dropout which makes validation loss very small on our contrastive context since it depends on the dropout noise to create different embeddings from the same input
+        # Validation loss computation for early stopping and hyperparameter tunning. Also we need to turn on the lat dropout or else our validation loss becomes very small on our contrastive context since it depends on the dropout noise to create different embeddings from the same input
+        model.eval()
+        model.dropout.train()
         model.zero_grad()
         val_loss = 0
         with torch.no_grad():
@@ -293,6 +297,29 @@ def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader
                 break
 
     return all_indices, all_embeddings, train_losses, val_losses
+
+# Function to evaluate model on STS-B PTBR
+def stsb_test(model, usimcse=True):
+    # Loading STS-B PTBR version from Hugging Face. Validation split is used because it's more concise and it has labels (the test doesn't)
+    sts = load_dataset("extraglue", "stsb_pt-BR", split="validation")
+    
+    model.eval()
+    
+    # Turning on dropout because of the unsupervised SimCSE method
+    if usimcse:
+        model.dropout.train()
+
+    # Computing encodings for sentences, their similarity and comparing to the given label
+    sims, labels = [], []
+    for example in sts:
+        sent1, sent2 = example["sentence1"], example["sentence2"]
+        z1 = model(sent1)
+        z2 = model(sent2)
+        sims.append(F.cosine_similarity(z1, z2))
+        labels.append(example["label"])
+
+    pearson, _ = pearsonr(sims, labels)
+    print(f"STS-B (Pearson): {pearson:.4f}")
 
 # Function to plot losses obtained during training
 def plot_training_curves(train_losses, val_losses, model_name):
