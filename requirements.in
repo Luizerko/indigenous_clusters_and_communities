@@ -24,3 +24,4 @@ torchmetrics
 dash-bootstrap-components
 captum
 openai
+datasets

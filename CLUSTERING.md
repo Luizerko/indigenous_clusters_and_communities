@@ -367,8 +367,3 @@ In short, *DINOv2* proved to be a stronger model in terms of raw classification 
 
 ### Text-Based Clustering
 
-
-
-### Multimodal clustering
-
-

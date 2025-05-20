@@ -224,7 +224,7 @@ def nt_xent_loss(embeddings, device, temperature=0.05):
     loss = F.cross_entropy(logits, positive_indices)
     return loss
 
-# Training loop for the SimCSE
+# Training loop for the unsupervised SimCSE
 def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.05, patience=3, model_name='simcse_bertimbau'):
     # Varibales for saving the best model and early-stopping
     best_val_loss = float('inf')

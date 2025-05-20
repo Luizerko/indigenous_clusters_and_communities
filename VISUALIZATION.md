@@ -9,6 +9,16 @@ Our tool was built using `Python` and two powerful interactive libraries: `Plotl
 The system is organized into three main sections, each offering a distinct way to explore the dataset. The first tab presents an interactive view of the data as point clouds, allowing users to explore visual and semantic relationships between items through various projection and filtering tools. The second tab focuses on the temporal dimension of the collection, enabling users to browse the museum's acquisition timeline and analyze how items are distributed across specific years. The third and final tab offers a geographic perspective, displaying the full dataset on a map of Brazil and linking each object and community to its associated location.
 
 <!-- Image of tabs -->
+<p align="center">
+  <br>
+  <img src="assets/tab1.png" alt="First tab" width="30%" style="margin-right: 10px;">
+  <img src="assets/tab2.png" alt="Second tab" width="30%" style="margin-right: 10px;">
+  <img src="assets/tab3.png" alt="Third tab" width="30%">
+  <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
+    Visual similarities between necklaces from the <i>Mayongong</i> (left), <i>Kamayurá</i> (center), and <i>Kuikuro</i> (right) communities. The model highlighted overlapping color palettes between all and distinctive tie styles between the last two, suggesting possible shared stylistic or material influences.
+  </p>
+  <br>
+</p>
 
 To help users better understand the tool's features, we've also added info buttons throughout the interface. These small buttons are placed next to filters, visual elements, and even at the top of entire tabs. Clicking one opens a short description explaining what the element does, offering quick, in-context guidance wherever it might be needed.
 
@@ -19,6 +29,15 @@ Below, we describe each of these components in more detail.
 This tab presents several point-cloud based visualizations of the dataset. Each point represents an object, and users can choose between two display modes: marker-based - where colors can correspond to different clusters if applicable -  or image-based, where each point is replaced by the object’s actual image.
 
 <!-- Image of markers and images -->
+<p align="center">
+  <br>
+  <img src="assets/grouping_markers.png" alt="Markers on grouping tab" width="45%" style="margin-right: 10px;">
+  <img src="assets/grouping_images.png" alt="Images on grouping tab" width="45%">
+  <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
+    Visual similarities between necklaces from the <i>Mayongong</i> (left), <i>Kamayurá</i> (center), and <i>Kuikuro</i> (right) communities. The model highlighted overlapping color palettes between all and distinctive tie styles between the last two, suggesting possible shared stylistic or material influences.
+  </p>
+  <br>
+</p>
 
 To ensure smooth performance - especially given the high number of points - we implement lazy loading throughout this tab. Rather than processing and rendering all points at once, the system first determines whether each point is currently visible within the user’s viewport. Only visible points are processed for actions like color assignment, plotting, and interactions. This significantly improves responsiveness and prevents unnecessary computations.
 
@@ -44,7 +63,7 @@ The marker-based point cloud is fully interactive and designed to support explor
 
 - For visual similarity, the card displays the item’s image.
 
-- For textual similarity, it shows the item's description with highlighted keywords - the terms considered the most relevant for the embedding computation of the item.
+- For textual similarity, it shows the item's description with highlighted keywords - the terms considered the most relevant for the embedding computation of the item. A small (cropped) image of the object is also shown (if available) to provide a bit more context for the text.
 
 In both cases, the card also includes key metadata: the item’s name, the community it comes from, and the year it was acquired by the museum. Additionally, the corresponding marker is visually emphasized with a subtle shadow and increased size to highlight the hovered item in the point cloud.
 
@@ -78,7 +97,13 @@ The four visual clustering options differ in how they were trained:
 
 <!-- Images of visual groupings -->
 
-Finally, there are two experimental grouping modes based on textual similarity, using items' descriptions instead of images. These are still under development and will be detailed in future updates.
+Finally, there are two grouping modes based on textual similarity, using items’ descriptions instead of images. Analogous to the image pipeline, these modes organize objects by their (summarized) descriptions, capturing textual affinities even when items don’t look alike but embody the same concept. This approach also lets us cluster objects for which we have no image (half of the collection), using only their descriptions (with just one item lacking any description). More information about generating these clusters can be found in our [clustering experiments documentation](https://github.com/Luizerko/master_thesis/tree/main/CLUSTERING.md).
+
+The two visual clustering options also differ in how they were trained:
+
+- **Vanilla:** Uses embeddings from a pre-trained model. It provides a general-purpose visual grouping.
+
+- **Contrastive Learning:** Uses embeddings from a contrastively fine-tuned model that pulls semantically similar sentences closer together and pushes different ones farther apart. This creates a representation tailored to our custom-designed dataset of descriptions.
 
 <!-- Images of textual groupings -->
 
@@ -124,7 +149,7 @@ The second part of the tab provides a detailed view of a specific year, designed
 
 At the top-left, the selected year is displayed alongside a back button, allowing users to return to the zig-zag timeline and choose another year.
 
-One of the main elements is a grid of item thumbnails, sorted chronologically by their acquisition date. Items with a known date are arranged accordingly, while those with only a known year appear first (as *no specific date* items). Below each thumbnail is a colored line, part of a gradient that visually encodes the month of acquisition. These lines are connected directly to a histogram (bar plot) beneath the grid, the other main element, which shows the number of items acquired in each month of that year, along with a special bar for those items that have no exact date.
+One of the main elements is a grid of item thumbnails, sorted chronologically by their acquisition date. Items with a known date are arranged accordingly, while those with only a known year appear first (as *no specific date* items). Below each thumbnail is a colored line, part of a gradient that visually encodes the month of acquisition. These lines are connected directly to a histogram (bar plot) beneath the grid, the other main element, which shows the number of items acquired in each month of that year, along with a bar for those items that have no exact date.
 
 The interface supports rich interactivity:
 
@@ -135,6 +160,8 @@ The interface supports rich interactivity:
 - Hovering over a bar in the histogram shows the exact quantity of items acquired on that month and highlights all these items on the grid using the same visual effect (larger image, border), but this time applies it to all relevant items. Other items in the grid fade out to allow better focus on the selected month. No tooltip is shown in this case, since the selection involves multiple items. There’s also a bar for items with no exact date, allowing those to be explored and highlighted similarly.
 
 <!-- Image of the highlighted bar -->
+
+- There’s also a slider to navigate between pages of the image grid. This widget is crucial because displaying all items on a single grid at once shrinks the visualizations to an unreadable size (we can barely distinguish items or colors in years with many acquisitions) and compromises the app’s interactivity (rendering so many items simultaneously often caused crashes). All hover interactions are naturally scoped to the specific page the user is viewing.
 
 This layout offers users a compelling way to navigate through time, identify patterns in acquisition, and explore how specific years and months shaped the collection as it stands today.
 

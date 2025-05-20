@@ -4,6 +4,12 @@
 #
 #    pip-compile requirements.in
 #
+aiohappyeyeballs==2.6.1
+    # via aiohttp
+aiohttp==3.11.18
+    # via fsspec
+aiosignal==1.3.2
+    # via aiohttp
 annotated-types==0.7.0
     # via pydantic
 annoy==1.17.3
@@ -14,6 +20,10 @@ anyio==4.9.0
     #   openai
 asttokens==3.0.0
     # via stack-data
+async-timeout==5.0.1
+    # via aiohttp
+attrs==25.3.0
+    # via aiohttp
 blinker==1.9.0
     # via flask
 build==1.2.2.post1
@@ -54,10 +64,16 @@ dash-table==5.0.0
     # via dash
 dataclass-wizard==0.30.1
     # via dash-extensions
+datasets==3.6.0
+    # via -r requirements.in
 decorator==5.1.1
     # via
     #   ipdb
     #   ipython
+dill==0.3.8
+    # via
+    #   datasets
+    #   multiprocess
 distro==1.9.0
     # via openai
 editorconfig==0.17.0
@@ -70,6 +86,7 @@ executing==2.1.0
     # via stack-data
 filelock==3.16.1
     # via
+    #   datasets
     #   huggingface-hub
     #   torch
     #   transformers
@@ -82,8 +99,13 @@ flask-caching==2.3.0
     # via dash-extensions
 fonttools==4.54.1
     # via matplotlib
-fsspec==2024.10.0
+frozenlist==1.6.0
     # via
+    #   aiohttp
+    #   aiosignal
+fsspec[http]==2024.10.0
+    # via
+    #   datasets
     #   huggingface-hub
     #   torch
 h11==0.16.0
@@ -94,6 +116,7 @@ httpx==0.28.1
     # via openai
 huggingface-hub==0.26.2
     # via
+    #   datasets
     #   timm
     #   tokenizers
     #   transformers
@@ -102,6 +125,7 @@ idna==3.10
     #   anyio
     #   httpx
     #   requests
+    #   yarl
 imageio==2.36.1
     # via scikit-image
 importlib-metadata==8.5.0
@@ -154,6 +178,12 @@ more-itertools==10.5.0
     # via dash-extensions
 mpmath==1.3.0
     # via sympy
+multidict==6.4.4
+    # via
+    #   aiohttp
+    #   yarl
+multiprocess==0.70.16
+    # via datasets
 nest-asyncio==1.6.0
     # via dash
 networkx==3.4.2
@@ -167,6 +197,7 @@ numpy==2.1.2
     #   -r requirements.in
     #   captum
     #   contourpy
+    #   datasets
     #   imageio
     #   kmodes
     #   matplotlib
@@ -219,6 +250,7 @@ opencv-python==4.10.0.84
 packaging==24.1
     # via
     #   build
+    #   datasets
     #   huggingface-hub
     #   kornia
     #   lazy-loader
@@ -229,7 +261,9 @@ packaging==24.1
     #   torchmetrics
     #   transformers
 pandas==2.2.3
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   datasets
 parso==0.8.4
     # via jedi
 pexpect==4.9.0
@@ -248,10 +282,16 @@ plotly==5.24.1
     #   dash
 prompt-toolkit==3.0.48
     # via ipython
+propcache==0.3.1
+    # via
+    #   aiohttp
+    #   yarl
 ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
+pyarrow==20.0.0
+    # via datasets
 pydantic==2.10.5
     # via
     #   dash-extensions
@@ -274,6 +314,7 @@ pytz==2024.2
     # via pandas
 pyyaml==6.0.2
     # via
+    #   datasets
     #   huggingface-hub
     #   timm
     #   transformers
@@ -283,6 +324,7 @@ requests==2.32.3
     # via
     #   -r requirements.in
     #   dash
+    #   datasets
     #   huggingface-hub
     #   transformers
 retrying==1.3.4
@@ -350,6 +392,7 @@ tqdm==4.66.5
     # via
     #   -r requirements.in
     #   captum
+    #   datasets
     #   huggingface-hub
     #   openai
     #   transformers
@@ -371,6 +414,7 @@ typing-extensions==4.12.2
     #   huggingface-hub
     #   ipython
     #   lightning-utilities
+    #   multidict
     #   openai
     #   pydantic
     #   pydantic-core
@@ -389,6 +433,10 @@ werkzeug==3.0.6
     #   flask
 wheel==0.44.0
     # via pip-tools
+xxhash==3.5.0
+    # via datasets
+yarl==1.20.0
+    # via aiohttp
 zipp==3.21.0
     # via importlib-metadata
 
