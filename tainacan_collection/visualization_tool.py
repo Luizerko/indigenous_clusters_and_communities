@@ -463,7 +463,17 @@ app.layout = html.Div([
                                     ]
                                 )
                             ]
-                        )
+                        ),
+                        html.Div(
+                            style={'position': 'absolute', 'bottom': '8px', 'right': '18px', 'fontSize': '0.8rem', 'fontWeight': 'bold', 'backgroundColor': '#f2f2f2', 'padding': '3px', 'borderRadius': '5px', 'display': 'inline-flex', 'alignItems': 'center', 'gap': '4px',
+                            },
+                            children=[
+                                html.Span("Por"),
+                                html.A("Luis Vitor Zerkowski", href="https://www.linkedin.com/in/luis-vitor-zerkowski-93a3471b4/", target="_blank", style={ 'color': '#062a57'}),
+                                html.Span("e"),
+                                html.A("Nina Hirata", href="https://www.ime.usp.br/~nina/", target="_blank", style={'color': '#062a57'}),
+                            ]
+                        ),
                     ]
                 )
             ],
@@ -491,6 +501,16 @@ app.layout = html.Div([
                         dcc.Graph(id='timeline', config=config, clear_on_unhover=True, figure=timeline_figure_zigzag(ind_df['ano_de_aquisicao'])),
                         dcc.Store(id='turn-grid', data=1),
                         dcc.Tooltip(id='timeline-tooltip'),
+                        html.Div(
+                            style={'position': 'absolute', 'bottom': '8px', 'right': '18px', 'fontSize': '0.8rem', 'fontWeight': 'bold', 'backgroundColor': '#f2f2f2', 'padding': '3px', 'borderRadius': '5px', 'display': 'inline-flex', 'alignItems': 'center', 'gap': '4px',
+                            },
+                            children=[
+                                html.Span("Por"),
+                                html.A("Luis Vitor Zerkowski", href="https://www.linkedin.com/in/luis-vitor-zerkowski-93a3471b4/", target="_blank", style={ 'color': '#062a57'}),
+                                html.Span("e"),
+                                html.A("Nina Hirata", href="https://www.ime.usp.br/~nina/", target="_blank", style={'color': '#062a57'}),
+                            ]
+                        ),
                     ]
                 ),
             ],
@@ -501,7 +521,7 @@ app.layout = html.Div([
             className='tab-option',
             children=[
                 dbc.Tooltip(
-                    "Essa aba permite que o usuário estude a coleção geograficamente, entendendo a regionalidade dos povos e localizando os itens no mapa do Brasil.",
+                    "Esta aba oferece ao usuário uma visão geográfica da coleção, permitindo compreender a regionalidade dos povos e localizar seus itens no mapa do Brasil. Os marcadores vermelhos apontam as posições exatas de cada povo, com base no Mapa Socioambiental do ISA, possibilitando identificar sua localização e explorar os objetos a eles vinculados. Já os marcadores azuis indicam de forma genérica os povos de cada estado - uma solução para manter na visualização aqueles povos para os quais não conseguimos adquirir dados específicos pelo ISA.",
                     target="aba-mapa",
                     trigger='click',
                     id="tooltip-info-mapa",
@@ -515,7 +535,17 @@ app.layout = html.Div([
                         dcc.Graph(id='brazil-map', config=config, figure=brazil_figure()),
                         dcc.Store(id='current-name', data=None),
                         dcc.Store(id='current-page', data=0),
-                        dcc.Store(id='current-curve', data=0)
+                        dcc.Store(id='current-curve', data=0),
+                        html.Div(
+                            style={'position': 'absolute', 'bottom': '8px', 'right': '18px', 'fontSize': '0.8rem', 'fontWeight': 'bold', 'backgroundColor': '#f2f2f2', 'padding': '3px', 'borderRadius': '5px', 'display': 'inline-flex', 'alignItems': 'center', 'gap': '4px',
+                            },
+                            children=[
+                                html.Span("Por"),
+                                html.A("Luis Vitor Zerkowski", href="https://www.linkedin.com/in/luis-vitor-zerkowski-93a3471b4/", target="_blank", style={ 'color': '#062a57'}),
+                                html.Span("e"),
+                                html.A("Nina Hirata", href="https://www.ime.usp.br/~nina/", target="_blank", style={'color': '#062a57'}),
+                            ]
+                        ),
                     ]
                 ),
             ],
