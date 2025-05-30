@@ -1,4 +1,5 @@
 # Centralizing main imports so we can run the models separately
+import os
 import random
 from tqdm import tqdm
 
@@ -32,7 +33,7 @@ def normalize(data, norm_factor=2):
     
     return norm_factor*(data-mean)/max_dev
 
-# Class for the TextDataset and to avoid loading everything simultaneously and to better interact with toch data pipelines
+# Class for the TextDataset and to avoid loading everything simultaneously and to better interact with torch data pipelines
 class TextDataset(Dataset):
     def __init__(self, df, tokenizer, max_length=256, clf_col=None):
         self.df = df
@@ -225,7 +226,7 @@ def nt_xent_loss(embeddings, device, temperature=0.05):
     return loss
 
 # Training loop for the unsupervised SimCSE
-def contrastive_training_loop(model, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.05, patience=3, model_name='simcse_bertimbau'):
+def usimcse_training_loop(model, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.05, patience=3, model_name='simcse_bertimbau'):
     # Varibales for saving the best model and early-stopping
     best_val_loss = float('inf')
     patience_counter = 0
@@ -320,6 +321,10 @@ def stsb_test(model, usimcse=True):
 
     pearson, _ = pearsonr(sims, labels)
     print(f"STS-B (Pearson): {pearson:.4f}")
+
+# Function to evaluate model on our (in-context) generated dataset in STS-B fashion
+# def context_stsb_test(model, test_indices, usimcse=True):
+    
 
 # Function to plot losses obtained during training
 def plot_training_curves(train_losses, val_losses, model_name):
