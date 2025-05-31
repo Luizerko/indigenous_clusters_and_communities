@@ -33,30 +33,59 @@ def normalize(data, norm_factor=2):
     
     return norm_factor*(data-mean)/max_dev
 
-# Class for the TextDataset and to avoid loading everything simultaneously and to better interact with torch data pipelines
-class TextDataset(Dataset):
-    def __init__(self, df, tokenizer, max_length=256, clf_col=None):
+# Class for the text dataset for the unsupervised fine-tuning, to avoid loading everything simultaneously and to better interact with torch data pipelines
+class UnsupervisedTextDataset(Dataset):
+    def __init__(self, df, tokenizer, max_length=256):
         self.df = df
         self.tokenizer = tokenizer
         self.max_length = max_length
-        self.clf_col = clf_col
 
     def __len__(self):
         return len(self.df)
     
     def __getitem__(self, idx):
-        text = self.df.iloc[idx]['descricao']
+        text = self.df.iloc[idx]['descricao_resumida']
         
         # Getting input_ids from the text with the tokenizer
         inputs = self.tokenizer(text, return_tensors='pt', padding='max_length', truncation=True, max_length=self.max_length)
         input_ids = inputs['input_ids'].squeeze(0)
         
-        # Creating labels if dataset is used for supervised fine-tuning
-        label = []
-        if self.clf_col is not None:
-            label = self.df.iloc[idx][self.clf_col]
+        return self.df.iloc[idx].name, input_ids
+    
+# Class for the text dataset for the supervised fine-tuning, to avoid loading everything simultaneously and to better interact with torch data pipelines
+class SupervisedTextDataset(Dataset):
+    def __init__(self, df, tokenizer, max_length=256):
+        self.df = df
+        self.tokenizer = tokenizer
+        self.max_length = max_length
 
-        return self.df.iloc[idx].name, input_ids, label
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        row = self.df.iloc[idx]
+
+        # Getting pieces of text needed for contrastive training
+        anchor_text = row['descricao_resumida']
+        positive_text = row['positive_contrastive']
+        negatives_list = row['multi_negative_contrastive']
+        
+        # Getting input_ids from all the pieces of text with the tokenizer
+        anchor_inputs = self.tokenizer(anchor_text, return_tensors='pt', padding='max_length', truncation=True, max_length=self.max_length)
+        anchor_input_ids = anchor_inputs['input_ids'].squeeze(0)
+        
+        pos_inputs = self.tokenizer(positive_text, return_tensors='pt', padding='max_length', truncation=True, max_length=self.max_length)
+        pos_input_ids = pos_inputs['input_ids'].squeeze(0)
+        
+        neg_input_ids_list = []
+        for neg_text in negatives_list:
+            neg_inputs = self.tokenizer(neg_text, return_tensors='pt', padding='max_length', truncation=True, max_length=self.max_length)
+            neg_input_ids_list.append(neg_inputs['input_ids'].squeeze(0))
+            
+        # Stacking negatives to get a tensor of size (num_negatives, max_length)
+        neg_input_ids = torch.stack(neg_input_ids_list, dim=0)
+        
+        return self.df.iloc[idx].name, anchor_input_ids, pos_input_ids, neg_input_ids
 
 # Function to get the dataloaders for a dataset
 def get_dataloaders(dataset, batch_size=8, splits=None):
@@ -74,7 +103,7 @@ def get_dataloaders(dataset, batch_size=8, splits=None):
     else:
         return DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
-# Captum compatible wrapper model for the vanilla BERTimbau. Notice that we need to use a scalar representation for the [CLS] token so we can evaluate how ir varies with the other tokens (integrated gradients as the name suggests). In this case, we decided to go for the norm of the embedding vector
+# Captum compatible wrapper model for the vanilla models. Notice that we need to use a scalar representation for the [CLS] token so we can evaluate how ir varies with the other tokens (integrated gradients as the name suggests). In this case, we decided to go for the norm of the embedding vector
 class CaptumWrappedModel(nn.Module):
     def __init__(self, model, pad_token_id, baseline_embedding, device, target_type='l2-norm'):
         super(CaptumWrappedModel, self).__init__()
@@ -111,7 +140,7 @@ def get_embeddings(model, tokenizer, input_ids, device, fine_tuned=False):
     with torch.no_grad():
         if not fine_tuned:
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        if fine_tuned:
+        else:
             outputs = model.model(input_ids=input_ids, attention_mask=attention_mask)
         cls_embeddings = outputs.last_hidden_state[:, 0]
 
@@ -119,7 +148,7 @@ def get_embeddings(model, tokenizer, input_ids, device, fine_tuned=False):
 
 # Function to compute attributions via integrated gradients torwards the [CLS] token
 def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggreg_type='sum', return_tokens=True, verbose=False, sample_num=0):
-    # Computing attributions and then summing over the embedding dimensions (because we compute attributions for every dimension of the tokens' embeddings, so we need some kind of aggregation to idedntify tokens individually)
+    # Computing attributions and then summing over the embedding dimensions (because we compute attributions for every dimension of the tokens' embeddings, so we need some kind of aggregation to identify tokens individually)
     attributions, delta = lig.attribute(inputs=input_ids, baselines=baseline_input_ids, return_convergence_delta=True, n_steps=50)
     if attrib_aggreg_type == 'sum':
         attributions = attributions.sum(dim=-1)
@@ -178,10 +207,10 @@ def data_projections(image_embeddings, **kwargs):
 
     return vanilla_vit_trimap, vanilla_vit_tsne, vanilla_vit_umap
 
-# Class for the SimCSE models. The idea is to use fine-tune different models using the SimCSE approach with NT-Xent loss, which is an unsupervised contrastive loss, ideal for specializing the embedding model to our data without having to group it by categories
-class SimCSEModel(nn.Module):
+# Class for the unsupervised  SimCSE models. The idea is to fine-tune different models using the SimCSE approach with NT-Xent loss, which is an unsupervised contrastive loss, good for specializing the embedding model to our data without having to group it by categories
+class USimCSEModel(nn.Module):
     def __init__(self, model, pad_token_id, device, dropout_prob=0.1):
-        super(SimCSEModel, self).__init__()
+        super(USimCSEModel, self).__init__()
         self.model = model.to(device)
         self.dropout = nn.Dropout(dropout_prob)
         
@@ -203,6 +232,31 @@ class SimCSEModel(nn.Module):
         
         return cls_embedding
     
+# Class for the (supervised)  InfoNCE models. The idea is to fine-tune different models using the contrastive InfoNCE approach with InfoNCE loss, which is a supervised contrastive loss based on our distribution of positive against all negatives, good for specializing the embedding model to our data without having to group it by categories
+class InfoNCE(nn.Module):
+    def __init__(self, model, pad_token_id, device, hidden_dim=768, proj_dim=256, dropout_prob=0.1):
+        super(InfoNCE, self).__init__()
+    #     self.model = model.to(device)
+    #     self.dropout = nn.Dropout(dropout_prob)
+        
+    #     self.device = device
+    #     self.pad_token_id = pad_token_id
+        
+    # def forward(self, input_ids, train=True):
+    #     # Moving (or guaranteeing) input_ids to proper device
+    #     input_ids = input_ids.to(self.device)
+
+    #     # Computing attention mask and moving it to device as well
+    #     attention_mask = (input_ids != self.pad_token_id).to(self.device).long()
+
+    #     # Extracting [CLS] token embedding and passing it through dropout to late compute NT-Xent loss
+    #     outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+    #     cls_embedding = outputs.last_hidden_state[:, 0]
+    #     if train:
+    #         cls_embedding = self.dropout(cls_embedding)
+        
+    #     return cls_embedding
+
 # Computing the NT-Xent loss. The embeddings in this case should have shape [2*batch_size, dim], because we want two different views (different masked dimensions) of each sample to use as positive pairs
 def nt_xent_loss(embeddings, device, temperature=0.05):
     # Computing cosine similarity in a more optimized way
@@ -226,7 +280,7 @@ def nt_xent_loss(embeddings, device, temperature=0.05):
     return loss
 
 # Training loop for the unsupervised SimCSE
-def usimcse_training_loop(model, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.05, patience=3, model_name='simcse_bertimbau'):
+def usimcse_training_loop(model, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.05, patience=3, model_name='usimcse_bertimbau'):
     # Varibales for saving the best model and early-stopping
     best_val_loss = float('inf')
     patience_counter = 0
@@ -244,7 +298,7 @@ def usimcse_training_loop(model, optimizer, train_dataloader, val_dataloader, de
         model.train()
         train_loss = 0
 
-        for indices, input_ids, _ in train_dataloader:
+        for indices, input_ids in train_dataloader:
             # Saving indices
             all_indices.append(indices)
 
@@ -274,7 +328,7 @@ def usimcse_training_loop(model, optimizer, train_dataloader, val_dataloader, de
         model.zero_grad()
         val_loss = 0
         with torch.no_grad():
-            for indices, input_ids, _ in val_dataloader:
+            for indices, input_ids in val_dataloader:
                 # Repeating process for validation dataset
                 input_ids = input_ids.to(device)
                 input_ids = torch.cat([input_ids, input_ids], dim=0)
