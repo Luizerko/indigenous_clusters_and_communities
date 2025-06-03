@@ -138,6 +138,7 @@ def get_embeddings(model, tokenizer, input_ids, device, fine_tuned=False):
     
     # And now the [CLS] token embeddings
     with torch.no_grad():
+        model.eval()
         if not fine_tuned:
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
         else:
@@ -217,7 +218,7 @@ class USimCSEModel(nn.Module):
         self.device = device
         self.pad_token_id = pad_token_id
         
-    def forward(self, input_ids, train=True):
+    def forward(self, input_ids):
         # Moving (or guaranteeing) input_ids to proper device
         input_ids = input_ids.to(self.device)
 
@@ -227,35 +228,47 @@ class USimCSEModel(nn.Module):
         # Extracting [CLS] token embedding and passing it through dropout to late compute NT-Xent loss
         outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
         cls_embedding = outputs.last_hidden_state[:, 0]
-        if train:
-            cls_embedding = self.dropout(cls_embedding)
+        cls_embedding = self.dropout(cls_embedding)
         
         return cls_embedding
     
 # Class for the (supervised)  InfoNCE models. The idea is to fine-tune different models using the contrastive InfoNCE approach with InfoNCE loss, which is a supervised contrastive loss based on our distribution of positive against all negatives, good for specializing the embedding model to our data without having to group it by categories
-class InfoNCE(nn.Module):
-    def __init__(self, model, pad_token_id, device, hidden_dim=768, proj_dim=256, dropout_prob=0.1):
-        super(InfoNCE, self).__init__()
-    #     self.model = model.to(device)
-    #     self.dropout = nn.Dropout(dropout_prob)
-        
-    #     self.device = device
-    #     self.pad_token_id = pad_token_id
-        
-    # def forward(self, input_ids, train=True):
-    #     # Moving (or guaranteeing) input_ids to proper device
-    #     input_ids = input_ids.to(self.device)
+class InfoNCEModel(nn.Module):
+    def __init__(self, model, pad_token_id, device, hidden_dim=768, proj_dim=512):
+        super(InfoNCEModel, self).__init__()
+        self.model = model.to(device)
+        self.pad_token_id = pad_token_id
+        self.device = device
 
-    #     # Computing attention mask and moving it to device as well
-    #     attention_mask = (input_ids != self.pad_token_id).to(self.device).long()
+        # Getting encoder hiddem_dim
+        encoder_dim = model.config['hidden_size']
 
-    #     # Extracting [CLS] token embedding and passing it through dropout to late compute NT-Xent loss
-    #     outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-    #     cls_embedding = outputs.last_hidden_state[:, 0]
-    #     if train:
-    #         cls_embedding = self.dropout(cls_embedding)
+        # Simple MLP for fine-tuning
+        self.mlp_head = nn.Sequential(
+            nn.Linear(encoder_dim, hidden_dim),
+            nn.Relu(),
+            nn.Linear(hidden_dim, proj_dim)
+        )
         
-    #     return cls_embedding
+    def forward(self, input_ids):
+        # Moving (or guaranteeing) input_ids to proper device
+        input_ids = input_ids.to(self.device)
+
+        # Computing attention mask and moving it to device as well
+        attention_mask = (input_ids != self.pad_token_id).to(self.device).long()
+
+        # Mean-pooling embedding of tokens (weighted by attention mask) and passing it through the MLP head
+        outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+        
+        last_embeddings = outputs.last_hidden_state
+        attention_mask_expanded = attention_mask.unsqueeze(-1).float()
+        sum_embedding = (last_embeddings*attention_mask_expanded).sum(dim=1)
+        length = attention_mask_expanded.sum(dim=1).clamp(min=1e-9)
+        mean_embedding = sum_embedding/length
+        
+        projected = self.mlp_head(mean_embedding)
+        
+        return projected
 
 # Computing the NT-Xent loss. The embeddings in this case should have shape [2*batch_size, dim], because we want two different views (different masked dimensions) of each sample to use as positive pairs
 def nt_xent_loss(embeddings, device, temperature=0.05):
@@ -294,9 +307,9 @@ def usimcse_training_loop(model, optimizer, train_dataloader, val_dataloader, de
     val_losses = []
 
     # Effective training loop
-    for epoch in tqdm(range(epochs)):
+    for epoch in tqdm(range(epochs), desc='Epoch'):
         model.train()
-        train_loss = 0
+        epoch_train_loss = 0
 
         for indices, input_ids in train_dataloader:
             # Saving indices
@@ -308,7 +321,7 @@ def usimcse_training_loop(model, optimizer, train_dataloader, val_dataloader, de
             # Duplicating batch for SimCSE
             input_ids = torch.cat([input_ids, input_ids], dim=0)
             
-            # Computing embeddings, saving them, and computing loss
+            # Computing embeddings, saving them and computing loss
             optimizer.zero_grad()
             embeddings = model(input_ids)
             all_embeddings.append(embeddings.cpu().detach())
@@ -317,25 +330,25 @@ def usimcse_training_loop(model, optimizer, train_dataloader, val_dataloader, de
             loss.backward()
             optimizer.step()
 
-            train_loss += loss.item()
+            epoch_train_loss += loss.item()
 
-        avg_train_loss = train_loss/len(train_dataloader)
+        avg_train_loss = epoch_train_loss/len(train_dataloader)
         train_losses.append(avg_train_loss)
 
         # Validation loss computation for early stopping and hyperparameter tunning. Also we need to turn on the lat dropout or else our validation loss becomes very small on our contrastive context since it depends on the dropout noise to create different embeddings from the same input
         model.eval()
         model.dropout.train()
         model.zero_grad()
-        val_loss = 0
+        epoch_val_loss = 0
         with torch.no_grad():
             for indices, input_ids in val_dataloader:
                 # Repeating process for validation dataset
                 input_ids = input_ids.to(device)
                 input_ids = torch.cat([input_ids, input_ids], dim=0)
                 embeddings = model(input_ids)
-                val_loss += nt_xent_loss(embeddings, device, temperature).item()
+                epoch_val_loss += nt_xent_loss(embeddings, device, temperature).item()
         
-        avg_val_loss = val_loss/len(val_dataloader)
+        avg_val_loss = epoch_val_loss/len(val_dataloader)
         val_losses.append(avg_val_loss)
 
         print(f"Epoch {epoch+1}/{epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
@@ -344,7 +357,120 @@ def usimcse_training_loop(model, optimizer, train_dataloader, val_dataloader, de
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             patience_counter = 0
-            torch.save({'epoch': epoch+1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, '../data/models_weights/'+model_name+'.pth')
+            torch.save({'epoch': epoch+1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, f'../data/models_weights/{model_name}.pth')
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print("Early stopping!")
+                break
+
+    return all_indices, all_embeddings, train_losses, val_losses
+
+# Computing the InfoNCE loss. The anchor embeddings in this case should have shape [batch_size, dim], as well as the positive embeddings. The negative embeddings should have shape [batch_size, number_of_negatives, dim]. We then compute cosine similarity between the examples and the anchor and use them all in a smart way as logits for our cross-entropy loss (like the positive sample is our correct label and the negative samples are wrong labels)
+def infonce_loss(anchor_embeddings, pos_embeddings, neg_embeddings, device, temperature=0.07):
+    # Normalizing embeddings for InfoNCE
+    anchor_norm = F.normalize(anchor_embeddings, dim=1)
+    pos_norm = F.normalize(pos_embeddings, dim=1)
+    neg_norm = F.normalize(neg_embeddings, dim=2)
+
+    # Computing positive similarity to acnhor (batch_size)
+    pos_sim = torch.sum(anchor_norm*pos_norm, dim=1)
+
+    # Computing negative similarities to anchor (batch_size, N)
+    neg_sim = torch.bmm(anchor_norm.unsqueeze(1), neg_norm.transpose(1, 2)).squeeze(1)  
+
+    # Computing logits (normalized by the temperature)
+    logits = torch.cat([pos_sim.unsqueeze(1), neg_sim], dim=1)
+    logits = logits/temperature
+    
+    # Computing InfoNCE loss
+    labels = torch.zeros(anchor_norm.size(0), dtype=torch.long, device=logits.device)
+    loss = F.cross_entropy(logits, labels)
+
+    return loss
+
+# Training loop for the supervised contrastive learning (InfoNCE) 
+def infonce_training_loop(model, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.07, patience=3, model_name='infonce_bertimbau'):
+    # Varibales for saving the best model and early-stopping
+    best_val_loss = float('inf')
+    patience_counter = 0
+
+    # Saving indicies and embeddings for later usage
+    all_indices = []
+    all_embeddings = []
+
+    # Tracking loss
+    train_losses = []
+    val_losses = []
+
+    # Effective training loop
+    for epoch in tqdm(range(epochs), desc="Epoch"):
+        model.train()
+        epoch_train_loss = 0.0
+
+        for indices, anchor_ids, pos_ids, neg_ids in train_dataloader:
+            # Saving indices
+            all_indices.append(indices)
+
+            # Moving tensors to device
+            anchor_ids = anchor_ids.to(device)
+            pos_ids = pos_ids.to(device)
+            neg_ids = neg_ids.to(device)
+
+            # Computing embeddings, saving them and computing loss
+            optimizer.zero_grad()
+            anchor_emb = model(anchor_ids)
+            pos_emb    = model(pos_ids)
+            all_embeddings.append(anchor_emb.cpu().detach())
+
+            B, N, L = neg_ids.size()
+            neg_flat = neg_ids.view(B*N, L)
+            neg_emb_flat = model(neg_flat)
+            neg_emb = neg_emb_flat.view(B, N, -1)
+
+            loss = infonce_loss(anchor_emb, pos_emb, neg_emb, device, temperature=0.07)
+            loss.backward()
+            optimizer.step()
+
+            epoch_train_loss += loss.item()
+
+        avg_train_loss = epoch_train_loss/len(train_dataloader)
+        train_losses.append(avg_train_loss)
+
+        # Validation part of training loop
+        model.eval()
+        model.zero_grad()
+        epoch_val_loss = 0.0
+        with torch.no_grad():
+            for indices, anchor_ids, pos_ids, neg_ids in val_dataloader:
+                # Moving tensors to dedvice
+                anchor_ids = anchor_ids.to(device)
+                pos_ids = pos_ids.to(device)
+                neg_ids = neg_ids.to(device)
+
+                # Computing embeddings and computing loss
+                anchor_emb = model(anchor_ids)
+                pos_emb = model(pos_ids)
+
+                B, N, L = neg_ids.size()
+                neg_flat = neg_ids.view(B*N, L)
+                neg_emb_flat = model(neg_flat)
+                neg_emb = neg_emb_flat.view(B, N, -1)
+
+                loss = infonce_loss(anchor_emb, pos_emb, neg_emb, device, temperature=0.07)
+
+                epoch_val_loss += loss.item()
+
+        avg_val_loss = epoch_val_loss/len(val_dataloader)
+        val_losses.append(avg_val_loss)
+
+        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
+
+        # Implementing early-stopping
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            patience_counter = 0
+            torch.save({'epoch': epoch + 1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, f'../data/models_weights/{model_name}.pth')
         else:
             patience_counter += 1
             if patience_counter >= patience:
