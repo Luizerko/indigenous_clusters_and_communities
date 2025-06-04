@@ -143,9 +143,14 @@ def get_embeddings(model, tokenizer, input_ids, device, fine_tuned=False):
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
         else:
             outputs = model.model(input_ids=input_ids, attention_mask=attention_mask)
-        cls_embeddings = outputs.last_hidden_state[:, 0]
+        # cls_embeddings = outputs.last_hidden_state[:, 0]
+        last_embeddings = outputs.last_hidden_state
+        attention_mask_expanded = attention_mask.unsqueeze(-1).float()
+        sum_embedding = (last_embeddings*attention_mask_expanded).sum(dim=1)
+        length = attention_mask_expanded.sum(dim=1).clamp(min=1e-9)
+        mean_embedding = sum_embedding/length
 
-    return cls_embeddings
+    return mean_embedding
 
 # Function to compute attributions via integrated gradients torwards the [CLS] token
 def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggreg_type='sum', return_tokens=True, verbose=False, sample_num=0):
@@ -225,12 +230,17 @@ class USimCSEModel(nn.Module):
         # Computing attention mask and moving it to device as well
         attention_mask = (input_ids != self.pad_token_id).to(self.device).long()
 
-        # Extracting [CLS] token embedding and passing it through dropout to late compute NT-Xent loss
+        # Extracting mean pooling embedding and passing it through dropout to late compute NT-Xent loss
         outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-        cls_embedding = outputs.last_hidden_state[:, 0]
-        cls_embedding = self.dropout(cls_embedding)
+        # cls_embedding = outputs.last_hidden_state[:, 0]
+        last_embeddings = outputs.last_hidden_state
+        attention_mask_expanded = attention_mask.unsqueeze(-1).float()
+        sum_embedding = (last_embeddings*attention_mask_expanded).sum(dim=1)
+        length = attention_mask_expanded.sum(dim=1).clamp(min=1e-9)
+        mean_embedding = sum_embedding/length
+        mean_embedding = self.dropout(mean_embedding)
         
-        return cls_embedding
+        return mean_embedding
     
 # Class for the (supervised)  InfoNCE models. The idea is to fine-tune different models using the contrastive InfoNCE approach with InfoNCE loss, which is a supervised contrastive loss based on our distribution of positive against all negatives, good for specializing the embedding model to our data without having to group it by categories
 class InfoNCEModel(nn.Module):
@@ -480,24 +490,88 @@ def infonce_training_loop(model, optimizer, train_dataloader, val_dataloader, de
     return all_indices, all_embeddings, train_losses, val_losses
 
 # Function to evaluate model on STS-B PTBR
-def stsb_test(model, usimcse=True):
+def stsb_test(model, device, tokenizer, max_length=64, model_loss='vanilla'):
     # Loading STS-B PTBR version from Hugging Face. Validation split is used because it's more concise and it has labels (the test doesn't)
-    sts = load_dataset("extraglue", "stsb_pt-BR", split="validation")
-    
+    sts = load_dataset("PORTULAN/extraglue", "stsb_pt-BR", split="validation")
+
     model.eval()
     
-    # Turning on dropout because of the unsupervised SimCSE method
-    if usimcse:
-        model.dropout.train()
+    with torch.no_grad():
+        if model_loss == 'vanilla':
+            # Computing encodings for sentences, their similarity and comparing to the given label
+            sims, labels = [], []
+            for example in sts:
+                sent1, sent2 = example["sentence1"], example["sentence2"]
+                
+                # Generating input_ids and attention_masks to foward pass sentences
+                input_ids1 = tokenizer(sent1, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                attention_mask1 = (input_ids1 != tokenizer.pad_token_id).to(device).long()
 
-    # Computing encodings for sentences, their similarity and comparing to the given label
-    sims, labels = [], []
-    for example in sts:
-        sent1, sent2 = example["sentence1"], example["sentence2"]
-        z1 = model(sent1)
-        z2 = model(sent2)
-        sims.append(F.cosine_similarity(z1, z2))
-        labels.append(example["label"])
+                input_ids2 = tokenizer(sent2, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                attention_mask2 = (input_ids2 != tokenizer.pad_token_id).to(device).long()
+
+                # Effectively passing sentences through model
+                z1 = model(input_ids1, attention_mask=attention_mask1).last_hidden_state
+                sum_emb1 = (z1*attention_mask1.unsqueeze(-1).float()).sum(dim=1)
+                lengths1 = attention_mask1.unsqueeze(-1).float().sum(dim=1).clamp(min=1e-9)
+                z1 = sum_emb1/lengths1
+                
+                z2 = model(input_ids2, attention_mask=attention_mask2).last_hidden_state
+                sum_emb2 = (z2*attention_mask2.unsqueeze(-1).float()).sum(dim=1)
+                lengths2 = attention_mask2.unsqueeze(-1).float().sum(dim=1).clamp(min=1e-9)
+                z2 = sum_emb2/lengths2
+
+                sims.append(F.cosine_similarity(z1, z2).item())
+                labels.append(example["label"])
+
+        # Turning on dropout because of the unsupervised SimCSE method
+        elif model_loss == 'usimcse':
+            model.dropout.train()
+
+            # Computing encodings for sentences, their similarity and comparing to the given label
+            sims, labels = [], []
+            for example in sts:
+                sent1, sent2 = example["sentence1"], example["sentence2"]
+
+                # Generating input_ids and attention_masks to foward pass sentences
+                input_ids1 = tokenizer(sent1, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                input_ids2 = tokenizer(sent2, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+
+                # Effectively passing sentences through model
+                z1 = model(input_ids1)
+                z2 = model(input_ids2)
+                sims.append(F.cosine_similarity(z1, z2).item())
+                labels.append(example["label"])
+
+        # Evaluating InfoNCE models by dropping out MLP head and getting CLS token
+        elif model_loss == 'infonce':
+            model = model.model
+
+            # Computing encodings for sentences, their similarity and comparing to the given label
+            sims, labels = [], []
+            for example in sts:
+                sent1, sent2 = example["sentence1"], example["sentence2"]
+                
+                # Generating input_ids and attention_masks to foward pass sentences
+                input_ids1 = tokenizer(sent1, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                attention_mask1 = (input_ids1 != tokenizer.pad_token_id).to(device).long()
+
+                input_ids2 = tokenizer(sent2, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                attention_mask2 = (input_ids2 != tokenizer.pad_token_id).to(device).long()
+
+                # Effectively passing sentences through model
+                z1 = model(input_ids1, attention_mask=attention_mask1).last_hidden_state
+                sum_emb1 = (z1*attention_mask1.unsqueeze(-1).float()).sum(dim=1)
+                lengths1 = attention_mask1.unsqueeze(-1).float().sum(dim=1).clamp(min=1e-9)
+                z1 = sum_emb1/lengths1
+                
+                z2 = model(input_ids2, attention_mask=attention_mask2).last_hidden_state
+                sum_emb2 = (z2*attention_mask2.unsqueeze(-1).float()).sum(dim=1)
+                lengths2 = attention_mask2.unsqueeze(-1).float().sum(dim=1).clamp(min=1e-9)
+                z2 = sum_emb2/lengths2
+
+                sims.append(F.cosine_similarity(z1, z2).item())
+                labels.append(example["label"])
 
     pearson, _ = pearsonr(sims, labels)
     print(f"STS-B (Pearson): {pearson:.4f}")
