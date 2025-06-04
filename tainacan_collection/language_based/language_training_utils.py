@@ -122,12 +122,17 @@ class CaptumWrappedModel(nn.Module):
 
         # Extracting [CLS] token embedding and computing its L2 norm (for attributions target)
         outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-        cls_embedding = outputs.last_hidden_state[:, 0]
+        # cls_embedding = outputs.last_hidden_state[:, 0]
+        last_embeddings = outputs.last_hidden_state
+        attention_mask_expanded = attention_mask.unsqueeze(-1).float()
+        sum_embedding = (last_embeddings*attention_mask_expanded).sum(dim=1)
+        length = attention_mask_expanded.sum(dim=1).clamp(min=1e-9)
+        mean_embedding = sum_embedding/length
         
         if self.target_type == 'l2-norm':
-            cls_scalar = cls_embedding.norm(p=2, dim=1)
+            cls_scalar = mean_embedding.norm(p=2, dim=1)
         elif self.target_type == 'cos-sim':
-            cls_scalar = F.cosine_similarity(cls_embedding, self.baseline_embedding, dim=1)
+            cls_scalar = F.cosine_similarity(mean_embedding, self.baseline_embedding, dim=1)
         
         return cls_scalar
     
@@ -136,7 +141,7 @@ def get_embeddings(model, tokenizer, input_ids, device, fine_tuned=False):
     # Computing attention mask
     attention_mask = (input_ids != tokenizer.pad_token_id).to(device).long()
     
-    # And now the [CLS] token embeddings
+    # And now the mean pooling embeddings
     with torch.no_grad():
         model.eval()
         if not fine_tuned:
