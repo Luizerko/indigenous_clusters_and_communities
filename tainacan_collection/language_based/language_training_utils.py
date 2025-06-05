@@ -308,7 +308,7 @@ def nt_xent_loss(embeddings, device, temperature=0.05):
     return loss
 
 # Training loop for the unsupervised SimCSE
-def usimcse_training_loop(model, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.05, patience=3, model_name='usimcse_bertimbau'):
+def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.05, patience=3, model_name='usimcse_bertimbau'):
     # Varibales for saving the best model and early-stopping
     best_val_loss = float('inf')
     patience_counter = 0
@@ -317,9 +317,10 @@ def usimcse_training_loop(model, optimizer, train_dataloader, val_dataloader, de
     all_indices = []
     all_embeddings = []
 
-    # Tracking loss
+    # Tracking loss and STS-Bs
     train_losses = []
     val_losses = []
+    stsb_track = []
 
     # Effective training loop
     for epoch in tqdm(range(epochs), desc='Epoch'):
@@ -366,20 +367,26 @@ def usimcse_training_loop(model, optimizer, train_dataloader, val_dataloader, de
         avg_val_loss = epoch_val_loss/len(val_dataloader)
         val_losses.append(avg_val_loss)
 
-        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
+        # Tracking STS-B score as a validation method as well
+        print(input_ids.size())
+        stsb_track.append(stsb_test(model, device, tokenizer, max_length=input_ids.size(1), model_loss='usimcse'))
+
+        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | STS-B: {stsb_track[-1]:.4f}")
 
         # Implementing early-stopping
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             patience_counter = 0
             torch.save({'epoch': epoch+1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, f'../data/models_weights/{model_name}.pth')
+        elif avg_val_loss < best_val_loss*1.25:
+            continue        
         else:
             patience_counter += 1
             if patience_counter >= patience:
                 print("Early stopping!")
                 break
 
-    return all_indices, all_embeddings, train_losses, val_losses
+    return all_indices, all_embeddings, train_losses, val_losses, stsb_track
 
 # Computing the InfoNCE loss. The anchor embeddings in this case should have shape [batch_size, dim], as well as the positive embeddings. The negative embeddings should have shape [batch_size, number_of_negatives, dim]. We then compute cosine similarity between the examples and the anchor and use them all in a smart way as logits for our cross-entropy loss (like the positive sample is our correct label and the negative samples are wrong labels)
 def infonce_loss(anchor_embeddings, pos_embeddings, neg_embeddings, device, temperature=0.07):
@@ -405,7 +412,7 @@ def infonce_loss(anchor_embeddings, pos_embeddings, neg_embeddings, device, temp
     return loss
 
 # Training loop for the supervised contrastive learning (InfoNCE) 
-def infonce_training_loop(model, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.07, patience=3, model_name='infonce_bertimbau'):
+def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.07, patience=3, model_name='infonce_bertimbau'):
     # Varibales for saving the best model and early-stopping
     best_val_loss = float('inf')
     patience_counter = 0
@@ -414,9 +421,10 @@ def infonce_training_loop(model, optimizer, train_dataloader, val_dataloader, de
     all_indices = []
     all_embeddings = []
 
-    # Tracking loss
+    # Tracking loss and STS-B
     train_losses = []
     val_losses = []
+    stsb_track = []
 
     # Effective training loop
     for epoch in tqdm(range(epochs), desc="Epoch"):
@@ -479,20 +487,26 @@ def infonce_training_loop(model, optimizer, train_dataloader, val_dataloader, de
         avg_val_loss = epoch_val_loss/len(val_dataloader)
         val_losses.append(avg_val_loss)
 
-        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
+        # Tracking STS-B score as a validation method as well
+        print(anchor_ids.size())
+        stsb_track.append(stsb_test(model, device, tokenizer, max_length=anchor_ids.size(1), model_loss='usimcse'))
+
+        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | STS-B: {stsb_track[-1]:.4f}")
 
         # Implementing early-stopping
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             patience_counter = 0
             torch.save({'epoch': epoch + 1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, f'../data/models_weights/{model_name}.pth')
+        elif avg_val_loss < best_val_loss*1.25:
+            continue
         else:
             patience_counter += 1
             if patience_counter >= patience:
                 print("Early stopping!")
                 break
 
-    return all_indices, all_embeddings, train_losses, val_losses
+    return all_indices, all_embeddings, train_losses, val_losses, stsb_track
 
 # Function to evaluate model on STS-B PTBR
 def stsb_test(model, device, tokenizer, max_length=64, model_loss='vanilla'):
@@ -580,27 +594,36 @@ def stsb_test(model, device, tokenizer, max_length=64, model_loss='vanilla'):
 
     pearson, _ = pearsonr(sims, labels)
     print(f"STS-B (Pearson): {pearson:.4f}")
+    
+    return pearson
 
 # Function to evaluate model on our (in-context) generated dataset in STS-B fashion
 # def context_stsb_test(model, test_indices, usimcse=True):
     
 
 # Function to plot losses obtained during training
-def plot_training_curves(train_losses, val_losses, model_name):
+def plot_training_curves(train_losses, val_losses, stsb_track, model_name):
     plt.figure(figsize=(8,4))
     plt.suptitle(f'Training Loss and Validation Loss for {model_name}')
     
-    # Plotting loss curve
-    plt.subplot(1, 2, 1)
+    # Plotting training loss curve
+    plt.subplot(2, 2, 1)
     plt.plot([i+1 for i in range(len(train_losses))], train_losses, 'x-', c='b')
     plt.title("Training Loss x Epoch")
     plt.xlabel("")
     plt.ylabel("")
     
-    # Plotting accuracy curve
-    plt.subplot(1, 2, 2)
+    # Plotting validation loss curve
+    plt.subplot(2, 2, 2)
     plt.plot([i+1 for i in range(len(val_losses))], val_losses, 'x-', c='r')
     plt.title("Validation Loss x Epoch")
+    plt.xlabel("")
+    plt.ylabel("")
+
+    # Plotting STS-B curve
+    plt.subplot(2, 2, 3)
+    plt.plot([i+1 for i in range(len(stsb_track))], stsb_track, 'x-', c='g')
+    plt.title("STS-B Pearson Correlation x Epoch")
     plt.xlabel("")
     plt.ylabel("")
     
