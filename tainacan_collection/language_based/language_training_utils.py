@@ -308,7 +308,11 @@ def nt_xent_loss(embeddings, device, temperature=0.05):
     return loss
 
 # Training loop for the unsupervised SimCSE
-def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.05, patience=3, model_name='usimcse_bertimbau'):
+def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dataloader, test_dataset, df, device, epochs=10, temperature=0.05, patience=3, model_name='usimcse_bertimbau'):
+    # Getting test indices to run in-context STS-B later
+    test_indices = test_dataset.df.index.tolist()
+    test_df = df.loc[test_indices, ['descricao_resumida', 'positive_contrastive', 'single_negative_contrastive']]
+    
     # Varibales for saving the best model and early-stopping
     best_val_loss = float('inf')
     patience_counter = 0
@@ -321,6 +325,7 @@ def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
     train_losses = []
     val_losses = []
     stsb_track = []
+    in_context_stsb_track = []
 
     # Effective training loop
     for epoch in tqdm(range(epochs), desc='Epoch'):
@@ -368,10 +373,12 @@ def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
         val_losses.append(avg_val_loss)
 
         # Tracking STS-B score as a validation method as well
-        print(input_ids.size())
-        stsb_track.append(stsb_test(model, device, tokenizer, max_length=input_ids.size(1), model_loss='usimcse'))
+        stsb_track.append(stsb_test(model, device, tokenizer, max_length=input_ids.size(1), model_loss='usimcse', verbose=False))
 
-        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | STS-B: {stsb_track[-1]:.4f}")
+        # Tracking in-context STS-B score as the validation method 
+        in_context_stsb_track.append(in_context_stsb_test(model, device, tokenizer, test_df, max_length=input_ids.size(1), model_loss='usimcse', verbose=False))
+
+        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | STS-B: {stsb_track[-1]:.4f} | in-context STS-B: {in_context_stsb_track[-1]:.4f}")
 
         # Implementing early-stopping
         if avg_val_loss < best_val_loss:
@@ -386,7 +393,7 @@ def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
                 print("Early stopping!")
                 break
 
-    return all_indices, all_embeddings, train_losses, val_losses, stsb_track
+    return all_indices, all_embeddings, train_losses, val_losses, stsb_track, in_context_stsb_track
 
 # Computing the InfoNCE loss. The anchor embeddings in this case should have shape [batch_size, dim], as well as the positive embeddings. The negative embeddings should have shape [batch_size, number_of_negatives, dim]. We then compute cosine similarity between the examples and the anchor and use them all in a smart way as logits for our cross-entropy loss (like the positive sample is our correct label and the negative samples are wrong labels)
 def infonce_loss(anchor_embeddings, pos_embeddings, neg_embeddings, device, temperature=0.07):
@@ -406,13 +413,17 @@ def infonce_loss(anchor_embeddings, pos_embeddings, neg_embeddings, device, temp
     logits = logits/temperature
     
     # Computing InfoNCE loss
-    labels = torch.zeros(anchor_norm.size(0), dtype=torch.long, device=logits.device)
+    labels = torch.zeros(anchor_norm.size(0), dtype=torch.long, device=device)
     loss = F.cross_entropy(logits, labels)
 
     return loss
 
 # Training loop for the supervised contrastive learning (InfoNCE) 
-def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dataloader, device, epochs=10, temperature=0.07, patience=3, model_name='infonce_bertimbau'):
+def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dataloader, test_dataset, df, device, epochs=10, temperature=0.07, patience=3, model_name='infonce_bertimbau'):
+    # Getting test indices to run in-context STS-B later
+    test_indices = test_dataset.df.index.tolist()
+    test_df = df.loc[test_indices, ['descricao_resumida', 'positive_contrastive', 'single_negative_contrastive']]
+    
     # Varibales for saving the best model and early-stopping
     best_val_loss = float('inf')
     patience_counter = 0
@@ -425,6 +436,7 @@ def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
     train_losses = []
     val_losses = []
     stsb_track = []
+    in_context_stsb_track = []
 
     # Effective training loop
     for epoch in tqdm(range(epochs), desc="Epoch"):
@@ -488,10 +500,12 @@ def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
         val_losses.append(avg_val_loss)
 
         # Tracking STS-B score as a validation method as well
-        print(anchor_ids.size())
-        stsb_track.append(stsb_test(model, device, tokenizer, max_length=anchor_ids.size(1), model_loss='usimcse'))
+        stsb_track.append(stsb_test(model, device, tokenizer, max_length=anchor_ids.size(1), model_loss='infonce', verbose=False))
 
-        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | STS-B: {stsb_track[-1]:.4f}")
+        # Tracking in-context STS-B score as the validation method 
+        in_context_stsb_track.append(in_context_stsb_test(model, device, tokenizer, test_df, max_length=anchor_ids.size(1), model_loss='infonce', verbose=False))
+
+        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | STS-B: {stsb_track[-1]:.4f} | in-context STS-B: {in_context_stsb_track[-1]:.4f}")
 
         # Implementing early-stopping
         if avg_val_loss < best_val_loss:
@@ -509,12 +523,11 @@ def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
     return all_indices, all_embeddings, train_losses, val_losses, stsb_track
 
 # Function to evaluate model on STS-B PTBR
-def stsb_test(model, device, tokenizer, max_length=64, model_loss='vanilla'):
+def stsb_test(model, device, tokenizer, max_length=64, model_loss='vanilla', verbose=False):
     # Loading STS-B PTBR version from Hugging Face. Validation split is used because it's more concise and it has labels (the test doesn't)
     sts = load_dataset("PORTULAN/extraglue", "stsb_pt-BR", split="validation")
 
     model.eval()
-    
     with torch.no_grad():
         if model_loss == 'vanilla':
             # Computing encodings for sentences, their similarity and comparing to the given label
@@ -593,16 +606,127 @@ def stsb_test(model, device, tokenizer, max_length=64, model_loss='vanilla'):
                 labels.append(example["label"])
 
     pearson, _ = pearsonr(sims, labels)
-    print(f"STS-B (Pearson): {pearson:.4f}")
+    if verbose:
+        print(f"STS-B (Pearson): {pearson:.4f}")
     
     return pearson
 
 # Function to evaluate model on our (in-context) generated dataset in STS-B fashion
-# def context_stsb_test(model, test_indices, usimcse=True):
+def in_context_stsb_test(model, device, tokenizer, test_df, max_length=64, model_loss='vanilla', verbose=False):
+    model.eval()
+    with torch.no_grad():
+        if model_loss == 'vanilla':
+            # Computing encodings for sentences, their similarity and comparing to the given label
+            sims, labels = [], []
+            for index, row in test_df.iterrows():
+                anchor, pos, neg = row['descricao_resumida'], row['positive_contrastive'], row['single_negative_contrastive']
+                
+                # Generating input_ids and attention_masks to foward pass sentences
+                anchor_ids = tokenizer(anchor, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                anchor_attention_mask = (anchor_ids != tokenizer.pad_token_id).to(device).long()
+
+                pos_ids = tokenizer(pos, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                pos_attention_mask = (pos_ids != tokenizer.pad_token_id).to(device).long()
+
+                neg_ids = tokenizer(neg, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                neg_attention_mask = (neg_ids != tokenizer.pad_token_id).to(device).long()
+
+                # Effectively passing sentences through model
+                anchor_z = model(anchor_ids, attention_mask=anchor_attention_mask).last_hidden_state
+                anchor_sum_emb = (anchor_z*anchor_attention_mask.unsqueeze(-1).float()).sum(dim=1)
+                anchor_lengths = anchor_attention_mask.unsqueeze(-1).float().sum(dim=1).clamp(min=1e-9)
+                anchor_z = anchor_sum_emb/anchor_lengths
+                
+                pos_z = model(pos_ids, attention_mask=pos_attention_mask).last_hidden_state
+                pos_sum_emb = (pos_z*pos_attention_mask.unsqueeze(-1).float()).sum(dim=1)
+                pos_lengths = pos_attention_mask.unsqueeze(-1).float().sum(dim=1).clamp(min=1e-9)
+                pos_z = pos_sum_emb/pos_lengths
+
+                neg_z = model(neg_ids, attention_mask=neg_attention_mask).last_hidden_state
+                neg_sum_emb = (neg_z*neg_attention_mask.unsqueeze(-1).float()).sum(dim=1)
+                neg_lengths = neg_attention_mask.unsqueeze(-1).float().sum(dim=1).clamp(min=1e-9)
+                neg_z = neg_sum_emb/neg_lengths
+
+                # Appending cosine similarities and pre-set (artificial) labels
+                sims.append(F.cosine_similarity(anchor_z, pos_z).item())
+                sims.append(F.cosine_similarity(anchor_z, neg_z).item())
+                labels.append(4.0)
+                labels.append(1.0)
+
+        # Turning on dropout because of the unsupervised SimCSE method
+        elif model_loss == 'usimcse':
+            model.dropout.train()
+
+            # Computing encodings for sentences, their similarity and comparing to the given label
+            sims, labels = [], []
+            for index, row in test_df.iterrows():
+                anchor, pos, neg = row['descricao_resumida'], row['positive_contrastive'], row['single_negative_contrastive']
+                
+                # Generating input_ids and attention_masks to foward pass sentences
+                anchor_ids = tokenizer(anchor, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                pos_ids = tokenizer(pos, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                neg_ids = tokenizer(neg, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                
+                # Effectively passing sentences through model
+                anchor_z = model(anchor_ids, attention_mask=anchor_attention_mask)
+                pos_z = model(pos_ids, attention_mask=pos_attention_mask)
+                neg_z = model(neg_ids, attention_mask=neg_attention_mask)
+
+                # Appending cosine similarities and pre-set (artificial) labels
+                sims.append(F.cosine_similarity(anchor_z, pos_z).item())
+                sims.append(F.cosine_similarity(anchor_z, neg_z).item())
+                labels.append(4.0)
+                labels.append(1.0)
+
+        # Evaluating InfoNCE models by dropping out MLP head and getting CLS token
+        elif model_loss == 'infonce':
+            model = model.model
+
+            # Computing encodings for sentences, their similarity and comparing to the given label
+            sims, labels = [], []
+            for index, row in test_df.iterrows():
+                anchor, pos, neg = row['descricao_resumida'], row['positive_contrastive'], row['single_negative_contrastive']
+                
+                # Generating input_ids and attention_masks to foward pass sentences
+                anchor_ids = tokenizer(anchor, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                anchor_attention_mask = (anchor_ids != tokenizer.pad_token_id).to(device).long()
+
+                pos_ids = tokenizer(pos, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                pos_attention_mask = (pos_ids != tokenizer.pad_token_id).to(device).long()
+
+                neg_ids = tokenizer(neg, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
+                neg_attention_mask = (neg_ids != tokenizer.pad_token_id).to(device).long()
+
+                # Effectively passing sentences through model
+                anchor_z = model(anchor_ids, attention_mask=anchor_attention_mask).last_hidden_state
+                anchor_sum_emb = (anchor_z*anchor_attention_mask.unsqueeze(-1).float()).sum(dim=1)
+                anchor_lengths = anchor_attention_mask.unsqueeze(-1).float().sum(dim=1).clamp(min=1e-9)
+                anchor_z = anchor_sum_emb/anchor_lengths
+                
+                pos_z = model(pos_ids, attention_mask=pos_attention_mask).last_hidden_state
+                pos_sum_emb = (pos_z*pos_attention_mask.unsqueeze(-1).float()).sum(dim=1)
+                pos_lengths = pos_attention_mask.unsqueeze(-1).float().sum(dim=1).clamp(min=1e-9)
+                pos_z = pos_sum_emb/pos_lengths
+
+                neg_z = model(neg_ids, attention_mask=neg_attention_mask).last_hidden_state
+                neg_sum_emb = (neg_z*neg_attention_mask.unsqueeze(-1).float()).sum(dim=1)
+                neg_lengths = neg_attention_mask.unsqueeze(-1).float().sum(dim=1).clamp(min=1e-9)
+                neg_z = neg_sum_emb/neg_lengths
+
+                # Appending cosine similarities and pre-set (artificial) labels
+                sims.append(F.cosine_similarity(anchor_z, pos_z).item())
+                sims.append(F.cosine_similarity(anchor_z, neg_z).item())
+                labels.append(4.0)
+                labels.append(1.0)
+
+    pearson, _ = pearsonr(sims, labels)
+    if verbose:
+        print(f"STS-B (Pearson): {pearson:.4f}")
     
+    return pearson
 
 # Function to plot losses obtained during training
-def plot_training_curves(train_losses, val_losses, stsb_track, model_name):
+def plot_training_curves(train_losses, val_losses, stsb_track, in_context_stsb_track, model_name):
     plt.figure(figsize=(8,4))
     plt.suptitle(f'Training Loss and Validation Loss for {model_name}')
     
@@ -624,6 +748,13 @@ def plot_training_curves(train_losses, val_losses, stsb_track, model_name):
     plt.subplot(2, 2, 3)
     plt.plot([i+1 for i in range(len(stsb_track))], stsb_track, 'x-', c='g')
     plt.title("STS-B Pearson Correlation x Epoch")
+    plt.xlabel("")
+    plt.ylabel("")
+
+    # Plotting in-context STS-B curve
+    plt.subplot(2, 2, 4)
+    plt.plot([i+1 for i in range(len(in_context_stsb_track))], in_context_stsb_track, 'x-', c='y')
+    plt.title("In-Context STS-B Pearson Correlation x Epoch")
     plt.xlabel("")
     plt.ylabel("")
     
