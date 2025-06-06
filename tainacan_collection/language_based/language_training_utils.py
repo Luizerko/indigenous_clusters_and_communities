@@ -310,11 +310,14 @@ def nt_xent_loss(embeddings, device, temperature=0.05):
 # Training loop for the unsupervised SimCSE
 def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dataloader, test_dataset, df, device, epochs=10, temperature=0.05, patience=3, model_name='usimcse_bertimbau'):
     # Getting test indices to run in-context STS-B later
-    test_indices = test_dataset.df.index.tolist()
+    positional_indices = test_dataset.indices
+    test_indices = test_dataset.dataset.df.index[positional_indices].tolist()
     test_df = df.loc[test_indices, ['descricao_resumida', 'positive_contrastive', 'single_negative_contrastive']]
     
     # Varibales for saving the best model and early-stopping
     best_val_loss = float('inf')
+    best_stsb = -float('inf')
+    best_in_context_stsb = -float('inf')
     patience_counter = 0
 
     # Saving indicies and embeddings for later usage
@@ -381,11 +384,11 @@ def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
         print(f"Epoch {epoch+1}/{epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | STS-B: {stsb_track[-1]:.4f} | in-context STS-B: {in_context_stsb_track[-1]:.4f}")
 
         # Implementing early-stopping
-        if avg_val_loss < best_val_loss:
-            best_val_loss = avg_val_loss
+        if stsb_track[-1] > best_stsb:
+            best_stsb = stsb_track[-1]
             patience_counter = 0
             torch.save({'epoch': epoch+1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, f'../data/models_weights/{model_name}.pth')
-        elif avg_val_loss < best_val_loss*1.25:
+        elif stsb_track[-1] > best_stsb*0.9:
             continue        
         else:
             patience_counter += 1
@@ -421,11 +424,14 @@ def infonce_loss(anchor_embeddings, pos_embeddings, neg_embeddings, device, temp
 # Training loop for the supervised contrastive learning (InfoNCE) 
 def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dataloader, test_dataset, df, device, epochs=10, temperature=0.07, patience=3, model_name='infonce_bertimbau'):
     # Getting test indices to run in-context STS-B later
-    test_indices = test_dataset.df.index.tolist()
+    positional_indices = test_dataset.indices
+    test_indices = test_dataset.dataset.df.index[positional_indices].tolist()
     test_df = df.loc[test_indices, ['descricao_resumida', 'positive_contrastive', 'single_negative_contrastive']]
     
     # Varibales for saving the best model and early-stopping
     best_val_loss = float('inf')
+    best_stsb = -float('inf')
+    best_in_context_stsb = -float('inf')
     patience_counter = 0
 
     # Saving indicies and embeddings for later usage
@@ -508,11 +514,11 @@ def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
         print(f"Epoch {epoch+1}/{epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | STS-B: {stsb_track[-1]:.4f} | in-context STS-B: {in_context_stsb_track[-1]:.4f}")
 
         # Implementing early-stopping
-        if avg_val_loss < best_val_loss:
-            best_val_loss = avg_val_loss
+        if stsb_track[-1] > best_stsb:
+            best_stsb = stsb_track[-1]
             patience_counter = 0
             torch.save({'epoch': epoch + 1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, f'../data/models_weights/{model_name}.pth')
-        elif avg_val_loss < best_val_loss*1.25:
+        elif stsb_track[-1] > best_stsb*0.9:
             continue
         else:
             patience_counter += 1
@@ -721,13 +727,13 @@ def in_context_stsb_test(model, device, tokenizer, test_df, max_length=64, model
 
     pearson, _ = pearsonr(sims, labels)
     if verbose:
-        print(f"STS-B (Pearson): {pearson:.4f}")
+        print(f"In-Context STS-B (Pearson): {pearson:.4f}")
     
     return pearson
 
 # Function to plot losses obtained during training
 def plot_training_curves(train_losses, val_losses, stsb_track, in_context_stsb_track, model_name):
-    plt.figure(figsize=(8,4))
+    plt.figure(figsize=(10,6))
     plt.suptitle(f'Training Loss and Validation Loss for {model_name}')
     
     # Plotting training loss curve
