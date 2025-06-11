@@ -103,7 +103,7 @@ def get_dataloaders(dataset, batch_size=8, splits=None):
     else:
         return DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
-# Captum compatible wrapper model for the vanilla models. Notice that we need to use a scalar representation for the [CLS] token so we can evaluate how ir varies with the other tokens (integrated gradients as the name suggests). In this case, we decided to go for the norm of the embedding vector
+# Captum compatible wrapper model for the vanilla models. Notice that we need to use a scalar representation for the mean pooling so we can evaluate how ir varies with the other tokens (integrated gradients as the name suggests). In this case, we decided to go for the norm of the embedding vector
 class CaptumWrappedModel(nn.Module):
     def __init__(self, model, pad_token_id, baseline_embedding, device, target_type='l2-norm'):
         super(CaptumWrappedModel, self).__init__()
@@ -120,23 +120,23 @@ class CaptumWrappedModel(nn.Module):
         # Computing attention mask and moving it to device as well
         attention_mask = (input_ids != self.pad_token_id).to(self.device).long()
 
-        # Extracting [CLS] token embedding and computing its L2 norm (for attributions target)
+        # Extracting mean pooling embedding and computing its L2 norm (for attributions target)
         outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
         # cls_embedding = outputs.last_hidden_state[:, 0]
         last_embeddings = outputs.last_hidden_state
         attention_mask_expanded = attention_mask.unsqueeze(-1).float()
         sum_embedding = (last_embeddings*attention_mask_expanded).sum(dim=1)
         length = attention_mask_expanded.sum(dim=1).clamp(min=1e-9)
-        mean_embedding = sum_embedding/length
+        mp_embedding = sum_embedding/length
         
         if self.target_type == 'l2-norm':
-            cls_scalar = mean_embedding.norm(p=2, dim=1)
+            mp_scalar = mp_embedding.norm(p=2, dim=1)
         elif self.target_type == 'cos-sim':
-            cls_scalar = F.cosine_similarity(mean_embedding, self.baseline_embedding, dim=1)
+            mp_scalar = F.cosine_similarity(mp_embedding, self.baseline_embedding, dim=1)
         
-        return cls_scalar
+        return mp_scalar
     
-# Function to compute [CLS] token embeddings
+# Function to compute mean pooling embeddings
 def get_embeddings(model, tokenizer, input_ids, device, fine_tuned=False):
     # Computing attention mask
     attention_mask = (input_ids != tokenizer.pad_token_id).to(device).long()
@@ -157,7 +157,7 @@ def get_embeddings(model, tokenizer, input_ids, device, fine_tuned=False):
 
     return mean_embedding
 
-# Function to compute attributions via integrated gradients torwards the [CLS] token
+# Function to compute attributions via integrated gradients torwards the mean pooling
 def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggreg_type='sum', return_tokens=True, verbose=False, sample_num=0):
     # Computing attributions and then summing over the embedding dimensions (because we compute attributions for every dimension of the tokens' embeddings, so we need some kind of aggregation to identify tokens individually)
     attributions, delta = lig.attribute(inputs=input_ids, baselines=baseline_input_ids, return_convergence_delta=True, n_steps=50)
@@ -174,7 +174,7 @@ def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggre
     except:
         print('Check for a zero division on one of the samples! Maybe an empty string?')
 
-    # If verbose, decoding tokens and getting attributions for the [CLS] token for the first sample
+    # If verbose, decoding tokens and getting attributions for the mean pooling for the first sample
     if return_tokens:
         sample_input_ids = input_ids[min(sample_num, len(input_ids)-1)]
         tokens = tokenizer.convert_ids_to_tokens(sample_input_ids.cpu().tolist())
@@ -581,7 +581,7 @@ def stsb_test(model, device, tokenizer, max_length=64, model_loss='vanilla', ver
                 sims.append(F.cosine_similarity(z1, z2).item())
                 labels.append(example["label"])
 
-        # Evaluating InfoNCE models by dropping out MLP head and getting CLS token
+        # Evaluating InfoNCE models by dropping out MLP head and getting mean pooling
         elif model_loss == 'infonce':
             model = model.model
 
@@ -674,9 +674,9 @@ def in_context_stsb_test(model, device, tokenizer, test_df, max_length=64, model
                 neg_ids = tokenizer(neg, return_tensors='pt', padding='max_length', truncation=True, max_length=max_length)['input_ids'].to(device)
                 
                 # Effectively passing sentences through model
-                anchor_z = model(anchor_ids, attention_mask=anchor_attention_mask)
-                pos_z = model(pos_ids, attention_mask=pos_attention_mask)
-                neg_z = model(neg_ids, attention_mask=neg_attention_mask)
+                anchor_z = model(anchor_ids)
+                pos_z = model(pos_ids)
+                neg_z = model(neg_ids)
 
                 # Appending cosine similarities and pre-set (artificial) labels
                 sims.append(F.cosine_similarity(anchor_z, pos_z).item())
@@ -684,7 +684,7 @@ def in_context_stsb_test(model, device, tokenizer, test_df, max_length=64, model
                 labels.append(4.0)
                 labels.append(1.0)
 
-        # Evaluating InfoNCE models by dropping out MLP head and getting CLS token
+        # Evaluating InfoNCE models by dropping out MLP head and getting mean pooling
         elif model_loss == 'infonce':
             model = model.model
 
