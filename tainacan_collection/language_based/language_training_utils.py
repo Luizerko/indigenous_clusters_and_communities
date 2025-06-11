@@ -256,14 +256,14 @@ class InfoNCEModel(nn.Module):
         self.device = device
 
         # Getting encoder hiddem_dim
-        encoder_dim = model.config['hidden_size']
+        encoder_dim = model.config.hidden_size
 
         # Simple MLP for fine-tuning
         self.mlp_head = nn.Sequential(
             nn.Linear(encoder_dim, hidden_dim),
-            nn.Relu(),
+            nn.ReLU(),
             nn.Linear(hidden_dim, proj_dim)
-        )
+        ).to(device)
         
     def forward(self, input_ids):
         # Moving (or guaranteeing) input_ids to proper device
@@ -319,6 +319,15 @@ def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
     best_stsb = -float('inf')
     best_in_context_stsb = -float('inf')
     patience_counter = 0
+
+    # Initial scores for reference (again) before training
+    first_input_ids = None
+    for _, input_ids in train_dataloader:
+        first_input_ids = input_ids
+        break
+    ini_stsb = stsb_test(model, device, tokenizer, max_length=first_input_ids.size(1), model_loss='usimcse', verbose=False)
+    ini_in_context_stsb = in_context_stsb_test(model, device, tokenizer, test_df, max_length=first_input_ids.size(1), model_loss='usimcse', verbose=False)
+    print(f'Initial STS-B: {ini_stsb:.4f} | Initial In-Context STS-B: {ini_in_context_stsb:.4f}')
 
     # Saving indicies and embeddings for later usage
     all_indices = []
@@ -388,6 +397,7 @@ def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
             best_stsb = stsb_track[-1]
             patience_counter = 0
             torch.save({'epoch': epoch+1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, f'../data/models_weights/{model_name}.pth')
+            print('New best model found!')
         elif stsb_track[-1] > best_stsb*0.9:
             continue        
         else:
@@ -434,6 +444,15 @@ def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
     best_in_context_stsb = -float('inf')
     patience_counter = 0
 
+    # Initial scores for reference (again) before training
+    first_anchor_ids = None
+    for _, anchor_ids, _, _ in train_dataloader:
+        first_anchor_ids = anchor_ids
+        break
+    ini_stsb = stsb_test(model, device, tokenizer, max_length=first_anchor_ids.size(1), model_loss='infonce', verbose=False)
+    ini_in_context_stsb = in_context_stsb_test(model, device, tokenizer, test_df, max_length=first_anchor_ids.size(1), model_loss='infonce', verbose=False)
+    print(f'Initial STS-B: {ini_stsb:.4f} | Initial In-Context STS-B: {ini_in_context_stsb:.4f}')
+
     # Saving indicies and embeddings for later usage
     all_indices = []
     all_embeddings = []
@@ -469,7 +488,7 @@ def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
             neg_emb_flat = model(neg_flat)
             neg_emb = neg_emb_flat.view(B, N, -1)
 
-            loss = infonce_loss(anchor_emb, pos_emb, neg_emb, device, temperature=0.07)
+            loss = infonce_loss(anchor_emb, pos_emb, neg_emb, device, temperature)
             loss.backward()
             optimizer.step()
 
@@ -518,6 +537,7 @@ def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
             best_stsb = stsb_track[-1]
             patience_counter = 0
             torch.save({'epoch': epoch + 1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, f'../data/models_weights/{model_name}.pth')
+            print('New best model found!')
         elif stsb_track[-1] > best_stsb*0.9:
             continue
         else:
