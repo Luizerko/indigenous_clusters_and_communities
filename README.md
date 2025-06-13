@@ -17,39 +17,26 @@ The main challenges lie in extracting, organizing, and analyzing the data from t
 
     .
     ├── assets                # Collection of images and GIFs used for the documentation
+    |   └── ...
+    ├── docs                  # Project's documentation folder
+    |   └── ...
     ├── tainacan_collection   # Code collection for Tainacan data exploration (core code folder)
     |   ├── assets            # Stylesheets for visualization tool
     |   ├── image_based       # Code focused on image based feature extraction and clustering
     |   ├── language_based    # Code focused on language based feature extraction and clustering
-    |   ├── multimodal        # Code focused on multimodal feature extraction and clustering
     |   └── ...
-    ├── README.md
-    ├── INSTALL.md            # Environment installation documentation
-    ├── DATASET.md            # Data extraction and processing documentation
-    ├── VISUALIZATION.md      # Visualization tool documentation
-    ├── CLUSTERING.md         # Clustering experiments documentation
     └── ...
 
 This is the base folder for the project. In here, you'll find:
  
- - The [install documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/INSTALL.md) to help set up your own environment.
+ - The [install documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/INSTALL.md) to help set up your own environment.
 
- - The [dataset documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/DATASET.md) describing how the data was extracted and processed, as well as explaining its attributes. 
+ - The [dataset documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/DATASET.md) describing how the data was extracted and processed, as well as explaining its attributes. 
  
- - The [visualization tool documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/VISUALIZATION.md) containing details reagarding the tool egineering and visual examples of its parts.
+ - The [visualization tool documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/VISUALIZATION.md) containing details reagarding the tool egineering and visual examples of its parts.
  
- - The [clustering experiments documentation](https://github.com/Luizerko/master_thesis/tree/main/CLUSTERING.md) describing all the clustering technical implementations and obtained results.
+ - The [clustering experiments documentation](https://github.com/Luizerko/master_thesis/tree/main/docs/CLUSTERING.md) describing all the clustering technical implementations and obtained results.
  
 If you want to take a look at the code itself, go into the [`tainacan_collection`](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection) folder and explore the individual files.
 
 I hope you have as much fun going through the repo as I had developing it all :grin:
-
-<!-- # Clustering Graffiti Around the World: a Visual Journey into Urban Art
-
-Urban art, particularly graffiti, has long been a powerful form of self-expression and cultural commentary, transforming public spaces into dynamic canvases that challenge societal norms, celebrate diversity, and capture the spirit of urban life. The advent of technology and digital archiving, however, has changed the study and preservation of art, offering new ways to analyze and share cultural heritage. Graffiti, as a globally widespread art form, presents unique opportunities for digital exploration, greatly exemplified by the [Graffiti-Database](https://graffiti-database.com/). This project, therefore, lies at the intersection of artificial intelligence, digital cultural preservation, and visual arts, with a focus on clustering and visualization. Using machine learning techniques, we aim to analyze and interpret graffiti on a large scale, connecting visual patterns, artists’ styles, and geographic locations. This project addresses the need for an organized, accessible graffiti dataset with the possibility of exploring clusters based on artistic features, becoming an interactive tool that allows the general public to navigate and better engage with this form of art.
-
-## Project Goals
-
-The current challenge is to create a structured pipeline to analyze, and later visualize, graffiti images coming from two different online sources, [17K-Graffiti](http://visualdslab.com/papers/17KGraffiti/) and Graffiti-Database. This process starts with data collection through web scraping and image preprocessing, using a graffiti detection model to identify and isolate graffiti elements in each image. Once the dataset is created, we will explore various clustering methods based on visual features. To make these clusters easier to visualize, we’ll use embedding techniques to project high-dimensional data into lower-dimensional spaces.
-
-The clustering will allow us to examine visual similarities among graffiti, providing a basis for comparing the results coming from different models and also comparing our findings to established art literature. We also aim to understand potential geographic connections between clusters, as well as connections between different artists. Our ultimate goal, therefore, is to develop an interactive platform where users can explore graffiti by groupings, geographical location, and artist, enhancing public access and engagement with graffiti art. If time permits, we’d like to go a step further by incorporating a style extraction network that allows users to apply graffiti styles from different clusters to their own images, making the platform even more artistically rich. -->
