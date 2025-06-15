@@ -8,12 +8,11 @@ Our tool was built using `Python` and two powerful interactive libraries: `Plotl
 
 The system is organized into three main sections, each offering a distinct way to explore the dataset. The first tab presents an interactive view of the data as point clouds, allowing users to explore visual and semantic relationships between items through various projection and filtering tools. The second tab focuses on the temporal dimension of the collection, enabling users to browse the museum's acquisition timeline and analyze how items are distributed across specific years. The third and final tab offers a geographic perspective, displaying the full dataset on a map of Brazil and linking each object and community to its associated location.
 
-<!-- Image of tabs -->
 <p align="center">
   <br>
-  <img src="assets/tab1.png" alt="First tab" width="30%" style="margin-right: 10px;">
-  <img src="assets/tab2.png" alt="Second tab" width="30%" style="margin-right: 10px;">
-  <img src="assets/tab3.png" alt="Third tab" width="30%">
+  <img src="../assets/tab1.png" alt="First tab" width="30%" style="margin-right: 10px;">
+  <img src="../assets/tab2.png" alt="Second tab" width="30%" style="margin-right: 10px;">
+  <img src="../assets/tab3.png" alt="Third tab" width="30%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
     Screenshots of the three primary tabs: (left) the Collection Semantic Space with point-cloud visualizations, (center) the Acquisition Timeline view, and (right) the Geographic Map of Brazil.
   </p>
@@ -28,11 +27,10 @@ Below, we describe each of these components in more detail.
 
 This tab presents several point-cloud based visualizations of the dataset. Each point represents an object, and users can choose between two display modes: marker-based - where colors can correspond to different clusters if applicable -  or image-based, where each point is replaced by the object’s actual image.
 
-<!-- Image of markers and images -->
 <p align="center">
   <br>
-  <img src="assets/grouping_markers.png" alt="Markers on grouping tab" width="45%" style="margin-right: 10px;">
-  <img src="assets/grouping_images.png" alt="Images on grouping tab" width="45%">
+  <img src="../assets/grouping_markers.png" alt="Markers on grouping tab" width="45%" style="margin-right: 10px;">
+  <img src="../assets/grouping_images.png" alt="Images on grouping tab" width="45%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
     Comparison of point-cloud display modes: (left) markers colored by cluster, and (right) item images replacing markers for a more intuitive visual grouping.
   </p>
@@ -67,11 +65,10 @@ The marker-based point cloud is fully interactive and designed to support explor
 
 In both cases, the card also includes key metadata: the item’s name, the community it comes from, and the year it was acquired by the museum. Additionally, the corresponding marker is visually emphasized with a subtle shadow and increased size to highlight the hovered item in the point cloud.
 
-<!-- Image of the hovering boxes both for the image case and for the textual case -->
 <p align="center">
   <br>
-  <img src="assets/grouping_hover_image.png" alt="Image card on hovering" width="45%" style="margin-right: 10px;">
-  <img src="assets/grouping_hover_text.png" alt="Textual card on hovering" width="45%">
+  <img src="../assets/grouping_hover_image.png" alt="Image card on hovering" width="45%" style="margin-right: 10px;">
+  <img src="../assets/grouping_hover_text.png" alt="Textual card on hovering" width="45%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
     Hover tooltips in point-cloud mode: (left) visual similarity tooltip displaying the full item image, and (right) textual similarity tooltip showing the description with highlighted keywords alongside a thumbnail.
   </p>
@@ -88,10 +85,9 @@ The visualization tool offers several grouping modes, allowing users to explore 
 
 One of the simplest modes is based on `tipo_de_materia_prima` (material type). This view serves as a baseline and splits the dataset into 7 distinct regions based on whether items are composed of *animal*, *vegetal*, *mineral*, or combinations of these. The regions are laid out in a triangle, with each vertex representing a pure material type. The sides between vertices represent objects composed of two materials (e.g., animal and vegetal), and the center contains objects made from all three. Since all items in a given region share the same material composition, we introduced 2D Gaussian noise to their positions to create a visual spread - turning a flat categorical layout into a more natural point-cloud view.
 
-<!-- Image of tipo_de_materia_prima grouping -->
 <p align="center">
   <br>
-  <img src="assets/grouping_tipo_materia_prima.png" alt="Tipo de matéria prima grouping" width="60%">
+  <img src="../assets/grouping_tipo_materia_prima.png" alt="Tipo de matéria prima grouping" width="60%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
     Material composition grouping: objects arranged within a triangle based on primary materials (animal, vegetal, mineral), with 2D noise added for visual spread.
   </p>
@@ -112,15 +108,14 @@ The four visual clustering options differ in how they were trained:
 
 - **Single-head (`povo`):** This model was fine-tuned to predict `povo`. Due to the large number of communities and data imbalance, this view lacks global structure but still reveals local clusters that group items from the same or similar communities. It’s best used when exploring the collection with specific communities in mind.
 
-<!-- Images of visual groupings -->
 <p align="center">
   <br>
-  <img src="assets/grouping_imagetico_1.png" alt="Visual similarity grouping 1" width="45%" style="margin-right: 10px;">
-  <img src="assets/grouping_imagetico_2.png" alt="Visual similarity grouping 2" width="45%">
+  <img src="../assets/grouping_imagetico_1.png" alt="Visual similarity grouping 1" width="45%" style="margin-right: 10px;">
+  <img src="../assets/grouping_imagetico_2.png" alt="Visual similarity grouping 2" width="45%">
 </p>
 <p align="center">
-  <img src="assets/grouping_imagetico_3.png" alt="Visual similarity grouping 3" width="45%" style="margin-right: 10px;">
-  <img src="assets/grouping_imagetico_4.png" alt="Visual similarity grouping 4" width="45%">
+  <img src="../assets/grouping_imagetico_3.png" alt="Visual similarity grouping 3" width="45%" style="margin-right: 10px;">
+  <img src="../assets/grouping_imagetico_4.png" alt="Visual similarity grouping 4" width="45%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
     Four visual clustering modes: (top-left) Vanilla; Single-head (categoria); (bottom-left) Single-head (povo); (bottom-right) Multi-head.
   </p>
@@ -129,7 +124,7 @@ The four visual clustering options differ in how they were trained:
 
 Finally, there are two grouping modes based on textual similarity, using items’ descriptions instead of images. Analogous to the image pipeline, these modes organize objects by their (summarized) descriptions, capturing textual affinities even when items don’t look alike but embody the same concept. This approach also lets us cluster objects for which we have no image (half of the collection), using only their descriptions (with just one item lacking any description). More information about generating these clusters can be found in our [clustering experiments documentation](https://github.com/Luizerko/master_thesis/tree/main/CLUSTERING.md).
 
-The two visual clustering options also differ in how they were trained:
+The two textual clustering options also differ in how they were trained:
 
 - **Vanilla:** Uses embeddings from a pre-trained model. It provides a general-purpose visual grouping.
 
@@ -143,10 +138,9 @@ The granularity slider lets users control how detailed or aggregated the point-c
 
 At low granularity (high threshold), nearby points are grouped into larger clusters, making the visualization easier to navigate and more performant - especially useful when focusing on a smaller region of the space or zooming in deeply. At high granularity (low threshold), points are less aggressively grouped, preserving fine-grained detail and revealing subtle structures across the whole dataset. However, this mode may be heavier on performance, especially when many individual points need to be rendered simultaneously.
 
-<!-- Images comparing very low granularity with very high granularity -->
 <p align="center">
-  <img src="assets/grouping_low_gran.png" alt="Grouping with low granularity" width="45%" style="margin-right: 10px;">
-  <img src="assets/grouping_high_gran.png" alt="Grouping with high granularity" width="45%">
+  <img src="../assets/grouping_low_gran.png" alt="Grouping with low granularity" width="45%" style="margin-right: 10px;">
+  <img src="../assets/grouping_high_gran.png" alt="Grouping with high granularity" width="45%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
     Granularity comparison: (left) low granularity aggregating nearby points into larger clusters, and (right) high granularity revealing individual point detail.
   </p>
@@ -161,9 +155,8 @@ The visualization tool includes powerful filtering options that let users focus 
 
 To provide immediate feedback, a small rectangle in the top-left corner of the interface shows the number of items remaining after filtering. This helps users stay aware of the scope of their current selection. If no filters are applied, the visualization shows all items available for the selected grouping mode.
 
-<!-- Images of the filters and the item counter -->
 <p align="center">
-  <img src="assets/grouping_filters.png" alt="Grouping with high granularity" width="60%">
+  <img src="../assets/grouping_filters.png" alt="Grouping with high granularity" width="60%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
     Filter panel with multiclass filters selected, and the top-left corner of the graph showing remaining items after filtering.
   </p>
@@ -182,9 +175,8 @@ The timeline tab is split into two main parts: an interactive timeline overview 
 
 The first view presents a zig-zag timeline, where each marker represents a year in which the museum acquired items. The position of the markers forms a zig-zag layout for better visual spacing, and the size of each marker is computed based on the number of items acquired that year - larger markers signal more acquisitions.
 
-<!-- Image of the zig-zag timeline -->
 <p align="center">
-  <img src="assets/timeline_zigzag.png" alt="Timeline zig-zag interface with one point hovered" width="60%">
+  <img src="../assets/timeline_zigzag.png" alt="Timeline zig-zag interface with one point hovered" width="60%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
     Zig-zag timeline view: yearly acquisition markers sized by count, with hover highlighting a selected year.
   </p>
@@ -197,9 +189,8 @@ When you hover over a marker, it subtly enlarges to highlight the year. Clicking
 
 The second part of the tab provides a detailed view of a specific year, designed to give users a month-by-month breakdown of item acquisition.
 
-<!-- Image of the year distribution page -->
 <p align="center">
-  <img src="assets/timeline_year_dist.png" alt="Timeline year distribution interface" width="60%">
+  <img src="../assets/timeline_year_dist.png" alt="Timeline year distribution interface" width="60%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
     Yearly breakdown view: grid of item thumbnails color-coded by acquisition month, paired with a monthly histogram below.
   </p>
@@ -216,10 +207,9 @@ The interface supports rich interactivity:
 
 - Hovering over a bar in the histogram shows the exact quantity of items acquired on that month and highlights all these items on the grid using the same visual effect (larger image, border), but this time applies it to all relevant items. Other items in the grid fade out to allow better focus on the selected month. No tooltip is shown in this case, since the selection involves multiple items. There’s also a bar for items with no exact date, allowing those to be explored and highlighted similarly.
 
-<!-- <!-- Image of the highlighted item and image of the highlighted bar -->
 <p align="center">
-  <img src="assets/timeline_year_item.png" alt="Timeline year distribution item highlight" width="30%" style="margin-right: 10px;">
-  <img src="assets/timeline_year_bar.png" alt="Timeline year distribution month highlight" width="65%">
+  <img src="../assets/timeline_year_item.png" alt="Timeline year distribution item highlight" width="30%" style="margin-right: 10px;">
+  <img src="../assets/timeline_year_bar.png" alt="Timeline year distribution month highlight" width="65%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
     Interactive highlights: (left) the hovered item thumbnail on the grid, and (right) the highlighted month bar with all corresponding items emphasized.
   </p>
@@ -240,10 +230,9 @@ This tab provides a geographic visualization of the collection across Brazil, al
 
 Hovering over any marker displays its name - either the name of the community (for red markers) or the state (for blue markers) - providing quick geographic context.
 
-<!-- Image of the entire map -->
 <p align="center">
-  <img src="assets/mapa_community.png" alt="Map with community highlight" width="35%" style="margin-right: 10px;">
-  <img src="assets/mapa_state.png" alt="Map with state highlight" width="35%">
+  <img src="../assets/mapa_community.png" alt="Map with community highlight" width="35%" style="margin-right: 10px;">
+  <img src="../assets/mapa_state.png" alt="Map with state highlight" width="35%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
     Geographic view: red markers for individual communities and blue markers for states, illustrating the spatial distribution of collection items.
   </p>
@@ -258,9 +247,8 @@ That said, not all territories could be mapped directly to specific communities.
 
 Clicking on any marker (red or blue) opens a modal window listing all the items associated with that marker. The modal begins by indicating the total number of items accessible through that marker and then displays the items in cards organized in a structured grid. Each card includes the item's image, the item's name, the community, acquisition year and a small information button to reveal a short item description.
 
-<!-- Image of the modal with the card grid -->
 <p align="center">
-  <img src="assets/mapa_modal.png" alt="Map modal example" width="50%">
+  <img src="../assets/mapa_modal.png" alt="Map modal example" width="50%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
     Item modal view: paginated grid of item cards with images, metadata, and info buttons, showing all items related to a selected marker.
   </p>

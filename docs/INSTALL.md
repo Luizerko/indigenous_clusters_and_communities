@@ -71,7 +71,7 @@ pip install -r requirements.txt
 
 ## Expanding the Environment
 
-The dependencies in thi repository are managed using `pip-tools`. If you need to add new dependencies, first add the new package names to `requirements.in` and then run the following command to update `requirements.txt` accordingly:
+The dependencies in this repository are managed using `pip-tools`. If you need to add new dependencies, first add the new package names to `requirements.in` and then run the following command to update `requirements.txt` accordingly:
 
 ```
 # Generating new requirements.txt file through pip-tools

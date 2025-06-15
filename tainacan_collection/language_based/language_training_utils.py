@@ -548,7 +548,7 @@ def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
                 print("Early stopping!")
                 break
 
-    return all_indices, all_embeddings, train_losses, val_losses, stsb_track
+    return all_indices, all_embeddings, train_losses, val_losses, stsb_track, in_context_stsb_track
 
 # Function to evaluate model on STS-B PTBR
 def stsb_test(model, device, tokenizer, max_length=64, model_loss='vanilla', verbose=False):
