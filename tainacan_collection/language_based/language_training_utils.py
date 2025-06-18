@@ -333,7 +333,7 @@ def nt_xent_loss(embeddings, device, temperature=0.05):
     return loss
 
 # Training loop for the unsupervised SimCSE
-def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dataloader, test_dataset, df, device, epochs=10, temperature=0.05, patience=3, model_name='usimcse_bertimbau'):
+def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dataloader, test_dataset, df, device, epochs=10, temperature=0.05, patience=2, model_name='usimcse_bertimbau'):
     # Getting test indices to run In-Context STS-B later
     positional_indices = test_dataset.indices
     test_indices = test_dataset.dataset.df.index[positional_indices].tolist()
@@ -458,7 +458,7 @@ def infonce_loss(anchor_embeddings, pos_embeddings, neg_embeddings, device, temp
     return loss
 
 # Training loop for the supervised contrastive learning (InfoNCE) 
-def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dataloader, test_dataset, df, device, epochs=10, temperature=0.07, patience=3, model_name='infonce_bertimbau'):
+def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dataloader, test_dataset, df, device, epochs=10, temperature=0.07, patience=2, model_name='infonce_bertimbau'):
     # Getting test indices to run In-Context STS-B later
     positional_indices = test_dataset.indices
     test_indices = test_dataset.dataset.df.index[positional_indices].tolist()
