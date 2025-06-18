@@ -424,7 +424,7 @@ def usimcse_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
             patience_counter = 0
             torch.save({'epoch': epoch+1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, f'../data/models_weights/{model_name}.pth')
             print('New best model found!')
-        elif (stsb_track[-1]+in_context_stsb_track[-1])/2 > 0.95*(best_stsb+best_in_context_stsb)/2:
+        elif (stsb_track[-1]+in_context_stsb_track[-1])/2 > 0.98*(best_stsb+best_in_context_stsb)/2:
             continue        
         else:
             patience_counter += 1
@@ -565,7 +565,7 @@ def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
             patience_counter = 0
             torch.save({'epoch': epoch + 1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, f'../data/models_weights/{model_name}.pth')
             print('New best model found!')
-        elif (stsb_track[-1]+in_context_stsb_track[-1])/2 > 0.95*(best_stsb+best_in_context_stsb)/2:
+        elif (stsb_track[-1]+in_context_stsb_track[-1])/2 > 0.98*(best_stsb+best_in_context_stsb)/2:
             continue
         else:
             patience_counter += 1
