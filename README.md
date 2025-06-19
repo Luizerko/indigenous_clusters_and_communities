@@ -33,7 +33,7 @@ This is the base folder for the project. In here, you'll find:
 
  - The [dataset documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/DATASET.md) describing how the data was extracted and processed, as well as explaining its attributes. 
  
- - The [visualization tool documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/VISUALIZATION.md) containing details reagarding the tool egineering and visual examples of its parts.
+ - The [visualization tool documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/VISUALIZATION.md) containing details regarding the tool egineering and visual examples of its parts.
  
  - The [clustering documentation](https://github.com/Luizerko/master_thesis/tree/main/docs/CLUSTERING.md) describing all the clustering technical implementations and obtained results.
  
