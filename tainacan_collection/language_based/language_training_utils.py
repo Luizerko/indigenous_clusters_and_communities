@@ -620,9 +620,14 @@ def infonce_training_loop(model, tokenizer, optimizer, train_dataloader, val_dat
     return all_indices, all_embeddings, train_losses, val_losses, stsb_track, in_context_stsb_track
 
 # Function to evaluate model on STS-B PTBR
-def stsb_test(model, device, tokenizer, max_length=64, model_loss='vanilla', verbose=False):
+def stsb_test(model, device, tokenizer, max_length=64, model_loss='vanilla', verbose=False, train_split=True):
     # Loading STS-B PTBR version from Hugging Face. Validation split is used because it's more concise and it has labels (the test doesn't)
     sts = load_dataset("PORTULAN/extraglue", "stsb_pt-BR", split="validation")
+    splits = sts.train_test_split(test_size=0.5, seed=42)
+    if train_split:
+        sts = splits['train']
+    else:
+        sts = splits['test']
 
     model.eval()
     if model_loss != 'vanilla':
@@ -662,7 +667,14 @@ def stsb_test(model, device, tokenizer, max_length=64, model_loss='vanilla', ver
     return pearson
 
 # Function to evaluate model on our (In-Context) generated dataset in STS-B fashion
-def in_context_stsb_test(model, device, tokenizer, test_df, max_length=64, model_loss='vanilla', verbose=False):
+def in_context_stsb_test(model, device, tokenizer, test_df, max_length=64, model_loss='vanilla', verbose=False, train_split=True):
+    train_split_df = test_df.sample(frac=0.5, random_state=42)
+    test_split_df = test_df.drop(train_split_df.index)
+    if train_split:
+        test_df = train_split_df
+    else:
+        test_df = test_split_df
+    
     model.eval()
     if model_loss != 'vanilla':
         model = model.model
@@ -670,7 +682,7 @@ def in_context_stsb_test(model, device, tokenizer, test_df, max_length=64, model
     with torch.no_grad():
         # Computing encodings for sentences, their similarity and comparing to the given label
         sims, labels = [], []
-        for index, row in test_df.iterrows():
+        for _, row in test_df.iterrows():
             anchor, pos, neg = row['descricao_resumida'], row['positive_contrastive'], row['single_negative_contrastive']
             
             # Generating input_ids and attention_masks to foward pass sentences
