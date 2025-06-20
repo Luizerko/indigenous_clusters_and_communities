@@ -183,7 +183,7 @@ def get_embeddings(model, tokenizer, input_ids, device, fine_tuned=False):
     return mean_embedding
 
 # Function to compute attributions via integrated gradients torwards the mean pooling
-def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggreg_type='sum', return_tokens=True, verbose=False, sample_num=0):
+def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggreg_type='sum', return_tokens=True, verbose=False, sample_num=0, model_name='bertimbau'):
     # Computing attributions and then summing over the embedding dimensions (because we compute attributions for every dimension of the tokens' embeddings, so we need some kind of aggregation to identify tokens individually)
     attributions, delta = lig.attribute(inputs=input_ids, baselines=baseline_input_ids, return_convergence_delta=True, n_steps=50)
     if attrib_aggreg_type == 'sum':
@@ -205,20 +205,64 @@ def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggre
         tokens = tokenizer.convert_ids_to_tokens(sample_input_ids.cpu().tolist())
         sample_attribution = attributions[min(sample_num, len(input_ids)-1)]
 
+        # Special character map for Albertina's tokenizer
+        spec_charac_map = {'¢': 'â', '¡': 'á', 'ł': 'à', '£': 'ã', 'ª': 'ê', '©': 'é', '´': 'ô', '³': 'ó', 'µ': 'õ', 'Ń': 'í', 'º': 'ú', '§': 'ç',}
+        
         new_tokens, new_attributions = [], []
         counter = -1
-        for token, attribution in zip(tokens[1:-1], sample_attribution[1:-1]):
-            if token == '[PAD]':
-                new_tokens = new_tokens[:-1]
-                break
+        for i, (token, attribution) in enumerate(zip(tokens[1:-1], sample_attribution[1:-1])):
+            # Cleaning BERTimbau tokenizer output
+            if model_name == 'bertimbau':
+                if token == '[PAD]':
+                    new_tokens = new_tokens[:-1]
+                    break
 
-            if token[0] == '#':
-                new_tokens[counter] += token[2:]
-                new_attributions[counter] += attribution
+                if token[0] == '#':
+                    new_tokens[counter] += token[2:]
+                    new_attributions[counter] += attribution
+                else:
+                    new_tokens.append(token)
+                    new_attributions.append(attribution)
+                    counter += 1
+
+            # Cleaning Albertina's tokenizer output
             else:
-                new_tokens.append(token)
-                new_attributions.append(attribution)
-                counter += 1
+                if token == '[SEP]':
+                    break
+
+                token = token.replace('Ã¢', 'â')
+                token = token.replace('Ã¡', 'á')
+                token = token.replace('Ãł', 'à')
+                token = token.replace('Ã£', 'ã')
+                
+                token = token.replace('Ãª', 'ê')
+                token = token.replace('Ã©', 'é')
+                
+                token = token.replace('Ã´', 'ô')
+                token = token.replace('Ã³', 'ó')
+                token = token.replace('Ãµ', 'õ')
+                
+                token = token.replace('ÃŃ', 'í')
+                
+                token = token.replace('Ãº', 'ú')
+                
+                token = token.replace('Ã§', 'ç')
+                
+                if token[0] == 'Ġ':
+                    new_tokens.append(token[1:])
+                    new_attributions.append(attribution)
+                    counter += 1
+                elif token[0] in list(spec_charac_map.keys()):
+                    new_tokens[-1] = new_tokens[-1].replace('Ã', spec_charac_map[token[0]])
+                else:
+                    if i == 0:
+                        new_tokens.append(token)
+                        new_attributions.append(attribution)
+                        counter += 1
+                        continue
+                    
+                    new_tokens[counter] += token
+                    new_attributions[counter] += attribution
 
         if verbose:
             print("Token importances:")

@@ -37,11 +37,19 @@ vanilla_dino_df = pd.read_csv('data/projections/vanilla_dino.csv', index_col='id
 # categoria_dino_df = pd.read_csv('data/projections/categoria_dino.csv', index_col='id')
 multihead_dino_df = pd.read_csv('data/projections/multihead_dino.csv', index_col='id')
 
-# vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_trimap.csv', index_col='id')
-vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_umap.csv', index_col='id')
+vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_trimap.csv', index_col='id')
+# vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_umap.csv', index_col='id')
+usimcse_bertimbau_df = pd.read_csv('data/projections/usimcse_bertimbau_trimap.csv', index_col='id')
+# usimcse_bertimbau_df = pd.read_csv('data/projections/usimcse_bertimbau_umap.csv', index_col='id')
+infonce_bertimbau_df = pd.read_csv('data/projections/infonce_bertimbau_trimap.csv', index_col='id')
+# infonce_bertimbau_df = pd.read_csv('data/projections/infonce_bertimbau_umap.csv', index_col='id')
 
-# simcse_bertimbau_df = pd.read_csv('data/projections/simcse_bertimbau_trimap.csv', index_col='id')
-simcse_bertimbau_df = pd.read_csv('data/projections/simcse_bertimbau_umap.csv', index_col='id')
+vanilla_albertina_df = pd.read_csv('data/projections/vanilla_albertina_trimap.csv', index_col='id')
+# vanilla_albertina_df = pd.read_csv('data/projections/vanilla_albertina_umap.csv', index_col='id')
+usimcse_albertina_df = pd.read_csv('data/projections/usimcse_albertina_trimap.csv', index_col='id')
+# usimcse_albertina_df = pd.read_csv('data/projections/usimcse_albertina_umap.csv', index_col='id')
+infonce_albertina_df = pd.read_csv('data/projections/infonce_albertina_trimap.csv', index_col='id')
+# infonce_albertina_df = pd.read_csv('data/projections/infonce_albertina_umap.csv', index_col='id')
 
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index
@@ -632,7 +640,7 @@ def display_hover(hover_data, fig, grouping):
 
         # Getting specific hovering information (text)
         ind_index = df_row['ind_index']
-        token_attribution_map = ast.literal_eval(vanilla_bertimbau_df.loc[ind_index, 'token_attribution_map'])
+        token_attribution_map = ast.literal_eval(infonce_bertimbau_df.loc[ind_index, 'token_attribution_map'])
 
         # getting parameters for attribution normalization (to the [0, 1] interval) for better visuals
         attributions = list(token_attribution_map.values())
@@ -1044,7 +1052,7 @@ def update_cluster(selected_option):
         update_cluster_selection(plot_df, multihead_dino_df, no_clusters=True)
 
     elif selected_option == 'cluster_6':
-        update_cluster_selection(plot_df, vanilla_bertimbau_df, no_clusters=True)
+        update_cluster_selection(plot_df, infonce_bertimbau_df, no_clusters=True)
 
     return True, [], [], [], [], plot_df['ano_de_aquisicao'].min(), plot_df['ano_de_aquisicao'].max(), plot_df['comprimento'].min(), plot_df['comprimento'].max(), plot_df['largura'].min(), plot_df['largura'].max(), plot_df['altura'].min(), plot_df['altura'].max(), plot_df['diametro'].min(), plot_df['diametro'].max()
 
@@ -1080,7 +1088,7 @@ def filter_data(selected_categorias, selected_povos, selected_estados, selected_
     elif grouping == 'cluster_5':
         filtered_df = plot_df[plot_df['ind_index'].isin(multihead_dino_df.index)].copy()
     elif grouping == 'cluster_6':
-        filtered_df = plot_df[plot_df['ind_index'].isin(vanilla_bertimbau_df.index)].copy()
+        filtered_df = plot_df[plot_df['ind_index'].isin(infonce_bertimbau_df.index)].copy()
 
     # Applying filters if a selection is made
     if selected_categorias is not None and len(selected_categorias) > 0:
