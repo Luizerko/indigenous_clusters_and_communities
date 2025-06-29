@@ -290,7 +290,7 @@ This behavior reinforces previous observations: `categoria` benefits from greate
 
 After exploring the performance of the *ViT* architecture, we moved on to a more modern model (*DINOv2*) to evaluate its potential and investigate how a self-supervised backbone might differ in both quantitative results and visual embedding structure. *DINOv2* has been shown to generalize well across multiple visual tasks without requiring large-scale supervised fine-tuning, making it a promising candidate for clustering goals.
 
-Unlike *ViT*, which is trained in a supervised manner, *DINOv2* is pre-trained using a self-supervised learning objective based on knowledge distillation. It uses a teacher-student setup where the student model learns to match the output of a (slowly evolving non-gradients based) teacher model across multiple augmented views of the same image. This allows *DINOv2* to train with much more data (around 10 times more than ViT) and learn more robust semantic visual representations that generalize well across downstream tasks.
+Unlike *ViT*, which is trained in a supervised manner, *DINOv2* is pre-trained using a self-supervised learning objective based on knowledge distillation. It uses a teacher-student setup where the student model learns to match the output of a (slowly evolving non-gradients based) teacher model across multiple augmented views of the same image. This allows *DINOv2* to train with much more data (around 10 times more than ViT) and learn more robust semantic visual representations that generalize well across downstream tasks. Objectively, it uses a curated dataset of around 142 million unlabeled images called *LVD-142M*, which also includes the whole *ImageNet21K*.
 
 We used the base version of *DINOv2* (available on [Hugging Face](https://huggingface.co/facebook/dinov2-base)) and applied a similar preprocessing pipeline to that used with *ViT*, but with minor adjustments: images were resized so that the shorter side was 256 pixels, then center-cropped to 224×224, and normalized using the standard *ImageNet* statistics (`[0.485, 0.456, 0.406]` means and `[0.229, 0.224, 0.225]` standard deviations).
 
@@ -332,7 +332,7 @@ However, despite these promising results, the visual projections generated on to
 
 <p align="center">
   <br>
-  <img src="../assets/vit_x_dino_povo_categoria.png" alt="ViT and DINOv2 point-cloud spread comparison for models fine-tuned on both `povo` and `categoria`" width="20%">
+  <img src="../assets/vit_x_dino_povo_categoria.png" alt="ViT and DINOv2 point-cloud spread comparison for models fine-tuned on both `povo` and `categoria`" width="30%">
   <p align="center" style="margin-top: 10px; margin-bottom: 5px;">
       Comparison between the projected embedding spaces of <i>ViT</i> and <i>DINOv2</i> models single-task fine-tuned both on <code>povo</code> and <code>categoria</code>.
   </p>
