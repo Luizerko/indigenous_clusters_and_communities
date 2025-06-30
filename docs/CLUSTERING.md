@@ -369,7 +369,7 @@ In short, *DINOv2* proved to be a stronger model in terms of raw classification 
 
 Analogous to our previous work on image-based clustering, we have developed a textual clustering approach. The fundamental goal remains consistent, enhancing navigation and uncovering latent relationships within the data, but this time we utilize textual descriptions rather than images. For detailed insights into our preprocessing methods, please refer to the [dataset documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/DATASET.md). Notably, we are working with "summarized" versions of the textual descriptions instead of their full-length counterparts. The reasons for this choice are elaborated in the dataset documentation.
 
-Similar to our image processing pipeline, our textual clustering utilizes encoder pipelines to extract sentence-level features, followed by dimensionality reduction techniques to visualize point clouds and potential clusters. We experimented with two different encoder models: [BERTimbau](https://huggingface.co/neuralmind/bert-base-portuguese-cased), a widely-used encoder for Brazilian Portuguese, and [Albertina](https://huggingface.co/albertina-ptbr/albertina-100m), a more modern model with better benchmark scores (on the bigger versions). Due to hardware limitations, we selected the smallest available versions of each model. Despite this, we obtained visually appealing and insightful results.
+Similar to our image processing pipeline, our textual clustering utilizes encoder pipelines to extract sentence-level features, followed by dimensionality reduction techniques to visualize point clouds and potential clusters. We experimented with two different encoder models: [*BERTimbau base*](https://huggingface.co/neuralmind/bert-base-portuguese-cased), a widely-used encoder for Brazilian Portuguese, and [*Albertina-100M*](https://huggingface.co/albertina-ptbr/albertina-100m), a more modern model with better benchmark scores (on the bigger versions). Due to hardware limitations, we selected the smallest available versions of each model. Despite this, we obtained visually appealing and insightful results.
 
 Beyond simple projections from pre-trained (vanilla) models, unlike our straightforward supervised approach in the image pipeline, we experimented with two fine-tuning strategies using contrastive learning:
 
@@ -377,7 +377,9 @@ Beyond simple projections from pre-trained (vanilla) models, unlike our straight
 
 We will discuss specific training details alongside the model descriptions, however, an important factor that may affect training performance deserves mention: the abundant presence of similar or identical descriptions, also known as hard examples. Even with randomized training data to prevent sequential similarity, certain descriptions remain notably alike or identical due to similar creation techniques (e.g., painting in circular or diagonal patterns), shared materials (e.g., identical flowers or fruits), variations of the same object (e.g., two dolls, two arrows) or combinations of these factors. Despite this challenge, our models achieved good results, indicating successful learning. Nonetheless, we haven't examined how this phenomenon impacted training outcomes, whether beneficially by improving model discrimination for challenging examples, or detrimentally by unnecessarily distancing embeddings of highly similar sentences.
 
-TALK ABOUT LOSS HERE
+Now talking about the loss, the core of our objective is the Normalized Temperature-scaled Cross Entropy (NT-Xent) loss, which encourages each pair of “positive” embeddings (two stochastic views of the same description) to be more similar than any “negative” pair in the batch. Intuitively, after we L2-normalize all embeddings so that similarity is just a dot-product on the unit sphere, the NT-Xent loss computes for each anchor embedding a softmax over its cosine similarities to all other embeddings. The numerator pulls up the similarity score to its positive counterpart, while the denominator sums over all similarities (positive and negatives), so minimizing this loss pushes positives closer together and pushes all negatives farther apart in the embedding space.
+
+A key hyperparameter is the temperature (t): dividing the cosine-similarity logits by t before the softmax effectively sharpens (for small t) or smooths (for large t) the distribution over negatives. A lower t makes the model focus on the hardest negatives, those whose embeddings are closest to the anchor, amplifying their penalty, whereas a higher t distributes the gradient more evenly across all negatives. Finally, rather than writing a custom pairwise contrastive objective, we make us of the cross entropy trick: we treat our 2Nx2N similarity matrix (with self-similarities masked out) divided by t as the “logits,” and construct integer labels that map each position *i* to its positive index *i*±N. `PyTorch`’s highly-optimized cross-entropy then does the heavy lifting of computing log-softmax and negative log-likelihood in one go, making the implementation both concise and as fast as possible.
 
 - **Supervised**: Utilizes a contrastive dataset described in the [dataset documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/DATASET.md), consisting of one anchor phrase, one paraphrase as a positive example, and 10 summarized descriptions from items belonging to different `categoria` as negative examples.
 
@@ -392,3 +394,30 @@ Integrated gradients is an attribution technique that explains a network’s pre
 To go a bit more into details, we first choose an “empty” text sequence (`[CLS]`, `62*[PAD]`, `[SEP]`) as the baseline. We then adapt the model to output a scalar using cosine similarity between the baseline final embedding and the actual input final embedding, encoding semantic differences from our "neutral" representation. We also tried L2-norm, but quickly found it less effective since it is highly dependent on the magnitude of vectors, a number that does not encode much semantics. In the end the latter method tended to highlight common tokens like “the” or “and” rather than true content words.
 
 From this point, we can apply IG to the input initial embedding. To do that, for each feature of each token, we interpolate from the baseline embedding to the input embedding, sample gradients of the cosine-similarity scalar at each interpolation step, average the gradients and finally scale by the difference between the embeddings. This whole process leads to the attribution for a single feature of a single token. We then aggregate (in our case by summing, although we did experiment with l2-norm) features to get to a final token attribution and (when applicable) sum a few token attributions to produce a final word attribution.
+
+
+| Learning Method | Learning Rate | Temperature | Test STS-B (Pearson Corr.) | Test In-Context STS-B (Pearson Corr.) |
+|-|-|-|-|-|
+| Vanilla | - | - | 0.70 ± 0.01 | 0.75 ± 0.01 |
+| Uns. SimCSE | 3e-6 | 0.05 | 0.71 ± 0.00 | **0.86 ± 0.01** |
+| Uns. SimCSE | 3e-6 | 0.1 | 0.72 ± 0.00 | **0.86 ± 0.00** |
+| Uns. SimCSE | 3e-6 | 0.2 | 0.74 ± 0.00 | **0.86 ± 0.00** |
+| InfoNCE | 3e-6 | 0.05 | 0.78 ± 0.01 | **0.86 ± 0.01** |
+| InfoNCE | 3e-6 | 0.1 | **0.79 ± 0.01** | 0.85 ± 0.01 |
+| InfoNCE | 3e-6 | 0.2 | **0.79 ± 0.01** | 0.82 ± 0.00 |
+<p align="center" style="margin-bottom: 25px;">
+  Parameters and results for <i>BERTimbau</i> models.
+</p>
+
+| Learning Method | Learning Rate | Temperature | Test STS-B (Pearson Corr.) | Test In-Context STS-B (Pearson Corr.) |
+|-|-|-|-|-|
+| Vanilla | - | - | 0.69 ± 0.01 | 0.68 ± 0.03 |
+| Uns. SimCSE | 1e-6 | 0.05 | 0.70 ± 0.01 | 0.85 ± 0.01 |
+| Uns. SimCSE | 1e-6 | 0.1 | 0.72 ± 0.01 | <ins>0.86 ± 0.00</ins> |
+| Uns. SimCSE | 1e-6 | 0.2 | 0.69 ± 0.00 | 0.83 ± 0.00 |
+| InfoNCE | 1e-6 | 0.05 | **0.74 ± 0.01** | **0.87 ± 0.01** |
+| InfoNCE | 1e-6 | 0.1 | **0.74 ± 0.01** | 0.84 ± 0.01 |
+| InfoNCE | 1e-6 | 0.2 | 0.72 ± 0.01 | 0.78 ± 0.01 |
+<p align="center" style="margin-bottom: 25px;">
+  Parameters and results for <i>Albertina</i> models.
+</p>
