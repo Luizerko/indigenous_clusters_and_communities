@@ -269,7 +269,7 @@ def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggre
             for token, attribution in zip(new_tokens, new_attributions):
                 print(f"{token:20} -> {attribution:.4f}")
 
-        return tokens, attributions, delta
+        return new_tokens, new_attributions, delta
 
     return attributions, delta
 

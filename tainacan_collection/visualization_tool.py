@@ -32,24 +32,18 @@ povo_vit_df = pd.read_csv('data/projections/povo_vit.csv', index_col='id')
 categoria_vit_df = pd.read_csv('data/projections/categoria_vit.csv', index_col='id')
 # multihead_vit_df = pd.read_csv('data/projections/multihead_vit.csv', index_col='id')
 
-vanilla_dino_df = pd.read_csv('data/projections/vanilla_dino.csv', index_col='id')
+# vanilla_dino_df = pd.read_csv('data/projections/vanilla_dino.csv', index_col='id')
 # povo_dino_df = pd.read_csv('data/projections/povo_dino.csv', index_col='id')
 # categoria_dino_df = pd.read_csv('data/projections/categoria_dino.csv', index_col='id')
 multihead_dino_df = pd.read_csv('data/projections/multihead_dino.csv', index_col='id')
 
-vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_trimap.csv', index_col='id')
-# vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_umap.csv', index_col='id')
-usimcse_bertimbau_df = pd.read_csv('data/projections/usimcse_bertimbau_trimap.csv', index_col='id')
-# usimcse_bertimbau_df = pd.read_csv('data/projections/usimcse_bertimbau_umap.csv', index_col='id')
+# vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_trimap.csv', index_col='id')
+# usimcse_bertimbau_df = pd.read_csv('data/projections/usimcse_bertimbau_trimap.csv', index_col='id')
 infonce_bertimbau_df = pd.read_csv('data/projections/infonce_bertimbau_trimap.csv', index_col='id')
-# infonce_bertimbau_df = pd.read_csv('data/projections/infonce_bertimbau_umap.csv', index_col='id')
 
-vanilla_albertina_df = pd.read_csv('data/projections/vanilla_albertina_trimap.csv', index_col='id')
-# vanilla_albertina_df = pd.read_csv('data/projections/vanilla_albertina_umap.csv', index_col='id')
-usimcse_albertina_df = pd.read_csv('data/projections/usimcse_albertina_trimap.csv', index_col='id')
-# usimcse_albertina_df = pd.read_csv('data/projections/usimcse_albertina_umap.csv', index_col='id')
-infonce_albertina_df = pd.read_csv('data/projections/infonce_albertina_trimap.csv', index_col='id')
-# infonce_albertina_df = pd.read_csv('data/projections/infonce_albertina_umap.csv', index_col='id')
+# vanilla_albertina_df = pd.read_csv('data/projections/vanilla_albertina_trimap.csv', index_col='id')
+# usimcse_albertina_df = pd.read_csv('data/projections/usimcse_albertina_trimap.csv', index_col='id')
+# infonce_albertina_df = pd.read_csv('data/projections/infonce_albertina_trimap.csv', index_col='id')
 
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index
@@ -62,8 +56,8 @@ storage_client = storage.Client.from_service_account_json('data/master-thesis-45
 
 # Creating temporary URL for lazy loading images
 plot_df['temporary_br_url'] = pd.NA
-plot_df.loc[plot_df['image_path'].notna(), 'temporary_br_url'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: generate_signed_url(storage_client, 'background-removed-tainacan-images', f"{path.split('/')[-1].split('.')[0]}.png", expiration_minutes=10))
-plot_df.loc[plot_df['temporary_br_url'].isna(), 'temporary_br_url'] = generate_signed_url(storage_client, 'background-removed-tainacan-images', 'placeholder_square.png', expiration_minutes=10)
+plot_df.loc[plot_df['image_path'].notna(), 'temporary_br_url'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: generate_signed_url(storage_client, 'background-removed-tainacan-images', f"{path.split('/')[-1].split('.')[0]}.png", expiration_minutes=30))
+plot_df.loc[plot_df['temporary_br_url'].isna(), 'temporary_br_url'] = generate_signed_url(storage_client, 'background-removed-tainacan-images', 'placeholder_square.png', expiration_minutes=30)
 
 plot_df['image_path_br'] = ind_df['image_path'].values
 plot_df.loc[plot_df['image_path_br'].notna(), 'image_path_br'] = plot_df.loc[plot_df['image_path_br'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")
@@ -224,8 +218,7 @@ app.layout = html.Div([
                                                 {'label': 'Similaridade Imagética', 'value': 'cluster_2'},
                                                 {'label': 'Similaridade Imagética (por Categoria)', 'value': 'cluster_3'},
                                                 {'label': 'Similaridade Imagética (por Povo)', 'value': 'cluster_4'},
-                                                {'label': 'Similaridade Imagética (por Categoria e Povo)', 'value': 'cluster_5'},
-                                                {'label': 'Similaridade Textual', 'value': 'cluster_6'}
+                                                {'label': 'Similaridade Textual', 'value': 'cluster_5'}
                                             ],
                                             multi=False,
                                             placeholder='Selecione uma opção de agrupamento',
@@ -635,7 +628,7 @@ def display_hover(hover_data, fig, grouping):
     img_src = df_row['image_path']
 
     # Building tooltip for text similarity visualization
-    if grouping == 'cluster_6':
+    if grouping == 'cluster_5':
         card_width = 300
 
         # Getting specific hovering information (text)
@@ -939,15 +932,15 @@ def update_scatter_plot(view_type, relayout_data, zoom_update, granularity, grou
     # Replotting outliers
     if len(visible_outliers) > 0:
         if view_type == 'markers':
-            fig = plot_with_markers(visible_outliers, len(collapse_df), color_df, x_range, y_range, grouping!='cluster_1' and grouping!='cluster_6', grouping=='cluster_2' or grouping=='cluster_5' or grouping=='cluster_6')
+            fig = plot_with_markers(visible_outliers, len(collapse_df), color_df, x_range, y_range, grouping!='cluster_1' and grouping!='cluster_5', grouping=='cluster_2' or grouping=='cluster_5')
         else:
             num_points = len(filtered_plot_df.loc[filtered_plot_df['image_path_br'] != 'data/placeholder_square.png'])
-            fig = plot_with_images(visible_outliers, num_points, color_df, x_range, y_range, grouping=='cluster_2' or grouping=='cluster_5' or grouping=='cluster_6')
+            fig = plot_with_images(visible_outliers, num_points, color_df, x_range, y_range, grouping=='cluster_2' or grouping=='cluster_5')
     else:
-        if len(color_df) > 0 and grouping != 'cluster_2' and grouping != 'cluster_5' and grouping != 'cluster_6' :
-            fig = empty_figure_legend(color_df, x_range, y_range, len(collapse_df), grouping!='cluster_1' and grouping!='cluster_6')
+        if len(color_df) > 0 and grouping != 'cluster_2' and grouping != 'cluster_5' and grouping != 'cluster_5' :
+            fig = empty_figure_legend(color_df, x_range, y_range, len(collapse_df), grouping!='cluster_1' and grouping!='cluster_5')
         else:
-            fig = empty_figure(x_range, y_range, len(collapse_df), grouping!='cluster_1' and grouping!='cluster_6')
+            fig = empty_figure(x_range, y_range, len(collapse_df), grouping!='cluster_1' and grouping!='cluster_5')
 
     # Plotting collapsed points
     fig.add_trace(go.Scatter(
@@ -1040,7 +1033,7 @@ def update_cluster(selected_option):
         update_cluster_selection(plot_df, tipo_materia_prima_baseline_df)
 
     elif selected_option == 'cluster_2':
-        update_cluster_selection(plot_df, vanilla_dino_df, no_clusters=True)
+        update_cluster_selection(plot_df, multihead_dino_df, no_clusters=True)
 
     elif selected_option == 'cluster_3':
         update_cluster_selection(plot_df, categoria_vit_df)
@@ -1049,9 +1042,6 @@ def update_cluster(selected_option):
         update_cluster_selection(plot_df, povo_vit_df)
 
     elif selected_option == 'cluster_5':
-        update_cluster_selection(plot_df, multihead_dino_df, no_clusters=True)
-
-    elif selected_option == 'cluster_6':
         update_cluster_selection(plot_df, infonce_bertimbau_df, no_clusters=True)
 
     return True, [], [], [], [], plot_df['ano_de_aquisicao'].min(), plot_df['ano_de_aquisicao'].max(), plot_df['comprimento'].min(), plot_df['comprimento'].max(), plot_df['largura'].min(), plot_df['largura'].max(), plot_df['altura'].min(), plot_df['altura'].max(), plot_df['diametro'].min(), plot_df['diametro'].max()
@@ -1080,14 +1070,12 @@ def filter_data(selected_categorias, selected_povos, selected_estados, selected_
     if grouping == 'cluster_1':
         filtered_df = plot_df[plot_df['ind_index'].isin(tipo_materia_prima_baseline_df.index)].copy()
     elif grouping == 'cluster_2':
-        filtered_df = plot_df[plot_df['ind_index'].isin(vanilla_dino_df.index)].copy()
+        filtered_df = plot_df[plot_df['ind_index'].isin(multihead_dino_df.index)].copy()
     elif grouping == 'cluster_3':
         filtered_df = plot_df[plot_df['ind_index'].isin(categoria_vit_df.index)].copy()
     elif grouping == 'cluster_4':
         filtered_df = plot_df[plot_df['ind_index'].isin(povo_vit_df.index)].copy()
     elif grouping == 'cluster_5':
-        filtered_df = plot_df[plot_df['ind_index'].isin(multihead_dino_df.index)].copy()
-    elif grouping == 'cluster_6':
         filtered_df = plot_df[plot_df['ind_index'].isin(infonce_bertimbau_df.index)].copy()
 
     # Applying filters if a selection is made
