@@ -768,19 +768,19 @@ def saving_outputs(projections, tokens, attributions, text_indices, save_file='v
     new_tokens, new_attributions = [[] for i in tokens], [[] for i in attributions]
     for i, (sentence_tokens, sentence_attributions) in enumerate(zip(tokens, attributions)):
         counter = -1
-        for token, attribution in zip(sentence_tokens[1:-1], sentence_attributions[1:-1]):
+        for j, (token, attribution) in enumerate(zip(sentence_tokens[1:-1], sentence_attributions[1:-1])):
             # Cleaning BERTimbau tokenizer output
             if model_name == 'bertimbau':
                 if token == '[PAD]':
-                    new_tokens = new_tokens[:-1]
+                    new_tokens[i] = new_tokens[i][:-1]
                     break
 
                 if token[0] == '#':
-                    new_tokens[counter] += token[2:]
-                    new_attributions[counter] += attribution
+                    new_tokens[i][counter] += token[2:]
+                    new_attributions[i][counter] += attribution
                 else:
-                    new_tokens.append(token)
-                    new_attributions.append(attribution)
+                    new_tokens[i].append(token)
+                    new_attributions[i].append(attribution)
                     counter += 1
 
             # Cleaning Albertina's tokenizer output
@@ -807,20 +807,20 @@ def saving_outputs(projections, tokens, attributions, text_indices, save_file='v
                 token = token.replace('Ã§', 'ç')
                 
                 if token[0] == 'Ġ':
-                    new_tokens.append(token[1:])
-                    new_attributions.append(attribution)
+                    new_tokens[i].append(token[1:])
+                    new_attributions[i].append(attribution)
                     counter += 1
                 elif token[0] in list(spec_charac_map.keys()):
-                    new_tokens[-1] = new_tokens[-1].replace('Ã', spec_charac_map[token[0]])
+                    new_tokens[i][-1] = new_tokens[i][-1].replace('Ã', spec_charac_map[token[0]])
                 else:
-                    if i == 0:
-                        new_tokens.append(token)
-                        new_attributions.append(attribution)
+                    if j == 0:
+                        new_tokens[i].append(token)
+                        new_attributions[i].append(attribution)
                         counter += 1
                         continue
                     
-                    new_tokens[counter] += token
-                    new_attributions[counter] += attribution
+                    new_tokens[i][counter] += token
+                    new_attributions[i][counter] += attribution
 
     # Getting dictionary of tokens and attributions
     token_attribution_map = [[] for i in range(len(new_tokens))]
