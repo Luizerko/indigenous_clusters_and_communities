@@ -269,7 +269,7 @@ def get_attributions(lig, tokenizer, input_ids, baseline_input_ids, attrib_aggre
             for token, attribution in zip(new_tokens, new_attributions):
                 print(f"{token:20} -> {attribution:.4f}")
 
-        return new_tokens, new_attributions, delta
+        return tokens, attributions, delta
 
     return attributions, delta
 
@@ -760,23 +760,67 @@ def plot_training_curves(train_losses, val_losses, stsb_track, in_context_stsb_t
     plt.show()
 
 # Function to safe outputs for visualization tool
-def saving_outputs(projections, tokens, attributions, text_indices, save_file='vanilla_bertimbau_umap.csv'):
+def saving_outputs(projections, tokens, attributions, text_indices, save_file='vanilla_bertimbau_umap.csv', model_name='bertimbau'):
+    # Special character map for Albertina's tokenizer
+    spec_charac_map = {'¢': 'â', '¡': 'á', 'ł': 'à', '£': 'ã', 'ª': 'ê', '©': 'é', '´': 'ô', '³': 'ó', 'µ': 'õ', 'Ń': 'í', 'º': 'ú', '§': 'ç',}
+        
     # Processing attributions to go back to more understandable tokens for visual tool
     new_tokens, new_attributions = [[] for i in tokens], [[] for i in attributions]
     for i, (sentence_tokens, sentence_attributions) in enumerate(zip(tokens, attributions)):
         counter = -1
         for token, attribution in zip(sentence_tokens[1:-1], sentence_attributions[1:-1]):
-            if token == '[PAD]':
-                new_tokens[i] = new_tokens[i][:-1]
-                break
+            # Cleaning BERTimbau tokenizer output
+            if model_name == 'bertimbau':
+                if token == '[PAD]':
+                    new_tokens = new_tokens[:-1]
+                    break
 
-            if token[0] == '#':
-                new_tokens[i][counter] += token[2:]
-                new_attributions[i][counter] += attribution
+                if token[0] == '#':
+                    new_tokens[counter] += token[2:]
+                    new_attributions[counter] += attribution
+                else:
+                    new_tokens.append(token)
+                    new_attributions.append(attribution)
+                    counter += 1
+
+            # Cleaning Albertina's tokenizer output
             else:
-                new_tokens[i].append(token)
-                new_attributions[i].append(attribution)
-                counter += 1
+                if token == '[SEP]':
+                    break
+
+                token = token.replace('Ã¢', 'â')
+                token = token.replace('Ã¡', 'á')
+                token = token.replace('Ãł', 'à')
+                token = token.replace('Ã£', 'ã')
+                
+                token = token.replace('Ãª', 'ê')
+                token = token.replace('Ã©', 'é')
+                
+                token = token.replace('Ã´', 'ô')
+                token = token.replace('Ã³', 'ó')
+                token = token.replace('Ãµ', 'õ')
+                
+                token = token.replace('ÃŃ', 'í')
+                
+                token = token.replace('Ãº', 'ú')
+                
+                token = token.replace('Ã§', 'ç')
+                
+                if token[0] == 'Ġ':
+                    new_tokens.append(token[1:])
+                    new_attributions.append(attribution)
+                    counter += 1
+                elif token[0] in list(spec_charac_map.keys()):
+                    new_tokens[-1] = new_tokens[-1].replace('Ã', spec_charac_map[token[0]])
+                else:
+                    if i == 0:
+                        new_tokens.append(token)
+                        new_attributions.append(attribution)
+                        counter += 1
+                        continue
+                    
+                    new_tokens[counter] += token
+                    new_attributions[counter] += attribution
 
     # Getting dictionary of tokens and attributions
     token_attribution_map = [[] for i in range(len(new_tokens))]
