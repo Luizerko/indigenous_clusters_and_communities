@@ -6,9 +6,9 @@ This page provides an overview of how we utilized the [Tainacan collection](http
 
 The first step in our workflow is data collection. We accomplish this through a two-stage process:
 
-1. **Scraping the data:** A [Bash script](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection/scrapping_data.sh) is used to extract data from the Tainacan platform.
+1. Scraping the data: A [`Bash` script](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection/scrapping_data.sh) is used to extract data from the Tainacan platform.
 
-2. **Processing and structuring:** A [Python script](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection/creating_dataset.py) then processes the raw data and organizes it into a structured CSV format.
+2. Processing and structuring: A [`Python` script](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection/creating_dataset.py) then processes the raw data and organizes it into a structured CSV format.
 
 Once the dataset is prepared, we proceed with data cleaning and exploratory analysis to assess the volume and distribution of the data, identify key categories and their relationships and explore potential clustering opportunities. For a more in-depth analysis of the dataset, refer to the [Jupyter notebook](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection/dataset_exploration.ipynb).
 
@@ -37,7 +37,7 @@ Below, we provide a high-level summary of the dataset attributes, based on our i
 | `descricao`          | Description of the item, including material, components, and functionality.                                                                      |
 | `dimensoes`          | Dimensions of the item.                                                                                                                          |
 | `funcao`             | Function of the item.                                                                                                                            |
-| `materia_prima`      | Material the item is made of, categorized as *animal*, *vegetal*, *mineral*, or *sintetico*.                                                     |
+| `materia_prima`      | Material the item is made of, categorized as 'animal', 'vegetal', 'mineral', or 'sintetico'.                                                     |
 | `tecnica_confeccao`  | Techniques used to make the item.                                                                                                                  |
 | `descritor_tematico` | Keywords describing themes related to the item.                                                                                                    |
 | `descritor_comum`    | Keywords describing generic categories related to the item.                                                                                         |
@@ -92,13 +92,13 @@ To mitigate this issue, we made use of a state-of-the-art [open-source backgroun
 
 ### Text Processing
 
-The text processing stage focused on preparing item descriptions extracted from the Tainacan collection for downstream modeling. This process initially perfectly preserved the linguistic characteristics of the original texts, such as Portuguese accents and indigenous vocabulary, while standardizing the input (e.g. converting all text to lowercase). As we dove deeper, however, we faced a few challenges that required targeted preprocessing solutions.
+The text processing stage focused on preparing item descriptions extracted from the Tainacan collection for downstream modeling. This process initially perfectly preserved the linguistic characteristics of the original texts, such as Portuguese accents and indigenous vocabulary, while standardizing the input simply by converting all text to lowercase. As we dove deeper, however, we faced a few challenges that required targeted preprocessing solutions.
 
 #### Token Limitations and GPU Constraints
 
-Our initial obstacle came from hardware constraints, specifically, running on an RTX 4070 with 8GB of VRAM. Because one of our main training strategies relied on unsupervised contrastive learning (more on that on the [clustering documentation](https://github.com/Luizerko/master_thesis/tree/main/docs/CLUSTERING.md)), which benefits from larger batch sizes for generating "negative samples", we needed to limit the number of tokens per description to maintain efficient training. While experimenting, we found that only 856 descriptions (out of ~21K) exceeded 128 tokens. So, truncating inputs to 128 tokens proved a reasonable compromise.
+Our initial obstacle came from hardware constraints, specifically, running on an RTX 4070 with 8GB of VRAM. Because one of our main training strategies relied on *unsupervised contrastive learning* (more on that on the [clustering documentation](https://github.com/Luizerko/master_thesis/tree/main/docs/CLUSTERING.md)), which benefits from larger batch sizes for generating "negative samples", we needed to limit the number of tokens per description to maintain efficient training. While experimenting, we found that only 856 descriptions (out of ~21K) exceeded 128 tokens. So, truncating inputs to 128 tokens proved a reasonable compromise.
 
-Actually, during training, we could still experiment with slightly longer descriptions thanks to batch sizes of 16 fitting into memory and being a reasonable enough number for our unsupervised method. However, the interpretability pipeline, particularly using integrated gradients, were much more memory intensive. Therefore, 128 tokens became our hard upper limit.
+Actually, during training, we could still experiment with slightly longer descriptions thanks to batch sizes of 16 fitting into memory and being a reasonable enough number for our unsupervised method. However, the interpretability pipeline, particularly using *integrated gradients*, were much more memory intensive. Therefore, 128 tokens became our hard upper limit.
 
 <p align="center">
   <img src="../assets/token_len_dist.png" alt="Token length distribution." width="60%" style="margin-top: 20px;" />
@@ -109,7 +109,7 @@ Actually, during training, we could still experiment with slightly longer descri
 
 #### Semantic Density and Description Overload
 
-Another issue wasn’t just length, but semantic overload. Encoding a long sequence into a single embedding dilutes semantic clarity. Sentence embeddings are not like predicting tokens, they aim to summarize a whole description in one vector. As the length grows and multiple concepts are included, the embedding loses focus. This is also consistent with established benchmarks. Most descriptions in datasets like [GLUE](https://huggingface.co/datasets/nyu-mll/glue) and [Extraglue](https://huggingface.co/datasets/PORTULAN/extraglue) (PT-BR translated version of GLUE), for example, stay under 100 tokens, reinforcing that shorter inputs are better for semantic representation.
+Another issue wasn’t just length, but semantic overload. Encoding a long sequence into a single embedding dilutes semantic clarity. Sentence embeddings are not like predicting tokens, they aim to summarize a whole description in one vector. As the length grows and multiple concepts are included, the embedding loses focus. This is also consistent with established benchmarks. Most descriptions in datasets like [GLUE](https://huggingface.co/datasets/nyu-mll/glue) and [extraglue](https://huggingface.co/datasets/PORTULAN/extraglue) (PT-BR translated version of GLUE), for example, stay under 100 tokens, reinforcing that shorter inputs are better for semantic representation.
 
 #### Mixed and Noisy Descriptions
 
@@ -123,7 +123,7 @@ We naturally abstain from judgment on curatorial decisions, but still needed to 
 
 #### Condensing Descriptions with LLMs
 
-To address the above challenges, we implemented a LLM-assisted rewriting pipeline, aiming to reduce each description to no more than 62 tokens (leaving room for a `CLS` and `SEP` token for a total input of 64). We prompted the model to preserve meaning, keywords, and especially indigenous vocabulary. In most cases, the model produced concise paraphrases. For roughly 30% of descriptions, the ones longer than 64 tokens, we observed some light summarization instead of strict paraphrasing. From this point on, we'll refer to all these new descriptions generated by the LLM as summarized descriptions.
+To address the above challenges, we implemented a LLM-assisted rewriting pipeline, aiming to reduce each description to no more than 62 tokens (leaving room for a `CLS` and `SEP` token for a total input of 64). We prompted the model to preserve meaning, keywords, and especially indigenous vocabulary. In most cases, the model produced concise paraphrases. For roughly 30% of descriptions, the ones longer than 64 tokens, we observed some light summarization instead of strict paraphrasing. From this point on, we'll refer to all these new descriptions generated by the LLM as "summarized descriptions".
 
 Again due to hardware limits, we leveraged the [Groq API](https://groq.com/) to access powerful open-source models. After manual evaluation of dozens of samples, we selected [Llama-4-Maverick-17B-128E-Instruct](https://huggingface.co/meta-llama/Llama-4-Maverick-17B-128E-Instruct) as the best fit. Because of the free-tier usage limits on input tokens we had for the API, we sticked to chunks of 20 descriptions per request. Also API usage was carefully monitored to stay within request limits per day. Temperature of the model was set to 0.3 for conservative outputs. This value seemed to give us the best balance between accuracy and variability.
 
@@ -138,8 +138,8 @@ Despite occasional errors, especially when we had a series of almost identical d
 
 #### Building the Contrastive Dataset
 
-While our first training method on the textual data was unsupervised contrastive learning, we also developed a supervised contrastive dataset for a second method. The process to build it used the summarized descriptions as input. For each, we prompted the LLM to generate a paraphrase (positive sample) and also select the most semantically different description from the same chunk (negative sample).
+While our first training method on the textual data was *unsupervised contrastive learning*, we also developed a *supervised contrastive dataset* for a second method. The process to build it used the summarized descriptions as input. For each, we prompted the LLM to generate a paraphrase (positive sample) and also select the most semantically different description from the same chunk (negative sample).
 
 Again, the LLM pipeline ran smoothly and required only light manual cleanup. However, we later discovered a subtle issue we haven't thought of earlier: because it didn't matter for condensing descriptions, our chunks were made of sequential data, which sometimes led to grouped similar descriptions (e.g. multiple dolls described similarly). This meant that the negatives the model was outputing weren’t always semantically distinct.
 
-In the end, we decided to use this dataset only as a validation metric and for evaluation (what we called In-Context STS-B), so the implications of the issue were very limited. For training, we later constructed a more robust dataset by keeping the positive paraphrases aforementioned and generating negatives by randomly sampling 10 summarized descriptions from items that belonged to a different `categoria`, (almost) always guaranteeing meaningful semantic contrast. The choice of 10 negatives was the best trade-off between diversity and GPU memory limits. Fewer negatives degraded model performance, but more reduced our batch sizes too much. For more detailed methodology and outcomes, refer to the [clustering documentation](https://github.com/Luizerko/master_thesis/tree/main/docs/CLUSTERING.md) once again.
+In the end, we decided to use this dataset only as a validation metric and for evaluation (what we called *In-Context STS-B*), so the implications of the issue were very limited. For training, we later constructed a more robust dataset by keeping the positive paraphrases aforementioned and generating negatives by randomly sampling 10 summarized descriptions from items that belonged to a different `categoria`, (almost) always guaranteeing meaningful semantic contrast. The choice of 10 negatives was the best trade-off between diversity and GPU memory limits. Fewer negatives degraded model performance, but more reduced our batch sizes too much. For more detailed methodology and outcomes, refer to the [clustering documentation](https://github.com/Luizerko/master_thesis/tree/main/docs/CLUSTERING.md) once again.

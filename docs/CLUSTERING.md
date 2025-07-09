@@ -4,7 +4,7 @@ This page outlines the clustering experiments we conducted, ranging from simple 
 
 ## The Baselines
 
-Before applying advanced machine learning techniques, we began by exploring fundamental aspects of our data. Instead of immediately relying on algorithms, we first sought to understand what insights could be directly extracted from the dataset and how domain knowledge from museum specialists could be integrated. Establishing these baselines was crucial for two reasons:
+Before applying advanced machine learning techniques, we began by exploring fundamental aspects of our data. Instead of immediately relying on algorithms, we first sought to understand what insights could be directly extracted from the dataset and how domain knowledge from museum specialists could be integrated. Establishing these baselines seemed crucial for two reasons:
 
 1. **Comparing our clusters to existing knowledge:** This helped evaluate how well our models captured essential patterns in the collection.
 
@@ -14,51 +14,51 @@ This analysis extends beyond traditional quantitative measures, such as embeddin
 
 ### Random Orthonormal Projections
 
-To establish these baselines, we first explored clustering categorical features by mapping them into a higher-dimensional space. We couldn't, however, assume any inherent relationships between categories, making it crucial to treat clusters as equidistant. To enforce that, we applied *random orthonormal projections*. For each feature (in our expetiment `categoria` with 10 classes and `tipo_de_materia_prima` with 4 classes), we generated a random orthonormal matrix, ensuring every category had a unit vector, all of them orthogonal to one another. For multi-category features, we summed categories' vectors when a datapoint belonged to more than 1 category. This produced "high-dimensional" representations of data that we could use for clustering.
+To establish these baselines, we first explored clustering categorical attributes by mapping them into a higher-dimensional space. We couldn't, however, assume any inherent relationships between categories, making it crucial to treat clusters as equidistant. To enforce that, we applied *random orthonormal projections*. For each attribute (in our expetiment `categoria` with 10 categories and `tipo_de_materia_prima` with 4 categories), we generated a random orthonormal matrix, ensuring every category had a unit vector, all of them orthogonal to one another. For multi-category attributes, we summed categories' vectors when a datapoint belonged to more than 1 category. This produced "high-dimensional" representations of data that we could use for clustering.
 
 While theoretically interesting, this approach naturally failed. The resulting space was highly sparse, leading to poor clustering and later visualization. Even before clustering, lower-dimensional projections showed no clear groupings or symmetry.
 
 To better preserve distances, we tested two projection techniques:
 
-- **MDS:** Effective in low dimensions (so 14 shouldn't be a problem) and optimizes for distance preservation.
+- *MDS:* Effective in low dimensions (so 14 shouldn't be a problem) and optimizes for distance preservation.
 
-- **TriMap:** Suitable for higher-dimensional spaces while maintaining global structure.
+- *TriMap:* Suitable for higher-dimensional spaces while maintaining global structure.
 
-Despite slight improvements with TriMap, neither method yielded meaningful clusters.
+Despite slight improvements with *TriMap*, neither method yielded meaningful clusters.
 
 <div align="center">
     <br>
     <img src="../assets/projections_orthonormal.png" alt="Projections using MDS and TriMap with Random Orthonormal Projections." width="500">
 </div>
 <div align='center'>
-    <span>Plot showing <i>MDS</i> and <i>TriMap</i> 2D projections from random orthonormal vectors for 2 (concatenated) features (14 dimensions).</span>
+    <span>Plot showing <i>MDS</i> and <i>TriMap</i> 2D projections from random orthonormal vectors for the 2 aforementioned attributes concatenated (14 dimensions).</span>
     <br>
 </div>
 
 ### Categorical Clustering
 
-After the failure of random orthonormal projections, we returned directly to categorical clustering. We used *multi-hot encoding* to transform features with multiple category assignments into binary vectors. Then, we applied *K-Modes*, a clustering algorithm designed for categorical data that measures dissimilarity based on category mismatches instead of Euclidean distance.
+After the failure of *random orthonormal projections*, we returned directly to categorical clustering. We used *multi-hot encoding* to transform attributes with multi-category assignments into binary vectors. Then, we applied *K-Modes*, a clustering algorithm designed for categorical data that measures dissimilarity based on category mismatches instead of Euclidean distance.
 
-Using `categoria` and `tipo_de_materia_prima` again, we found that 16 clusters provided the best balance, slightly exceeding the sum of individual category counts (14) - not suggesting an overestimation but still accounting for possible correlations between categories across the features. While this approach prevented cluster assignment issues through the direct use of the categories, we still had a very sparse feature space and visualization remained challenging.
+Using `categoria` and `tipo_de_materia_prima` again and the elbow method, we found that 16 clusters provided the best balance, slightly exceeding the sum of individual category counts (14 in total), not suggesting an overestimation but still accounting for possible correlations between categories across the attributes. While this approach prevented cluster assignment issues through the direct use of the categories, we still had a very sparse feature space and visualization remained challenging.
 
-- **t-SNE** failed, producing unnatural circular patterns due to its KL-Divergence minimization on (sparse) categorical data.
+- *t-SNE* failed, producing unnatural circular patterns due to its KL-Divergence minimization on (sparse) categorical data.
 
-- **UMAP** struggled, as the sparse feature space violated its assumption of an underlying manifold, leading to a chaotic point cloud.
+- *UMAP* struggled, as the sparse feature space violated its assumption of an underlying manifold, leading to a chaotic point cloud.
 
-- **TriMap** performed best, forming a few identifiable clusters. However, some clusters split across multiple areas - necessary for preserving some kind of equidistance between all clusters in 2D. Despite this improvement, visualization remained unclear.
+- *TriMap* performed best, forming a few identifiable clusters. However, some clusters split across multiple areas - necessary for preserving some kind of equidistance between all clusters in 2D. Despite this improvement, visualization remained unclear.
 
 <div align="center">
     <br>
     <img src="../assets/projections_categorical.png" alt="Projections using t-SNE, UMAP and TriMap with Categorical Clustering." width="550">
 </div>
 <div align='center'>
-    <span>Plot showing <i>t-SNE</i>, <i>UMAP</i>, and <i>TriMap</i> 2D projections from categorical vectors for 2 features (14 dimensions).</span>
+    <span>Plot showing <i>t-SNE</i>, <i>UMAP</i>, and <i>TriMap</i> 2D projections from categorical vectors for 2 concatenated attributes (14 dimensions).</span>
     <br>
 </div>
 
 ### Basic Feature-Based Clustering  
 
-Due to the failures of the previous methods, we opted for a simpler approach, directly using only the most well-defined and easily visualized feature as baseline: `tipo_de_materia_prima`. This feature has three meaningful categories - *animal*, *vegetal*, and *mineral*. A fourth category (*sintetico*) exists, but no data points fall into this group. Items can also belong to multiple categories.
+Due to the failures of the previous methods, we opted for a simpler approach, directly using only the most well-defined and easily visualized attribute as baseline: `tipo_de_materia_prima`. This attribute has three meaningful categories - 'animal', 'vegetal', and 'mineral'. A fourth category ('sintetico') exists, but no data points fall into this group. Items can also belong to multiple categories.
 
 To represent clusters in 2D, we used a triangle representation:
 
@@ -377,7 +377,7 @@ Beyond simple projections from pre-trained (vanilla) models, unlike our straight
 
 We will discuss specific training details alongside the model descriptions, however, an important factor that may affect training performance deserves mention: the abundant presence of similar or identical descriptions, also known as hard examples. Even with randomized training data to prevent sequential similarity, certain descriptions remain notably alike or identical due to similar creation techniques (e.g., painting in circular or diagonal patterns), shared materials (e.g., identical flowers or fruits), variations of the same object (e.g., two dolls, two arrows) or combinations of these factors. Despite this challenge, our models achieved good results, indicating successful learning. Nonetheless, we haven't examined how this phenomenon impacted training outcomes, whether beneficially by improving model discrimination for challenging examples, or detrimentally by unnecessarily distancing embeddings of highly similar sentences.
 
-Now talking about the loss, the core of our objective is the Normalized Temperature-scaled Cross Entropy (NT-Xent) loss, which encourages each pair of “positive” embeddings (two stochastic views of the same description) to be more similar than any “negative” pair in the batch. Intuitively, after we L2-normalize all embeddings so that similarity is just a dot-product on the unit sphere, the NT-Xent loss computes for each anchor embedding a softmax over its cosine similarities to all other embeddings. The numerator pulls up the similarity score to its positive counterpart, while the denominator sums over all similarities (positive and negatives), so minimizing this loss pushes positives closer together and pushes all negatives farther apart in the embedding space.
+Now talking about the loss, the core of our objective is the Normalized Temperature-scaled Cross Entropy (NT-Xent) loss, which encourages each pair of “positive” embeddings (two stochastic views of the same description) to be more similar than any “negative” pair in the batch. Intuitively, after we L2-normalize all embeddings so that cosine similarity is just a dot-product on the unit sphere, the NT-Xent loss computes for each anchor embedding a softmax over its cosine similarities to all other embeddings. The numerator pulls up the similarity score to its positive counterpart, while the denominator sums over all similarities (positive and negatives), so minimizing this loss pushes positives closer together and pushes all negatives farther apart in the embedding space.
 
 A key hyperparameter is the temperature (t): dividing the cosine-similarity logits by t before the softmax effectively sharpens (for small t) or smooths (for large t) the distribution over negatives. A lower t makes the model focus on the hardest negatives, those whose embeddings are closest to the anchor, amplifying their penalty, whereas a higher t distributes the gradient more evenly across all negatives. Finally, rather than writing a custom pairwise contrastive objective, we make us of the cross entropy trick: we treat our 2Nx2N similarity matrix (with self-similarities masked out) divided by t as the “logits,” and construct integer labels that map each position *i* to its positive index *i*±N. `PyTorch`’s highly-optimized cross-entropy then does the heavy lifting of computing log-softmax and negative log-likelihood in one go, making the implementation both concise and as fast as possible.
 

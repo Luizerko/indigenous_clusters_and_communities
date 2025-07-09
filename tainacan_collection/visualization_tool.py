@@ -38,12 +38,18 @@ categoria_vit_df = pd.read_csv('data/projections/categoria_vit.csv', index_col='
 multihead_dino_df = pd.read_csv('data/projections/multihead_dino.csv', index_col='id')
 
 # vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_trimap.csv', index_col='id')
+# vanilla_bertimbau_df = pd.read_csv('data/projections/vanilla_bertimbau_umap.csv', index_col='id')
 # usimcse_bertimbau_df = pd.read_csv('data/projections/usimcse_bertimbau_trimap.csv', index_col='id')
-infonce_bertimbau_df = pd.read_csv('data/projections/infonce_bertimbau_trimap.csv', index_col='id')
+# usimcse_bertimbau_df = pd.read_csv('data/projections/usimcse_bertimbau_umap.csv', index_col='id')
+# infonce_bertimbau_df = pd.read_csv('data/projections/infonce_bertimbau_trimap.csv', index_col='id')
+infonce_bertimbau_df = pd.read_csv('data/projections/infonce_bertimbau_umap.csv', index_col='id')
 
 # vanilla_albertina_df = pd.read_csv('data/projections/vanilla_albertina_trimap.csv', index_col='id')
+# vanilla_albertina_df = pd.read_csv('data/projections/vanilla_albertina_umap.csv', index_col='id')
 # usimcse_albertina_df = pd.read_csv('data/projections/usimcse_albertina_trimap.csv', index_col='id')
+# usimcse_albertina_df = pd.read_csv('data/projections/usimcse_albertina_umap.csv', index_col='id')
 # infonce_albertina_df = pd.read_csv('data/projections/infonce_albertina_trimap.csv', index_col='id')
+# infonce_albertina_df = pd.read_csv('data/projections/infonce_albertina_umap.csv', index_col='id')
 
 # Creating artificial index to interact with our dataframe
 plot_df['ind_index'] = ind_df.index
@@ -56,8 +62,8 @@ storage_client = storage.Client.from_service_account_json('data/master-thesis-45
 
 # Creating temporary URL for lazy loading images
 plot_df['temporary_br_url'] = pd.NA
-plot_df.loc[plot_df['image_path'].notna(), 'temporary_br_url'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: generate_signed_url(storage_client, 'background-removed-tainacan-images', f"{path.split('/')[-1].split('.')[0]}.png", expiration_minutes=30))
-plot_df.loc[plot_df['temporary_br_url'].isna(), 'temporary_br_url'] = generate_signed_url(storage_client, 'background-removed-tainacan-images', 'placeholder_square.png', expiration_minutes=30)
+plot_df.loc[plot_df['image_path'].notna(), 'temporary_br_url'] = plot_df.loc[plot_df['image_path'].notna(), 'image_path'].apply(lambda path: generate_signed_url(storage_client, 'background-removed-tainacan-images', f"{path.split('/')[-1].split('.')[0]}.png", expiration_minutes=5))
+plot_df.loc[plot_df['temporary_br_url'].isna(), 'temporary_br_url'] = generate_signed_url(storage_client, 'background-removed-tainacan-images', 'placeholder_square.png', expiration_minutes=5)
 
 plot_df['image_path_br'] = ind_df['image_path'].values
 plot_df.loc[plot_df['image_path_br'].notna(), 'image_path_br'] = plot_df.loc[plot_df['image_path_br'].notna(), 'image_path'].apply(lambda path: f"data/br_images/{path.split('/')[-1].split('.')[0]}.png")

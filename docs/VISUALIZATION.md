@@ -1,6 +1,6 @@
 # Visualization Tool  
 
-This page explains how we built our visualization tool. We go over the design choices and implementation, sharing the reasoning behind each step and highlighting the tool’s features. We also discuss its limitations and future improvements.
+This page explains how we built our visualization tool. We go over the design choices and implementation, sharing the reasoning behind each step, highlighting the tool’s features and discussing their limitations for future improvement.
 
 ## The Foundation  
 
@@ -14,7 +14,7 @@ The system is organized into three main sections, each offering a distinct way t
   <img src="../assets/tab2.png" alt="Second tab" width="30%" style="margin-right: 10px;">
   <img src="../assets/tab3.png" alt="Third tab" width="30%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
-    Screenshots of the three primary tabs: (left) the Collection Semantic Space with point-cloud visualizations, (center) the Acquisition Timeline view, and (right) the Geographic Map of Brazil.
+    Screenshots of the three primary tabs: (left) the <i>collection semantic space with point-cloud visualizations</i>, (center) the <i>acquisition timeline</i> view, and (right) the <i>map of communities in Brazil</i>.
   </p>
   <br>
 </p>
@@ -25,7 +25,7 @@ Below, we describe each of these components in more detail.
 
 ## Collection Semantic Space and Groupings
 
-This tab presents several point-cloud based visualizations of the dataset. Each point represents an item, and users can choose between two display modes: marker-based, where colors can correspond to different clusters if applicable, or image-based, where each point is replaced by the item’s actual image.
+This tab presents several *point-cloud based visualizations* of the dataset. Each point represents an item, and users can choose between two display modes: marker-based, where colors can correspond to different clusters if applicable, or image-based, where each point is replaced by the item’s actual image.
 
 <p align="center">
   <br>
@@ -37,17 +37,17 @@ This tab presents several point-cloud based visualizations of the dataset. Each 
   <br>
 </p>
 
-To ensure smooth performance - especially given the high number of points - we implement lazy loading throughout this tab. Rather than processing and rendering all points at once, the system first determines whether each point is currently visible within the user’s viewport. Only visible points are processed for actions like color assignment, plotting, and interactions. This significantly improves responsiveness and prevents unnecessary computations.
+To ensure smooth performance - especially given the high number of points - we implement *lazy loading* throughout this tab. Rather than processing and rendering all points at once, the system first determines whether each point is currently visible within the user’s viewport. Only visible points are processed for actions like color assignment, plotting, and interactions. This significantly improves responsiveness and prevents unnecessary computations.
 
 This approach, however, does come with a few trade-offs. For instance, when panning across the canvas, users may briefly see an empty area outside their initial view. The new region's points will load as soon as the mouse button is released, appearing instantly.
 
-In image mode, we went a step further: images are fetched in real time rather than preloaded. Preloading hundreds of images upfront severely impacted interactivity - screens could take up to 25 or 30 seconds to render. Now, as you navigate, images dynamically reload, even for regions you've visited before. While this can result in a brief flicker when dragging around the view, we believe this is a worthwhile trade-off, as it keeps the interface responsive and fluid.
+In image mode, we went a step further: images are fetched in real time rather than preloaded. Preloading hundreds of images upfront severely impacted interactivity - screens could take up to 50 or 60 seconds to render. Now, as you navigate, images dynamically reload, even for regions you've visited before. While this can result in a brief flicker when dragging around the view, we believe this is a worthwhile trade-off, as it keeps the interface responsive and fluid.
 
 We mention these limitations to be transparent, but in practice, they have minimal impact on the user experience. The overall performance gains and interactivity more than make up for the occasional moment of minimally delayed rendering.
 
 ### Collapse Markers
 
-Again due to the large volume of items in the collection, both visualization modes (markers and images) support collapse markers - translucent circles that represent multiple nearby points that can't be individually shown at the current zoom level. When points are too densely packed, plotting them all individually would lead to visual clutter and reduced performance. Instead, we display a larger, semi-transparent circle with a number inside, indicating how many items are aggregated in that region. The more points within a collapsed group, the larger the circle. This feature not only improves readability, but also enhances performance by avoiding the need to render thousands of overlapping points simultaneously.
+Again due to the large volume of items in the collection, both visualization modes (markers and images) support *collapse markers* - translucent circles that represent multiple nearby points that can't be individually shown at the current zoom level. When points are too densely packed, plotting them all individually would lead to visual clutter and reduced performance. Instead, we display a larger, semi-transparent circle with a number inside, indicating how many items are aggregated in that region. The more points within a collapsed group, the larger the circle. This feature not only improves readability, but also enhances performance by avoiding the need to render thousands of overlapping points simultaneously.
 
 We initially implemented collapsing using *DBSCAN*, a density-based clustering algorithm. While it worked reasonably well, *DBSCAN*'s propagation mechanism sometimes grouped together points that were visually far apart, especially in denser regions. This made the collapsed markers feel imprecise or unintuitive in certain areas.
 
@@ -57,7 +57,7 @@ This approach produces more natural and intuitive groupings, better aligned with
 
 ### Hovering and Clicking
 
-The marker-based point cloud is fully interactive and designed to support exploration. Depending on whether the user is browsing visual similarities or textual similarities, hovering over a point reveals a tooltip card:
+The marker-based point cloud is fully interactive and designed to support exploration. Depending on whether the user is browsing visual similarities or textual similarities, *hovering over a point reveals a tooltip card*:
 
 - For visual similarity, the card displays the item’s image.
 
@@ -83,28 +83,28 @@ The image-based point cloud is more straightforward and intentionally less inter
 
 The visualization tool offers several grouping modes, allowing users to explore the dataset through different semantic lenses.
 
-One of the simplest modes is based on `tipo_de_materia_prima` (material type). This view serves as a baseline and splits the dataset into 7 distinct regions based on whether items are composed of *animal*, *vegetal*, *mineral*, or combinations of these. The regions are laid out in a triangle, with each vertex representing a pure material type. The sides between vertices represent items composed of two materials (e.g., animal and vegetal), and the center contains items made from all three. Since all items in a given region share the same material composition, we introduced 2D Gaussian noise to their positions to create a visual spread - turning a flat categorical layout into a more natural point-cloud view.
+One of the simplest modes is based on `tipo_de_materia_prima` (material type). This view serves as a baseline and splits the dataset into 7 distinct regions based on whether items are composed of 'animal', 'vegetal', 'mineral', or combinations of these. The regions are laid out in a triangle, with each vertex representing a pure material type. The sides between vertices represent items composed of two materials (e.g., animal and vegetal), and the center contains items made from all three. Since all items in a given region share the same material composition, we introduced 2D Gaussian noise to their positions to create a visual spread - turning a flat categorical layout into a more natural point-cloud view.
 
 <p align="center">
   <br>
   <img src="../assets/grouping_tipo_materia_prima.png" alt="Tipo de matéria prima grouping" width="60%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
-    Material composition grouping: items arranged within a triangle based on primary materials (animal, vegetal, mineral), with 2D noise added for visual spread.
+    Material composition grouping: items arranged within a triangle based on primary materials ('animal', 'vegetal', 'mineral'), with 2D Gaussian noise added for visual spread.
   </p>
   <br>
 </p>
 
-Next, there are three visual-similarity-based groupings, which come from models trained on the image embedding pipeline. These groupings aim to organize items based on how they look, capturing patterns in color, shape, texture, and visual detail. More information about how these clusters were generated is available in our [clustering experiments documentation](https://github.com/Luizerko/master_thesis/tree/main/CLUSTERING.md).
+Next, there are three *visual-similarity-based groupings*, which come from models trained on the image embedding pipeline. These groupings aim to organize items based on how they look, capturing patterns in color, shape, texture, and visual detail. More information about how these clusters were generated is available in our [clustering experiments documentation](https://github.com/Luizerko/master_thesis/tree/main/CLUSTERING.md).
 
 These views enable users to browse the collection in a visually intuitive way, follow thematic or stylistic patterns, discover relationships between communities based on shared design elements, or even spot outliers, such as items potentially mislabeled by metadata but correctly clustered based on visual features.
 
 The three visual clustering options differ in how they were trained:
 
-- **Single-head (`categoria`):** Embeddings come from a model fine-tuned to predict `categoria`. This produces clear global clusters corresponding to each category, ideal for studying intra or inter-category relationships.
+- *Single-head (`categoria`):* Embeddings come from a model fine-tuned to predict `categoria`. This produces clear global clusters corresponding to each category, ideal for studying intra or inter-category relationships.
 
-- **Single-head (`povo`):** This model was fine-tuned to predict `povo`. Due to the large number of communities and data imbalance, this view lacks global structure but still reveals local clusters that group items from the same or similar communities. It’s best used when exploring the collection with specific communities in mind.
+- *Single-head (`povo`):* This model was fine-tuned to predict `povo`. Due to the large number of communities and data imbalance, this view lacks global structure but still reveals local clusters that group items from the same or similar communities. It’s best used when exploring the collection with specific communities in mind.
 
-- **Multi-head:** Embeddings come from a model trained to predict both `categoria` and `povo` simultaneously. This view reflects a semantically richer space (without any particular cluster) where structure may be influenced by both labels.
+- *Multi-head:* Embeddings come from a model trained to predict both `categoria` and `povo` simultaneously. This view reflects a semantically richer space (without any particular cluster) where structure may be influenced by both labels.
 
 <p align="center">
   <br>
@@ -117,17 +117,24 @@ The three visual clustering options differ in how they were trained:
   <br>
 </p>
 
-Finally, there's another grouping mode based on textual similarity, using items’ descriptions instead of images. Analogous to the image pipeline, this mode organizes items by their summarized descriptions, capturing textual affinities even when items don’t look alike but embody the same concept. This approach also lets us cluster items for which we have no image (half of the collection), using only their summarized descriptions (with just one item lacking any description). More information about generating these clusters can be found in our [clustering experiments documentation](https://github.com/Luizerko/master_thesis/tree/main/CLUSTERING.md).
+Finally, there's another grouping mode based on *textual similarity*, using items’ descriptions instead of images. Analogous to the image pipeline, this mode organizes items by their summarized descriptions, capturing textual affinities even when items don’t look alike but embody the same concept. This approach also lets us cluster items for which we have no image (half of the collection), using only their summarized descriptions (with just one item lacking any description). More information about generating these clusters can be found in our [clustering experiments documentation](https://github.com/Luizerko/master_thesis/tree/main/CLUSTERING.md).
 
-The textual clustering option was trained using **Contrastive Learning**. It uses embeddings from a contrastively fine-tuned model that pulls semantically similar sentences closer together and pushes different ones farther apart. This creates a representation tailored to our custom-designed dataset of summarized descriptions.
+The textual clustering option was trained using *contrastive learning*. It uses embeddings from a contrastively fine-tuned model that pulls semantically similar sentences closer together and pushes different ones farther apart. This creates a representation tailored to our custom-designed dataset of summarized descriptions.
 
-<!-- Images of textual groupings -->
+<p align="center">
+  <br>
+  <img src="../assets/grouping_textual_1.png" alt="Textual similarity grouping 1" width="50%" style="margin-right: 10px;">
+  <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
+    A view of the textual clustering mode with the whole point-cloud and a single item highlighted.
+  </p>
+  <br>
+</p>
 
 ### Point-Cloud Granularity
 
 The granularity slider lets users control how detailed or aggregated the point-cloud appears by adjusting the threshold used for collapsing nearby points.
 
-At low granularity (high threshold), nearby points are grouped into larger clusters, making the visualization easier to navigate and more performant - especially useful when focusing on a smaller region of the space or zooming in deeply. At high granularity (low threshold), points are less aggressively grouped, preserving fine-grained detail and revealing subtle structures across the whole dataset. However, this mode may be heavier on performance, especially when many individual points need to be rendered simultaneously.
+At low granularity (high threshold), nearby points are grouped into larger clusters, making the visualization easier to navigate and more performant - especially useful when finding a region of interest. At high granularity (low threshold), points are less aggressively grouped, preserving fine-grained detail and revealing subtle structures across the whole dataset - particularly useful for exploring items when a region of interest is found. However, this mode may be heavier on performance, especially when many individual points need to be rendered simultaneously.
 
 <p align="center">
   <img src="../assets/grouping_low_gran.png" alt="Grouping with low granularity" width="45%" style="margin-right: 10px;">
@@ -154,7 +161,7 @@ To provide immediate feedback, a small rectangle in the top-left corner of the i
   <br>
 </p>
 
-This filtering system enables targeted exploration of the dataset and allows users to investigate patterns in material, form, time, or geography within any chosen (grouping) embedding space.
+This filtering system enables targeted exploration of the dataset and allows users to investigate patterns in material, form, time, or geography within any chosen semantic space (grouping mode).
 
 ## Collection's Timeline
 

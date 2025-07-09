@@ -4,22 +4,19 @@ The modern world presents overwhelming challenges for most indigenous peoples, a
 
 ## Project Goals
 
-The main challenges lie in extracting, organizing, and analyzing the data from the Tainacan platform, which is currently not readily usable for large-scale computational tasks. The metadata structuring is inconsistent, the images require preprocessing, there are almost no possibilities of exploring relationships between artifacts based on several dimensions such as visual similarity, geographic origin, or metadata attributes (i.e. textual descriptions of objects), and the interactivity with the collection is very limited. This project seeks to address these issues by building an end-to-end pipeline that starts with data extraction and normalization, followed by various applications of feature extraction, clustering and projection techniques to explore connections within the dataset, and finally the development of a tool for globally visualizing the collection. The aim is not only to understand these clusters but to compare them against one another, established indigenous literature and geographic data, creating an exploratory application that can inform and engage the general public through an interactive platform, as well as become a useful research instrument for future cataloging.
+The main challenges lie in extracting, organizing, and analyzing the data from the [Tainacan platform](https://tainacan.org/), which is currently not readily usable for large-scale computational tasks. The metadata structuring is inconsistent, the images require preprocessing, there are almost no possibilities of exploring relationships between artifacts based on dimensions such as visual or textual similarity and the interactivity with the collection is very limited. This project seeks to address these issues by building an end-to-end pipeline that starts with data extraction and normalization, followed by various applications of feature extraction, clustering and projection techniques to explore connections within the dataset, and finally the development of a tool for globally visualizing the collection. The aim is not only to understand these clusters but to compare them against one another, established indigenous literature and geographic data, creating an exploratory application that can inform and engage the general public through an interactive platform, as well as become a useful research instrument for future cataloging.
 
 <p align="center">
   <img src="assets/visual_tool_summ.gif" alt="Visual tool overview." width="70%" style="margin-top: 20px;" />
 </p>
 <p align="center" style="margin-bottom: 15px;">
-  Animated interaction with the tool for an overview
+  Animated overview of visual tool interactions.
 </p>
 
 ## Repository Hierarchy
 
     .
-    ├── assets                # Collection of images and GIFs used for the documentation
-    |   └── ...
     ├── docs                  # Project's documentation folder
-    |   └── ...
     ├── tainacan_collection   # Code collection for Tainacan data exploration (core code folder)
     |   ├── assets            # Stylesheets for visualization tool
     |   ├── image_based       # Code focused on image based feature extraction and clustering
@@ -37,6 +34,6 @@ This is the base folder for the project. In here, you'll find:
  
  - The [clustering documentation](https://github.com/Luizerko/master_thesis/tree/main/docs/CLUSTERING.md) describing all the clustering technical implementations and obtained results.
  
-If you want to take a look at the code itself, go into the [`tainacan_collection`](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection) folder and explore the individual files.
+If you want to take a look at the code itself, go into the [`tainacan_collection`](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection) folder and explore the individual files inside the desired pipeline (image-based or textual-based).
 
 I hope you have as much fun going through the repo as I had developing it all :grin:
