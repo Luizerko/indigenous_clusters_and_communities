@@ -4,13 +4,13 @@ This page outlines the clustering experiments we conducted, ranging from simple 
 
 ## The Baselines
 
-Before applying advanced machine learning techniques, we began by exploring fundamental aspects of our data. Instead of immediately relying on algorithms, we first sought to understand what insights could be directly extracted from the dataset and how domain knowledge from museum specialists could be integrated. Establishing these baselines seemed crucial for two reasons:
+Before applying advanced machine learning techniques, we began by exploring fundamental aspects of our data. Instead of immediately relying on advanced algorithms, we first sought to understand what insights could be (almost) directly extracted from the dataset and how domain knowledge from museum specialists could be integrated. Establishing these baselines seemed crucial for two reasons:
 
-1. **Comparing our clusters to existing knowledge:** This helped evaluate how well our models captured essential patterns in the collection.
+1. Comparing our clusters to existing knowledge: This helped evaluate how well our models captured essential patterns in the collection.
 
-2. **Identifying knowledge gaps:** By analyzing our clustering results, we could pinpoint connections between items and communities that were previously not identified.
+2. Identifying knowledge gaps: By analyzing our clustering results, we could pinpoint connections between items and communities that were previously not identified.
 
-This analysis extends beyond traditional quantitative measures, such as embedding space distribution and clustering algorithm performance. Instead, it also focus on the qualitative aspects - evaluating whether the clusters align with meaningful patterns within the collection and how effectively they reveal new insights.
+This analysis extends beyond traditional quantitative measures, such as embedding space distribution and clustering algorithm performance. Instead, it also focus on the qualitative aspects, like evaluating whether the clusters align with meaningful patterns within the collection and how effectively they reveal new insights.
 
 ### Random Orthonormal Projections
 
@@ -39,13 +39,13 @@ Despite slight improvements with *TriMap*, neither method yielded meaningful clu
 
 After the failure of *random orthonormal projections*, we returned directly to categorical clustering. We used *multi-hot encoding* to transform attributes with multi-category assignments into binary vectors. Then, we applied *K-Modes*, a clustering algorithm designed for categorical data that measures dissimilarity based on category mismatches instead of Euclidean distance.
 
-Using `categoria` and `tipo_de_materia_prima` again and the elbow method, we found that 16 clusters provided the best balance, slightly exceeding the sum of individual category counts (14 in total), not suggesting an overestimation but still accounting for possible correlations between categories across the attributes. While this approach prevented cluster assignment issues through the direct use of the categories, we still had a very sparse feature space and visualization remained challenging.
+Using `categoria` and `tipo_de_materia_prima` again and the *elbow method*, we found that 16 clusters provided the best balance, slightly exceeding the sum of individual category counts (14 in total), not suggesting an overestimation but still accounting for possible correlations between categories across the attributes. While this approach prevented cluster assignment issues through the direct use of the categories, we still had a very sparse feature space and visualization remained challenging.
 
 - *t-SNE* failed, producing unnatural circular patterns due to its KL-Divergence minimization on (sparse) categorical data.
 
 - *UMAP* struggled, as the sparse feature space violated its assumption of an underlying manifold, leading to a chaotic point cloud.
 
-- *TriMap* performed best, forming a few identifiable clusters. However, some clusters split across multiple areas - necessary for preserving some kind of equidistance between all clusters in 2D. Despite this improvement, visualization remained unclear.
+- *TriMap* performed best, forming a few maybe identifiable clusters. However, some clusters split across multiple areas - necessary for preserving some kind of equidistance between all clusters in 2D. Despite this improvement, visualization remained fairly unclear.
 
 <div align="center">
     <br>
@@ -56,19 +56,19 @@ Using `categoria` and `tipo_de_materia_prima` again and the elbow method, we fou
     <br>
 </div>
 
-### Basic Feature-Based Clustering  
+### Basic Attribute-Based Clustering  
 
 Due to the failures of the previous methods, we opted for a simpler approach, directly using only the most well-defined and easily visualized attribute as baseline: `tipo_de_materia_prima`. This attribute has three meaningful categories - 'animal', 'vegetal', and 'mineral'. A fourth category ('sintetico') exists, but no data points fall into this group. Items can also belong to multiple categories.
 
 To represent clusters in 2D, we used a triangle representation:
 
-- Each vertex represents one category (*animal*, *vegetal*, or *mineral*).
+- Each vertex represents one category ('animal', 'vegetal', or 'mineral').
 
 - Midpoints between vertices represent items that belong to two categories (each one of the closest vertices).
 
 - Items that belong to all three categories are placed in the center of the triangle.
 
-Since each category would otherwise collapse into a single point, making visualization difficult, we added 2D Gaussian noise to create a point-cloud effect.
+Since each category would otherwise collapse into a single point, making visualization difficult, we added *2D Gaussian noise* to create a point-cloud effect.
 
 <div align="center">
     <br>
@@ -95,31 +95,31 @@ In the end, the "baseline" we were searching for was not something pre-existing,
 
 ### Image-Based Clustering
 
-This section delves into the technical aspects of one of our machine learning approaches: using image-based clustering to group objects, aiming to understand how they connect through visual similarities. The results of this process serve two main purposes:
+This section delves into the technical aspects of one of our machine learning approaches: using image-based clustering to group items, aiming to understand how they connect through visual similarities. The results of this process serve two main purposes:
 
-1. **Enhancing collection navigation:** By clustering visually similar objects together, we create an interactive and intuitive way for users to explore the collection. Similar objects will be positioned in close proximity within our final projection, allowing users to navigate different “micro-universes” of the collection, observe category transitions, and explore relationships between items.  
+1. Enhancing collection navigation: By clustering visually similar items together, we create an interactive and intuitive way for users to explore the collection. Similar items will be positioned in close proximity within our final projection, allowing users to navigate different “micro-universes” of the collection, observe category transitions, and explore relationships between items.  
 
-2. **Uncovering latent relationships:** Our models help to reveal previously undocumented connections between groups of objects or cultural communities. This is particularly valuable for researchers studying indigenous peoples, as it provides insights into shared artistic or manufacturing traditions. Given the lack of centralized taxonomies for indigenous groups in Brazil, our tool could serve as a pivotal resource for broader ethnographic studies in the country.  
+2. Uncovering latent relationships: Our models help to reveal previously undocumented connections between groups of items or cultural communities. This is particularly valuable for researchers studying indigenous peoples, as it provides insights into shared artistic or manufacturing traditions. Given the lack of centralized taxonomies for indigenous groups in Brazil, our tool could serve as a pivotal resource for broader ethnographic studies in the country.  
 
 To implement this, we use image feature extractors to project background-removed images (see [dataset documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/DATASET.md) for details) into high-dimensional space. We then apply dimensionality reduction techniques to visualize the clusters.
 
-Beyond simple projections, we experimented with fine-tuning models to improve item dispersion and enable subdivision by specific attributes (e.g., `povo` or `categoria`). This allows users to explore both individual item neighborhoods and broader categorical relationships within the dataset. 
+Beyond simple projections, we experimented with fine-tuning models to improve item dispersion and enable subdivision by specific attributes (e.g., `povo`, `categoria` or both). This allows users to explore both individual item neighborhoods and broader categorical relationships within the dataset. 
 
-We now proceed to describe the technical pipelines implemented, report the obtained results and show some of the generated images for clarity. For this stage, we used two main feature extraction models, both based on transformers. Transformer-based architectures are currently state-of-the-art for feature extraction, as they leverage pretrained backbones with the best results when optimized on large-scale classification tasks (such as ImageNet21K in our case).
+We now proceed to describe the technical pipelines implemented, report the obtained results and show some of the generated images for clarity. For this stage, we used two main feature extraction models, both based on transformers. Transformer-based architectures are currently state-of-the-art for feature extraction, as they leverage pretrained backbones with the best results when optimized on other large-scale tasks.
 
 #### ViT Base (Patch 16x16)
 
-We started with the *ViT Base* model with 16x16 patches, trained on *ImageNet21K*, available on [Hugging Face](https://huggingface.co/google/vit-base-patch16-224-in21k). Although no longer cutting-edge, *ViT* remains a foundational model in the field and serves as a solid reference point for transformer-based architectures. Many state-of-the-art models, including the next one we discuss (*DINOv2*), build upon it.
+We started with the *[ViT Base](https://huggingface.co/google/vit-base-patch16-224-in21k)* model with 16x16 patches, trained on *ImageNet21K*. Although no longer cutting-edge, *ViT* remains a foundational model in the field and serves as a solid reference point for transformer-based architectures. Many state-of-the-art models, including the next one we discuss (*DINOv2*), build upon it.
 
 For preprocessing, we resized images to 224x224 (cropping if larger in any dimension and bilinear interpolation if smaller), then normalized them using a mean of 0.5 and a standard deviation of 0.5 for all channels, following the model’s preprocessing pipeline.
 
 Using only the pretrained backbone, we projected the images into a high-dimensional space and applied dimensionality reduction techniques to generate 2D visualizations for the interactive tool. We tested three different techniques:
 
-- **TriMap:** Poor results, with minimal data dispersion and poor visual separation.
+- *TriMap:* Poor results, with minimal data dispersion and poor visual separation.
 
-- **t-SNE:** Produced an entangled, chaotic cloud with no clear clusters.
+- *t-SNE:* Produced an entangled, chaotic cloud with no clear clusters.
 
-- **UMAP:** Successfully created a meaningful manifold, capturing structure with the vanilla pretrained model and groupings when fine-tuned (as discussed later).  
+- *UMAP:* Successfully created a meaningful manifold, capturing structure with the vanilla pretrained model and groupings when fine-tuned (as discussed later).  
 
 <p align="center">
   <br>
@@ -130,33 +130,25 @@ Using only the pretrained backbone, we projected the images into a high-dimensio
   <br>
 </p>
 
-The resulting projection reveals a dense point cloud due to the lack of a specific fine-tunning category. However, a continuous manifold emerges, where visually similar objects are positioned close together. This reflects the model’s ability to capture diverse visual similarities, including shape, colors, texture and details. This manifold alone offers a unique and interactive way to navigate the collection. But what happens when we introduce more structured knowledge into the data?
+The resulting projection reveals a dense point cloud due to the lack of a specific fine-tunning category. However, a continuous manifold emerges, where visually similar items are positioned close together. This reflects the model’s ability to capture diverse visual similarities, including shape, colors, texture and details. This manifold alone offers a unique and interactive way to navigate the collection. But what happens when we introduce more structured knowledge into the data?
 
-To refine clustering, we performed fine-tuning using the `povo` and `categoria` features, aiming for semantically distinct object groupings. This allows for categorical exploration and a more nuanced understanding of relationships between indigenous communities and their artistic traditions.
+To refine clustering, we performed fine-tuning using the `povo` and `categoria` attributes, aiming for semantically distinct item groupings. This allows for categorical exploration and a more nuanced understanding of relationships between indigenous communities and their artistic traditions.
 
-For that, we added a classification head to the network’s backbone - a single linear layer with 768-dimensional output from the backbone as the input size and the number of classes in the chosen feature as the output size. While common fine-tuning methods involve adding a small fully connected network, *ViT* fine-tuning is typically performed by adding a single linear layer at the top of the network. This approach is supported by section **3.1** of the [*ViT* original paper](https://ar5iv.labs.arxiv.org/html/2010.11929) and section **3.2** of [this paper](https://openreview.net/pdf?id=4nPswr1KcP), which explores *ViT* training and fine-tunning strategies.
+For that, we added a *classification head* to the network’s backbone - a single linear layer with 768-dimensional output from the backbone as the input size and the number of classes in the chosen feature as the output size. While common fine-tuning methods involve adding a small fully connected network, *ViT* fine-tuning is typically performed by adding a single linear layer at the top of the network, as supported by section 3.1 of the [*ViT* original paper](https://ar5iv.labs.arxiv.org/html/2010.11929) and section 3.2 of [another paper](https://openreview.net/pdf?id=4nPswr1KcP) that explores *ViT* training and fine-tunning strategies.
 
 ##### Fine-Tunning Models
 
-We fine-tuned several models until convergence (normally 20 to 30 epochs) to achieve the best possible results and assess the effectiveness of each adjustment we were implementing. Going into the implementation details, the dataset was split into 80% training, 10% validation, 10% test, and the original collection contained approximately 11,000 images.
+We fine-tuned the imagetic models using *supervised learning* on two attributes: `povo` and `categoria`. The goal was to train the networks to classify these correctly and then return to the base-model embeddings to assess how well they captured dataset-specific visual semantics. This helped adapt the models to our context and improve their usefulness for visual similarity exploration.
 
-For each model, we tracked:  
-  - **Loss**  
-  - **Validation accuracy**  
-  - **Average class precision**  
-  - **Average class recall**  
+As the original base-model had no classification head, there’s no quantitative baseline for comparison. Still, strong classification performance and qualitative analysis of projections suggest that the models did learn meaningful visual features. We also compare trained models to one another to show how different design choices impacted the results.
 
-All models were fine-tuned on a 8GB RTX 4070 until convergence (typically between 20 and 30 epochs) using:  
-- **Adam optimizer** (with weight decay)  
-- **Cross-entropy loss** (either with or without weights)  
-- **Early stopping** (1% accuracy tolerance, 3-iteration patience)  
-- **Five runs per model** (for mean and standard deviation analysis)  
+Going into the implementation details, the dataset was split into 80% training, 10% validation, 10% test, and the original collection contained approximately 11K images. For each model, we tracked *loss*, *validation accuracy*, *average class precision* and *average class recall*. All models were fine-tuned on a 8GB RTX 4070 until convergence (typically between 20 and 30 epochs) using the *Adam optimizer* (with weight decay), *cross-entropy loss* (either with or without weights), *early stopping* (1% accuracy tolerance and 3-iteration patience), and five runs per model (for mean and standard deviation analysis).
 
-Most models, however, were not fine-tuned directly on the original dataset due to severe class imbalance for `povo` and, to a lesser extent, `categoria`. To address this, we developed a rebalancing pipeline, which significantly improved model performance.  
+Most models, however, were not fine-tuned directly on the original dataset due to severe class imbalance for `povo` and, to a lesser extent, `categoria`. To address this, we developed a *rebalancing pipeline*, which significantly improved model performance.
 
-For `povo`, we started by understanding the distribution. We analyzed the quantiles of class sizes. `povo` contains 187 classes, but 25% of these (~47 classes) have only 4 images - insufficient for training. Even after removing these 25% least populated classes, around 99% of the dataset remains intact. We ultimately removed 75% of the least populated classes (~138 classes), keeping only classes with more than 65 images, preserving around 85% of the original data.
+For `povo`, we started by understanding the distribution. We analyzed the quantiles of class sizes. `povo` contains 187 classes, but 25% of these (~47 classes) have only 4 images, definetly insufficient for training. After removing these 25% least populated classes, around 99% of the dataset remains intact. We ended up removing 75% of the least populated classes (~138 classes, including the aforementioned ~47 classes), keeping only classes with more than 65 images and still preserving around 85% of the original data.
 
-Despite filtering, class sizes still varied significantly. To address this we performed a class median analysis: classes with more than 2 times the median image count were labeled as *majority* classes, and others were labeled as *minority* classes. After that we started data augmentation for minority classes through random horizontal flips, random vertical flips and random Gaussian blur. For the majority classes, in turn, we randomly (under)sampled images to match minority class sizes. Notice, however, that only augmenting minority classes could introduce a bias where the model differentiates minority/majority classes based on artificially added noise. Thus, we applied stronger undersampling to majority classes and then also augmented them.  
+Despite filtering, class sizes still varied significantly. To address this we performed a class median analysis: classes with more than 2 times the median image count were labeled as "majority classes", and others were labeled as "minority classes". After that we started data augmentation for minority classes through random horizontal flips, random vertical flips and random Gaussian blur. For the majority classes, in turn, we randomly (under)sampled images to match minority class sizes. Notice, however, that only augmenting minority classes could introduce a bias where the model differentiates minority/majority classes based on artificially added noise. Thus, we applied stronger undersampling to majority classes and then also augmented them.  
 
 <p align="center">
   <br>
@@ -168,9 +160,9 @@ Despite filtering, class sizes still varied significantly. To address this we pe
   <br>
 </p>
 
-Even after balancing, class disparities remained though. Because of that, we assigned weights inversely proportional to the amount of data the class had, ensuring equal contribution during training.  
+Even after balancing, class disparities remained though. Because of that, we assigned weights inversely proportional to the amount of data a class had, ensuring equal contribution during training.  
 
-For `categoria`, the procedure was nearly identical to `povo`, with one key difference: only one class (*"etnobotânica"*) was significantly underrepresented. Hence, instead of a full quantile study, we filtered this single class. The remaining balancing steps followed the same augmentation, undersampling, and weight adjustment process.
+For `categoria`, the procedure was nearly identical to `povo`, with one key difference: only one class ('etnobotânica') was significantly underrepresented. Hence, instead of a full quantile study, we filtered out this single class. The remaining balancing steps followed the same augmentation, undersampling, and weight adjustment process.
 
 The tables below summarizes the parameters for different models and the corresponding quantitative results.
 
@@ -186,7 +178,7 @@ The tables below summarizes the parameters for different models and the correspo
 
 | Dataset | Learning Rate | Weight Decay | Frozen Layers (%) | Weighted Loss | Test Accuracy (%) | Avg. Precision | Avg. Recall | Avg. Precision on Selected Classes | Avg. Recall on Selected Classes | 
 |-|-|-|-|-|-|-|-|-|-|
-| Original | 1e-5 | 2e-6 | 0 | False | <ins>87.60 ± 0.81</ins> | 0.78 ± 0.01 | 0.76 ± 0.01 | <ins>0.86 ± 0.02</ins> | 0.84 ± 0.01 |
+| Original | 1e-5 | 2e-6 | 0 | False | <ins>87.60 ± 0.81</ins> | 0.78 ± 0.01 | 0.76 ± 0.01 | <ins>0.86 ± 0.02</ins> | <ins>0.84 ± 0.01</ins> |
 | Balanced | 3e-6 | 1e-6 | 0 | True | **88.64 ± 1.53** | - | - | **0.88 ± 0.01** | **0.85 ± 0.01** |
 | Balanced | 3e-6 | 1e-6 | 50 | True | 87.43 ± 1.37 | - | - | <ins>0.86 ± 0.02</ins> | **0.85 ± 0.02** |
 | Balanced | 3e-6 | 1e-6 | 80 | True | 86.30 ± 1.30 | - | - | 0.84 ± 0.02 | 0.83 ± 0.02 |
@@ -202,7 +194,7 @@ Second, we observed that freezing layers negatively impacted performance, partic
 
 Looking beyond the raw numbers, it’s also helpful to consider the embedding spaces produced by these models. When we project the full dataset (especially for `povo`) into 2D using *UMAP*, the spread of points appears noisy and unstructured at first glance. This lack of global structure is expected: most classes were filtered out due to insufficient data and never seen during training. However, local structures do emerge. When filtering the projection to highlight only a single community, items for that community tend to be grouped closely together, validating that the model learns consistent visual signatures for groups it has seen enough of. In some cases, we can also see visual affinities between specific communities, hinting at stylistic or material overlaps - something that the platform enables users to explore dynamically.
 
-The story is quite different for `categoria`. Here, the spread is much cleaner, and we can clearly see well-defined clusters for most categories. These clusters often sit close to others with which they share visual or material similarities. Interestingly, when inspecting the edges of clusters, we see a smooth transition: the items on the edge of one category often resemble those on the nearest edge of a neighboring cluster. This is a proof of a meaningful data manifold, where inter-class similarity is encoded naturally within the latent space. Within each cluster, there's also a strong internal structure - items flow from simpler, more typical examples to more complex or ambiguous ones along continuous directions. One notable exception is the class *etnobotânica*, which was not retained during fine-tuning due to lack of data. As expected, its samples are scattered across all clusters, showing weak cohesion but also ratifying the model’s ability to project items based on their visual similarities.
+The story is quite different for `categoria`. Here, the spread is much cleaner, and we can clearly see well-defined clusters for most categories. These clusters often sit close to others with which they share visual or material similarities. Interestingly, when inspecting the edges of clusters, we see a smooth transition: the items on the edge of one category often resemble those on the nearest edge of a neighboring cluster. This is proof of a meaningful data manifold, where inter-class similarity is encoded naturally within the latent space. Within each cluster, there's also a strong internal structure - items flow from some examples to others along continuous directions. One notable exception is the class 'etnobotânica', which was not retained during fine-tuning due to lack of data. As expected, its samples are scattered across all clusters, showing weak cohesion but also ratifying the model’s ability to project items based on their visual similarities since items from this class are visually very different from one another.
 
 <p align="center">
   <br>
@@ -214,7 +206,7 @@ The story is quite different for `categoria`. Here, the spread is much cleaner, 
   <br>
 </p>
 
-Going even beyond, one of the most exciting outcomes of these models - especially the ones fine-tuned for `categoria` - was their ability to offer qualitative insights into the collection. For example, in analyzing projections, we discovered that necklaces from the *Mayongong* people display a broad color diversity, with several items featuring vibrant palettes not commonly seen for other groups. Intriguingly, some of these color schemes overlapped with those found in *Kamayurá* and *Kuikuro* necklaces, suggesting possible shared stylistic influences or material sources.
+Going even beyond, one of the most exciting outcomes of these models - especially the ones fine-tuned for `categoria` - was their ability to offer qualitative insights into the collection. For example, in analyzing projections, we discovered that necklaces from the *Mayongong* people display a broad color diversity, with several items featuring vibrant palettes not commonly seen for other groups. Intriguingly, some of these color schemes overlapped with those found in *Kamayurá* and *Kuikuro* necklaces, suggesting possible shared stylistic influences or at least material sources.
 
 Another compelling observation was that both *Kamayurá* and *Kuikuro* necklaces frequently use a large lace to tie them, in contrast to the more commonly seen smaller wrap-style lace in other communities. The model's grouping behavior helped surface this design pattern, which might otherwise have been missed. We also noticed similarities between *Wajãpi* and *Wayana-Apalai* necklaces, especially in their color and layout, highlighting potential cultural or artisanal connections.
 
@@ -224,7 +216,7 @@ Another compelling observation was that both *Kamayurá* and *Kuikuro* necklaces
   <img src="../assets/necklace_sim_1_2.png" alt="Necklace color similarity Kamayurá" width="20%" style="margin-right: 20px;">
   <img src="../assets/necklace_sim_1_3.png" alt="Necklace color similarity Kuikuro" width="20%">
   <p align="center" style="margin-top: 10px; margin-bottom: 10px;">
-    Visual similarities between necklaces from the <i>Mayongong</i> (left), <i>Kamayurá</i> (center), and <i>Kuikuro</i> (right) communities. The model highlighted overlapping color palettes between all and distinctive tie styles between the last two, suggesting possible shared stylistic or material influences.
+    Visual similarities between necklaces from the <i>Mayongong</i> (left), <i>Kamayurá</i> (center), and <i>Kuikuro</i> (right). The model highlighted overlapping color palettes between all and distinctive tie styles between the last two, suggesting possible shared stylistic or material influences.
   </p>
   <br>
 </p>
@@ -234,12 +226,14 @@ Another compelling observation was that both *Kamayurá* and *Kuikuro* necklaces
   <img src="../assets/necklace_sim_2_1.png" alt="Necklace color similarity Wajãpi" width="30%" style="margin-right: 20px;">
   <img src="../assets/necklace_sim_2_2.png" alt="Necklace color similarity Wayana-Apalai" width="30%">
   <p align="center" style="margin-top: 10px; margin-bottom: 5px;">
-    Necklace designs from the <i>Wajãpi</i> (left) and <i>Wayana-Apalai</i> (right) communities. The model's clustering revealed subtle yet consistent visual parallels in color choice and layout, indicating potential artisanal or cultural connections.
+    Necklace designs from the <i>Wajãpi</i> (left) and <i>Wayana-Apalai</i> (right). The model's clustering revealed subtle yet consistent visual parallels in color choice and layout, indicating potential artisanal or cultural connections.
   </p>
   <br>
 </p>
 
-Furthermore, the model proved to be a valuable tool for identifying outliers. For instance, we detected a ceramic piece from the *Waurá* community that was mistakenly labeled as belonging to the *trançado* category. It appeared embedded within the ceramic cluster in our embeddings space though, indicating a strong visual similarity to other ceramics despite its incorrect categorization. This kind of flagging can help curators re-examine potential misclassifications and uncover hidden relationships across items and communities.
+This is just one brief and surface-level example of the insights we were able to quickly uncover in the dataset. It highlights the potential for much deeper investigation, even for people without formal expertise in indigenous communities.
+
+Furthermore, the model proved to be a valuable tool for identifying outliers. For instance, we detected a ceramic piece from the *Waurá* community that was mistakenly labeled as belonging to the 'trançado' category. It appeared embedded within the ceramic cluster in our embeddings space though, indicating a strong visual similarity to other ceramics despite its incorrect categorization. This kind of flagging can help curators re-examine potential misclassifications and uncover hidden relationships across items and communities.
 
 <p align="center">
   <br>
@@ -247,24 +241,22 @@ Furthermore, the model proved to be a valuable tool for identifying outliers. Fo
   <img src="../assets/outlier_ceramic_2.png" alt="(Outlier) ceramic example" width="30%">
   <br>
   <p align="center" style="margin-top: 10px; margin-bottom: 5px;">
-    Example of a typical ceramic piece (left) and the misclassified outlier (right), originally labeled as <i>trançado</i>. Despite the incorrect label, the model placed it within the ceramic cluster in the embedding space, showcasing its potential to surface visually consistent but categorically inconsistent items.
+    Example of a typical ceramic piece (left) and the misclassified outlier (right), originally labeled as 'trançado'. Despite the incorrect label, the model placed it within the ceramic cluster in the embedding space, showcasing its potential to surface visually consistent but categorically inconsistent items.
   </p>
   <br>
 </p>
 
-These examples reinforce the potential of these models not just for classification of new items, but as analytical tools for uncovering patterns, highlighting inconsistencies, and supporting more nuanced interpretations for such a complex cultural dataset.
+In addition to the previously mentioned models, we developed a *multi-head model* to explore the semantics of the network’s image projections when optimizing for both attributes simultaneously. We implemented two classification heads - one for `povo` and another for `categoria` - with the loss being the weighted average of both losses.
 
-In addition to the previously mentioned models, we developed a multi-head model to explore the semantics of the network’s image projections when optimizing both features simultaneously. We implemented two classification heads - one for `povo` and another for `categoria` - with the loss being the weighted average of both losses.
-
-Balancing the dataset was even more challenging in this case, as optimizing for one feature could disrupt the other. Joint distribution balancing was impractical due to the vast number of classes and because of the even worse joint-class imbalance, with little correlation between `povo` and `categoria`. Ultimately, we used the previously filtered classes for both features and initially balanced only for `povo`. This approach had minimal impact on `categoria`, which was already less imbalanced and not a major issue.
+Balancing the dataset was even more challenging in this case, as optimizing for one attribute could disrupt the other. Joint distribution balancing was impractical due to the vast number of classes and because of the even worse joint-class imbalance, with little correlation between `povo` and `categoria`. Ultimately, we used the previously filtered classes for both attributes and initially balanced only for `povo`. This approach had minimal impact on `categoria`, which was already less imbalanced and not a major issue.
 
 The table below summarizes the parameters for different head weights and the corresponding quantitative results.
 
 | Learning Rate | Weight Decay | Head Weights (`povo`/`categoria`) | `povo` Head Test Accuracy (%) | `povo` Head Avg. Precision on Selected Classes | `povo` Head Avg. Recall on Selected Classes | `categoria` Head Test Accuracy (%) | `categoria` Head Avg. Precision on Selected Classes | `categoria` Head Avg. recall on Selected Classes |
 |-|-|-|-|-|-|-|-|-|
-| 1e-5 | 3e-6 | 50/50 | **71.38 ± 1.29** | **0.72 ± 0.02** | **0.68 ± 0.02** | 88.16 ± 0.59 | 0.86 ± 0.01 | 0.85 ± 0.02 |
+| 1e-5 | 3e-6 | 50/50 | **71.38 ± 1.29** | **0.72 ± 0.02** | **0.68 ± 0.02** | 88.16 ± 0.59 | <ins>0.86 ± 0.01</ins> | 0.85 ± 0.02 |
 | 1e-5 | 3e-6 | 70/30 | <ins>71.16 ± 1.86</ins> | **0.72 ± 0.02** | **0.68 ± 0.02** | <ins>89.26 ± 1.20</ins> | **0.89 ± 0.01** | **0.88 ± 0.02** |
-| 1e-5 | 3e-6 | 30/70 | 70.28 ± 0.95 | 0.69 ± 0.01 | **0.68 ± 0.01** | **89.40 ± 1.09** | **0.89 ± 0.02** | <ins>0.87 ± 0.02</ins> |
+| 1e-5 | 3e-6 | 30/70 | 70.28 ± 0.95 | <ins>0.69 ± 0.01</ins> | **0.68 ± 0.01** | **89.40 ± 1.09** | **0.89 ± 0.02** | <ins>0.87 ± 0.02</ins> |
 <p align="center" style="margin-bottom: 25px;">
   Parameters and results for multi-head <i>ViT</i> models fine-tuned on both <code>povo</code> and <code>categoria</code>. The columns <i>Dataset</i>, <i>Frozen Layers (%)</i>, <i>Weighted Loss</i>, <i>Avg. Precision</i> and <i>Avg. Recall</i> are not found in this table because we fine-tuned all models with the same (balanced) dataset, no frozen layers, always with weighted loss for both heads and only on the selected categories.
 </p>
@@ -290,13 +282,13 @@ This behavior reinforces previous observations: `categoria` benefits from greate
 
 After exploring the performance of the *ViT* architecture, we moved on to a more modern model (*DINOv2*) to evaluate its potential and investigate how a self-supervised backbone might differ in both quantitative results and visual embedding structure. *DINOv2* has been shown to generalize well across multiple visual tasks without requiring large-scale supervised fine-tuning, making it a promising candidate for clustering goals.
 
-Unlike *ViT*, which is trained in a supervised manner, *DINOv2* is pre-trained using a self-supervised learning objective based on knowledge distillation. It uses a teacher-student setup where the student model learns to match the output of a (slowly evolving non-gradients based) teacher model across multiple augmented views of the same image. This allows *DINOv2* to train with much more data (around 10 times more than ViT) and learn more robust semantic visual representations that generalize well across downstream tasks. Objectively, it uses a curated dataset of around 142 million unlabeled images called *LVD-142M*, which also includes the whole *ImageNet21K*.
+Unlike *ViT*, which is trained in a supervised manner, *DINOv2* is pre-trained using a self-supervised learning objective based on knowledge distillation. It uses a teacher-student setup where the student model learns to match the output of a (slowly evolving non-gradient based) teacher model across multiple augmented views of the same image. This allows *DINOv2* to train with much more data (around 10 times more than ViT) and learn more robust semantic visual representations that generalize well across downstream tasks. Objectively, it uses a curated dataset of around 142M unlabeled images called *LVD-142M*, which also includes the whole *ImageNet21K*.
 
-We used the base version of *DINOv2* (available on [Hugging Face](https://huggingface.co/facebook/dinov2-base)) and applied a similar preprocessing pipeline to that used with *ViT*, but with minor adjustments: images were resized so that the shorter side was 256 pixels, then center-cropped to 224×224, and normalized using the standard *ImageNet* statistics (`[0.485, 0.456, 0.406]` means and `[0.229, 0.224, 0.225]` standard deviations).
+We used the [base version of *DINOv2*](https://huggingface.co/facebook/dinov2-base) and applied a similar preprocessing pipeline to that used with *ViT*, but with minor adjustments: images were resized so that the shorter side was 256 pixels, then center-cropped to 224×224, and normalized using the standard *ImageNet* statistics (`[0.485, 0.456, 0.406]` means and `[0.229, 0.224, 0.225]` standard deviations).
 
 Like before, we extracted embeddings using the pretrained backbone and projected them into 2D using the *UMAP* technique, which had previously shown the best performance in capturing meaningful structure. Even in its vanilla form, *DINOv2* generated a smooth and semantically rich manifold, offering a compelling visual spread where visually similar objects naturally clustered together.
 
-To better structure this space semantically, we fine-tuned *DINOv2* using both `povo` and `categoria` as classification targets again. As with *ViT*, we added a single linear classification head to the model - taking the 768-dimensional output from the backbone and projecting it to the number of target classes. This simple architecture was chosen to ensure a fair comparison to the *ViT* models we fine-tuned.
+To better structure this space semantically, we fine-tuned *DINOv2* using both `povo` and `categoria` as classification targets again. As with *ViT*, we added a single linear classification head to the model - taking the 768-dimensional output from the backbone and projecting it to the number of target classes. This simple architecture was chosen this time to ensure a fair comparison to the *ViT* models we fine-tuned.
 
 ##### Fine-Tunning Models
 
@@ -314,9 +306,9 @@ The tables below present results from fine-tuning *DINOv2* models on both `povo`
 
 | Dataset | Learning Rate | Weight Decay | Frozen Layers (%) | Weighted Loss | Test Accuracy (%) | Avg. Precision | Avg. Recall | Avg. Precision on Selected Classes | Avg. Recall on Selected Classes | 
 |-|-|-|-|-|-|-|-|-|-|
-| Original | 3e-7 | 1e-7 | 0 | False | 86.60 ± 1.44 | 0.80 ± 0.06 | 0.78 ± 0.04 | 0.84 ± 0.03 | 0.83 ± 0.02 |
+| Original | 3e-7 | 1e-7 | 0 | False | 86.60 ± 1.44 | 0.80 ± 0.06 | 0.78 ± 0.04 | <ins>0.84 ± 0.03</ins> | 0.83 ± 0.02 |
 | Balanced | 3e-7 | 1e-7 | 0 | True | <ins>90.21 ± 1.22</ins> | - | - | **0.87 ± 0.02** | **0.88 ± 0.02** |
-| Balanced | 3e-7 | 1e-7 | 50 | True | 89.90 ± 0.88 | - | - | **0.87 ± 0.01** | 0.87 ± 0.02 |
+| Balanced | 3e-7 | 1e-7 | 50 | True | 89.90 ± 0.88 | - | - | **0.87 ± 0.01** | <ins>0.87 ± 0.02</ins> |
 | Balanced | 3e-7 | 1e-7 | 80 | True | **90.52 ± 0.64** | - | - | **0.87 ± 0.01** | **0.88 ± 0.01** |
 <p align="center" style="margin-bottom: 25px;">
   Parameters and results for <i>DINOv2</i> models fine-tuned on <code>categoria</code>.
@@ -328,7 +320,7 @@ An interesting trend emerged when we introduced layer freezing. Unlike *ViT*, wh
 
 For `categoria`, *DINOv2* also achieved the highest accuracy overall. Precision and recall did not follow as much, in the sense that we did not see results getting much better than the ones for *ViT*, but still either similar or slightly better. In general, these improvements reinforce the idea that *DINOv2* was better equipped to extract meaningful visual patterns in categories for our data.
 
-However, despite these promising results, the visual projections generated on top of *DINOv2* did not improve proportionally. When analyzing the 2D embeddings of the entire dataset, the clusters were not always more distinct or interpretable than those produced by *ViT*. In fact, while *DINOv2* captured a broader and smoother spread of the collection in its raw, vanilla embedding, grouping behaviors were generally clearer in the *ViT* model. As a result, we made a deliberate trade-off in our platform design: we chose to use *ViT*-based projections for `povo` and `categoria`, where grouping was more distinct.
+However, despite these promising results, the visual projections generated on top of *DINOv2* did not improve proportionally. When analyzing the 2D embeddings of the entire dataset via *UMAP* projection, the clusters were not always more distinct or interpretable than those produced by *ViT*. In fact, while *DINOv2* captured a broader and smoother spread of the collection in its raw, vanilla embedding, grouping behaviors were generally clearer in the *ViT* model. As a result, we made a deliberate trade-off in our platform design: we chose to use *ViT*-based projections for `povo` and `categoria`, where grouping was more distinct.
 
 <p align="center">
   <br>
@@ -339,20 +331,20 @@ However, despite these promising results, the visual projections generated on to
   <br>
 </p>
 
-This decision is somewhat counter-intuitive. In both cases, the projections shown to the end-user do not come from the best-performing models, strictly in terms of metrics. Instead, we prioritized interpretability and visual coherence over a small gain in classification performance. It's important to note, however, that the trade-off is not gigantic - we’re not sacrificing 20% accuracy to get better visuals. The differences are typically just 2-3% in accuracy, and between 0.02-0.03 in precision and recall. Given this context, the improved visual experience and interpretability were valued more than the marginal performance bump.
+This decision is somewhat counter-intuitive since the projections shown to the end-user do not come from the best-performing models (in terms of metrics). Instead, we prioritized interpretability and visual coherence over a small gain in classification performance. It's important to note, however, that the trade-off is not gigantic - we’re not sacrificing 20% accuracy to get better visuals. The differences are typically just 2-3% in accuracy, and between 0.02-0.03 in precision and recall. Given this context, the improved visual experience and interpretability were valued more than the marginal performance bump.
+
+We also evaluated multi-head configurations using *DINOv2*. Interestingly, the multi-head setup did not provide significant benefits over the balanced single-task models. In contrast to *ViT*, where we observed small but consistent gains, *DINOv2*'s performance in multi-task training remained essentially on par or slightly worse than the best single-head fine-tuned models. It’s also worth noting that the multi-head models were fine-tuned with no frozen layers, making a fair comparison most appropriate against the unfrozen balanced *DINOv2* runs (not the best performing ones). In this context, multi-head training offered no clear advantage.
 
 | Learning Rate | Weight Decay | Head Weights (`povo`/`categoria`) | `povo` Head Test Accuracy (%) | `povo` Head Avg. Precision on Selected Classes | `povo` Head Avg. Recall on Selected Classes | `categoria` Head Test Accuracy (%) | `categoria` Head Avg. Precision on Selected Classes | `categoria` Head Avg. recall on Selected Classes |
 |-|-|-|-|-|-|-|-|-|
 | 3e-7 | 1e-7 | 50/50 | <ins>69.61 ± 1.00</ins> | **0.68 ± 0.01** | <ins>0.66 ± 0.03</ins> | **89.61 ± 0.60** | **0.87 ± 0.01** | **0.87 ± 0.01** |
-| 3e-7 | 1e-7 | 70/30 | 68.91 ± 1.12 | **0.68 ± 0.01** | <ins>0.66 ± 0.00</ins> | 87.69 ± 1.38 | 0.85 ± 0.02 | 0.85 ± 0.02 |
+| 3e-7 | 1e-7 | 70/30 | 68.91 ± 1.12 | **0.68 ± 0.01** | <ins>0.66 ± 0.00</ins> | 87.69 ± 1.38 | <ins>0.85 ± 0.02</ins> | 0.85 ± 0.02 |
 | 3e-7 | 1e-7 | 30/70 | **70.86 ± 1.34** | **0.68 ± 0.01** | **0.67 ± 0.02** | <ins>89.05 ± 0.53</ins> | **0.87 ± 0.01** | <ins>0.86 ± 0.02</ins> |
 <p align="center" style="margin-bottom: 25px;">
   Parameters and results for multi-head <i>DINOv2</i> models fine-tuned on both <code>povo</code> and <code>categoria</code>. The columns <i>Dataset</i>, <i>Frozen Layers (%)</i>, <i>Weighted Loss</i>, <i>Avg. Precision</i> and <i>Avg. Recall</i> are not found in this table because we fine-tuned all models with the same (balanced) dataset, no frozen layers, always with weighted loss for both heads and only on the selected categories.
 </p>
 
-We also evaluated multi-head configurations using *DINOv2*. Interestingly, the multi-head setup did not provide significant benefits over the balanced single-task models. In contrast to *ViT*, where we observed small but consistent gains, *DINOv2*'s performance in multi-task training remained essentially on par or slightly worse than the best single-head fine-tuned models. It’s also worth noting that the multi-head models were fine-tuned with no frozen layers, making a fair comparison most appropriate against the unfrozen balanced *DINOv2* runs (not the best performing ones). In this context, multi-head training offered no clear advantage.
-
-That said, the multi-head *DINOv2* projection was still selected for visualization. Just like the vanilla *DINOv2* projection, the multi-head model provided a smoother point cloud with better continuity across data points - a quality we found valuable for exploration, filtering, and semantic-based search.
+That said, the multi-head *DINOv2* projection was still selected for visualization over the *ViT* multi-head one. Just like the vanilla *DINOv2* projection, the multi-head model provided a smoother point cloud with better continuity across data points - a quality we found valuable for exploration, filtering, and semantic-based search.
 
 <p align="center">
   <br>
@@ -363,38 +355,51 @@ That said, the multi-head *DINOv2* projection was still selected for visualizati
   <br>
 </p>
 
-In short, *DINOv2* proved to be a stronger model in terms of raw classification performance, especially after balancing and partial freezing. But when it came to visual quality of the embeddings, *ViT* still held an edge in the grouping structure for our key labels, leading to a hybrid model selection strategy tailored to our end-user goals.
+In short, *DINOv2* proved to be a stronger model in terms of raw classification performance, especially after balancing and partial freezing. But when it came to visual quality of the embeddings, *ViT* still held an edge in the grouping structure for our key labels, leading to a strategy of using results coming from both models for the visualization tool tailored to our end-user goals.
 
 ### Text-Based Clustering
 
 Analogous to our previous work on image-based clustering, we have developed a textual clustering approach. The fundamental goal remains consistent, enhancing navigation and uncovering latent relationships within the data, but this time we utilize textual descriptions rather than images. For detailed insights into our preprocessing methods, please refer to the [dataset documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/DATASET.md). Notably, we are working with "summarized" versions of the textual descriptions instead of their full-length counterparts. The reasons for this choice are elaborated in the dataset documentation.
 
-Similar to our image processing pipeline, our textual clustering utilizes encoder pipelines to extract sentence-level features, followed by dimensionality reduction techniques to visualize point clouds and potential clusters. We experimented with two different encoder models: [*BERTimbau base*](https://huggingface.co/neuralmind/bert-base-portuguese-cased), a widely-used encoder for Brazilian Portuguese, and [*Albertina-100M*](https://huggingface.co/albertina-ptbr/albertina-100m), a more modern model with better benchmark scores (on the bigger versions). Due to hardware limitations, we selected the smallest available versions of each model. Despite this, we obtained visually appealing and insightful results.
+ Very similarly to what we did for the imagetic pipeline, our textual clustering utilizes encoders to extract sentence-level features, followed by dimensionality reduction techniques to visualize point clouds and potential clusters. We experimented with two different encoder models: [*BERTimbau (base)*](https://huggingface.co/neuralmind/bert-base-portuguese-cased), a widely-used encoder for Brazilian Portuguese, and [*Albertina (100M)*](https://huggingface.co/albertina-ptbr/albertina-100m), a more modern model with better benchmark scores (on the bigger versions). Due to hardware limitations, we selected the smallest available versions of each model. Despite this, we obtained visually appealing and insightful results.
 
-Beyond simple projections from pre-trained (vanilla) models, unlike our straightforward supervised approach in the image pipeline, we experimented with two fine-tuning strategies using contrastive learning:
+Beyond simple projections from pre-trained (vanilla) models, unlike our straightforward supervised approach in the image pipeline, we experimented with two fine-tuning strategies using *contrastive learning*:
 
-- **Unsupervised**: Based on the [Unsupervised SimCSE](https://arxiv.org/pdf/2104.08821) method. The method's core idea is, in the absence of labeled sentence pairs, adding a dropout layer on top of the encoder network to generate variability in embeddings. Specifically, we run each description through the encoder twice within the same batch. Due to dropout randomness, the same description produces two slightly different embeddings, effectively creating positive pairs. Embeddings from other descriptions in the batch serve as negative examples, a desirable setup since contrastive learning works better on distinguishing a target sentence from multiple dissimilar ones.
+- *Unsupervised*: Based on the [unsupervised SimCSE](https://arxiv.org/pdf/2104.08821) method. The method's core idea is, in the absence of labeled sentence pairs, adding a dropout layer on top of the encoder network to generate variability in embeddings. Specifically, we run each description through the encoder twice within the same batch. Due to dropout randomness, the same description produces two slightly different embeddings, effectively creating positive pairs. Embeddings from other descriptions in the batch serve as negative examples, a desirable setup since contrastive learning works better on distinguishing a target sentence from multiple dissimilar ones.
 
-We will discuss specific training details alongside the model descriptions, however, an important factor that may affect training performance deserves mention: the abundant presence of similar or identical descriptions, also known as hard examples. Even with randomized training data to prevent sequential similarity, certain descriptions remain notably alike or identical due to similar creation techniques (e.g., painting in circular or diagonal patterns), shared materials (e.g., identical flowers or fruits), variations of the same object (e.g., two dolls, two arrows) or combinations of these factors. Despite this challenge, our models achieved good results, indicating successful learning. Nonetheless, we haven't examined how this phenomenon impacted training outcomes, whether beneficially by improving model discrimination for challenging examples, or detrimentally by unnecessarily distancing embeddings of highly similar sentences.
+  We will discuss specific training details alongside the model descriptions, however, an important factor that may affect training performance deserves mention: the abundant presence of very similar or identical descriptions, also known as hard examples. Even with randomized training data to prevent sequential similarity, certain descriptions remain notably alike due to similar creation techniques (e.g., painting in circular or diagonal patterns), shared materials (e.g., identical plants or fruits), variations of the same object (e.g., two dolls, two arrows) or combinations of these factors. Despite this challenge, our models achieved good results, indicating successful learning. Nonetheless, we haven't fully examined how this phenomenon impacted training outcomes, whether beneficially by improving model discrimination for challenging examples, or detrimentally by unnecessarily distancing embeddings of highly similar sentences.
 
-Now talking about the loss, the core of our objective is the Normalized Temperature-scaled Cross Entropy (NT-Xent) loss, which encourages each pair of “positive” embeddings (two stochastic views of the same description) to be more similar than any “negative” pair in the batch. Intuitively, after we L2-normalize all embeddings so that cosine similarity is just a dot-product on the unit sphere, the NT-Xent loss computes for each anchor embedding a softmax over its cosine similarities to all other embeddings. The numerator pulls up the similarity score to its positive counterpart, while the denominator sums over all similarities (positive and negatives), so minimizing this loss pushes positives closer together and pushes all negatives farther apart in the embedding space.
+  Now talking about the loss, the core of our objective is the *[Normalized Temperature-scaled Cross Entropy (NT-Xent) loss](https://arxiv.org/pdf/2002.05709)*, which encourages each pair of “positive” embeddings (two stochastic views of the same description) to be more similar than any “negative” pair in the batch. Intuitively, after we *L2-normalize* all embeddings so that *cosine similarity* is just a dot-product on the unit sphere, the *NT-Xent loss* computes for each anchor embedding a *softmax* over its cosine similarities to all other embeddings. The numerator pulls up the similarity score to its positive counterpart, while the denominator sums over all similarities (positive and negatives), so minimizing this loss pushes positives closer together and pushes all negatives farther apart in the embedding space.
 
-A key hyperparameter is the temperature (t): dividing the cosine-similarity logits by t before the softmax effectively sharpens (for small t) or smooths (for large t) the distribution over negatives. A lower t makes the model focus on the hardest negatives, those whose embeddings are closest to the anchor, amplifying their penalty, whereas a higher t distributes the gradient more evenly across all negatives. Finally, rather than writing a custom pairwise contrastive objective, we make us of the cross entropy trick: we treat our 2Nx2N similarity matrix (with self-similarities masked out) divided by t as the “logits,” and construct integer labels that map each position *i* to its positive index *i*±N. `PyTorch`’s highly-optimized cross-entropy then does the heavy lifting of computing log-softmax and negative log-likelihood in one go, making the implementation both concise and as fast as possible.
+  A key hyperparameter is the *temperature* (*t*): dividing the cosine similarity logits by *t* before the softmax effectively sharpens (for small *t*) or smooths (for large *t*) the distribution over negatives. A lower *t* makes the model focus on the hardest negatives, those whose embeddings are closest to the anchor, amplifying their penalty, whereas a higher t distributes the gradient more evenly across all negatives. Finally, rather than writing a custom pairwise contrastive objective, we make us of the *cross-entropy trick*: we treat our *2Nx2N similarity matrix* (with self-similarities masked out) divided by *t* as the *logits*, and construct integer labels that map each position *i* to its positive index *i±N*. `PyTorch`’s highly-optimized cross-entropy then does the heavy lifting of computing log-softmax and negative log-likelihood in one go, making the implementation both concise and as fast as possible.
 
-- **Supervised**: Utilizes a contrastive dataset described in the [dataset documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/DATASET.md), consisting of one anchor phrase, one paraphrase as a positive example, and 10 summarized descriptions from items belonging to different `categoria` as negative examples.
+- *Supervised*: Utilizes a contrastive dataset described in the [dataset documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/DATASET.md), consisting of one anchor phrase, one paraphrase as a positive example, and 10 summarized descriptions from items belonging to different `categoria` as negative examples. The core idea is to use [InfoNCE loss](https://arxiv.org/pdf/1807.03748) as a contrastive signal. This setup closely resembles what we used in the unsupervised case, but now we leverage labeled data, which provides a stronger learning signal. Our approach is inspired by [a work](https://ar5iv.labs.arxiv.org/html/2106.04791) that demonstrates how to train (or project) sentence embeddings using supervised contrastive learning. We follow their strategy by placing a *two-layer softmax classifier* on top of the encoder network, shown to yield strong results on the *STS* task, which aligns with our goal of capturing semantic similarity in the absence of a specific downstream task.
 
-TALK ABOUT INFONCE HERE
+  This supervised method is also more robust to similar descriptions than our previous unsupervised one, primarily because we draw negative examples from items in different `categoria`s. This significantly reduces the chance of encountering extremely hard negatives, although some still occur when similar items exist across `categoria`s.
+
+  The loss function we optimize is a generalized version of what we used before: *NT-Xent loss* can be viewed as a special case of *InfoNCE* tailored for the unsupervised scenario we had. Here, we compute a similar loss, but instead of generating positives by passing the entire batch through the model twice and relying on dropout noise, we use the paraphrase directly as the positive example for the anchor. Negative samples are taken from summarized descriptions in different `categoria`s. Due to hardware limitations, we use fewer negatives than before, but they are likely more informative than the noise-heavy negatives from the unsupervised context.
+
+  As with *NT-Xent*, *InfoNCE* includes a *temperature* parameter that plays the same role. We also apply the *cross-entropy trick* for efficient loss computation. Unlike the full *2Nx2N similarity matrix* used in the unsupervised setup, we compute a *simplified similarity score* between each anchor and a fixed set of 11 examples: one positive paraphrase and ten negatives.
 
 #### Interpretability
 
-Before diving into the models themselves, it’s important to explain how we measure interpretability. As shown in our [visualization docs](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/VISUALIZATION.md), we highlight how individual words influence the final embedding using the [Integrated Gradients (IG) method](https://arxiv.org/pdf/1703.01365) via the [Captum library](https://arxiv.org/pdf/2009.07896), a `PyTorch` interpretability toolkit.
+Before diving into the models themselves, it’s important to explain how we measure interpretability. As shown in our [visualization documentation](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/docs/VISUALIZATION.md), we highlight how individual words influence the final embedding using the [*Integrated Gradients* (*IG*) method](https://arxiv.org/pdf/1703.01365) via the [*Captum* library](https://arxiv.org/pdf/2009.07896), a `PyTorch` interpretability toolkit.
 
-Integrated gradients is an attribution technique that explains a network’s predictions by assigning each input token (that can be combined into words) an importance score. Unlike raw gradients, which can be noisy or vanish when activations saturate, IG interpolates along a straight-line path from a baseline input to the actual input, accumulating gradients at each step to produce attributions that are meant to better capture the model's sensitivity in a (semantic) direction.
+*Integrated gradients* is an attribution technique that explains a network’s predictions by assigning each input token (that can be combined into words) an importance score. Unlike raw gradients, which can be noisy or vanish when activations saturate, *IG* interpolates along a straight-line path from a baseline input to the actual input, accumulating gradients at each step to produce attributions that are meant to better capture the model's sensitivity in a (semantic) direction.
 
-To go a bit more into details, we first choose an “empty” text sequence (`[CLS]`, `62*[PAD]`, `[SEP]`) as the baseline. We then adapt the model to output a scalar using cosine similarity between the baseline final embedding and the actual input final embedding, encoding semantic differences from our "neutral" representation. We also tried L2-norm, but quickly found it less effective since it is highly dependent on the magnitude of vectors, a number that does not encode much semantics. In the end the latter method tended to highlight common tokens like “the” or “and” rather than true content words.
+To go a bit more into details, we first choose an “empty” text sequence (`[CLS]`, `62*[PAD]`, `[SEP]`) as the baseline. We then adapt the model to output a scalar using *cosine similarity* between the baseline final embedding and the actual input final embedding, encoding semantic differences from our "neutral" representation. We also tried *L2-norm*, but quickly found it less effective since it is highly dependent on the magnitude of vectors, a number that does not encode much semantics. In the end the latter method tended to highlight common tokens like 'the' or 'and' rather than true content words.
 
-From this point, we can apply IG to the input initial embedding. To do that, for each feature of each token, we interpolate from the baseline embedding to the input embedding, sample gradients of the cosine-similarity scalar at each interpolation step, average the gradients and finally scale by the difference between the embeddings. This whole process leads to the attribution for a single feature of a single token. We then aggregate (in our case by summing, although we did experiment with l2-norm) features to get to a final token attribution and (when applicable) sum a few token attributions to produce a final word attribution.
+From this point, we can apply *IG* to the input initial embedding. To do that, for each feature of each token, we interpolate from the baseline embedding to the input embedding, sample gradients of the cosine similarity scalar at each interpolation step, average the gradients and finally scale by the difference between the embeddings. This whole process leads to the attribution for a *single feature of a single token*. We then *aggregate* (in our case by *summing*, although we experimented with *l2-norm* here too) features to get to a *final token attribution* and (when applicable) sum a few token attributions to produce a *final word attribution*.
 
+#### Evaluation
+
+EXPLAIN STS-B AND IN-CONTEXT STS-B HERE
+
+#### *BERTimbau*
+
+After introducing our training strategies, interpretation methods and how to evaluate our models, we now turn to the models themselves. We began with *BERTimbau* as our initial encoder, as it's widely regarded as the standard baseline for Brazilian Portuguese. This *transformer-based* model, in its base version, consists of 12 encoder layers, 12 attention heads, a final projection size of 768, and approximately 110M parameters. It was initialized from a multilingual *BERT* base checkpoint and trained on *BrWaC* (Brazilian Web as Corpus), which includes roughly 3.5M web pages and 2.7B tokens. The training objective was *self-supervised masked language modeling with whole-word masking*.
+
+The results of our experiments are summarized in the table below. All models were trained for 8 to 16 epochs depending on how quickly they converged (or began overfitting). *Unsupervised SimCSE* training typically converged faster than *InfoNCE*, largely due to the batch size differences. We used a batch size of 64 for *unsupervised SimCSE* (effectively 128 examples due to the positive/negative computation strategy), which struck a good balance between learning performance and memory constraints. Much larger batch sizes introduced too many negative samples and harmed learning, while much smaller ones were insufficient. For *InfoNCE*, we were limited to a batch size of 8 due to hardware constraints. Although this smaller batch size made training slower and gradient computation a bit more stochastic, we didn’t expect significant performance loss, as positives and negatives are directly defined and not batch-dependent in this setup.
 
 | Learning Method | Learning Rate | Temperature | Test STS-B (Pearson Corr.) | Test In-Context STS-B (Pearson Corr.) |
 |-|-|-|-|-|
@@ -402,22 +407,76 @@ From this point, we can apply IG to the input initial embedding. To do that, for
 | Uns. SimCSE | 3e-6 | 0.05 | 0.71 ± 0.00 | **0.86 ± 0.01** |
 | Uns. SimCSE | 3e-6 | 0.1 | 0.72 ± 0.00 | **0.86 ± 0.00** |
 | Uns. SimCSE | 3e-6 | 0.2 | 0.74 ± 0.00 | **0.86 ± 0.00** |
-| InfoNCE | 3e-6 | 0.05 | 0.78 ± 0.01 | **0.86 ± 0.01** |
-| InfoNCE | 3e-6 | 0.1 | **0.79 ± 0.01** | 0.85 ± 0.01 |
+| InfoNCE | 3e-6 | 0.05 | <ins>0.78 ± 0.01</ins> | **0.86 ± 0.01** |
+| InfoNCE | 3e-6 | 0.1 | **0.79 ± 0.01** | <ins>0.85 ± 0.01</ins> |
 | InfoNCE | 3e-6 | 0.2 | **0.79 ± 0.01** | 0.82 ± 0.00 |
 <p align="center" style="margin-bottom: 25px;">
   Parameters and results for <i>BERTimbau</i> models.
 </p>
 
+The data was split into 80% for training, 10% for validation and 10% for testing. During training, we monitored *training and validation loss*, the *STS-B score* on a validation set (50% of the validation *STS-B* dataset), and the *In-Context STS-B* score also on a validation set (50% of the test split of our dataset). All models were trained with *early stopping* using a patience of 2, triggered only when the validation score (average of *STS-B* and *In-Context STS-B*) differed negatively by at least 2%. This was crucial to ensure our model generalized well to our specific context without overfitting. We relied on *In-Context STS-B* for contextual relevance and the standard *STS-B* for general semantic understanding. While results were stable, each experiment was repeated three times to report average performance and standard deviation. Due to time constraints - especially since this was our final pipeline - we couldn’t run all configurations five times as we did in the previous image-based setup. Almost doubling the runs would have extended the training time from around 3.5 days to around 6 days, which was infeasible given the project deadline.
+
+Before analyzing the results, it’s worth noting that we also experimented with more *learning rates* and *temperature values* than reported. The ones shown in the table yielded the best overall results, both in terms of score and learning behavior. The progression in *temperature values* already illustrates how this hyperparameter affected model performance, so we did not include less effective variations.
+
+From the results (all evaluated on held-out test sets for *STS-B* and *In-Context STS-B*), several patterns emerge. Training clearly improved the model’s representations: *Pearson correlation* increased across both datasets for every configuration when compared to the untrained baseline. Unsupervised training had a stronger impact on the *In-Context STS-B* scores than on the *vanilla STS-B*, suggesting it specialized heavily to our setup, possibly at the cost of general semantic representation. This configuration also benefited from higher temperature values, indicating that it struggled with hard negatives, probably due to the noisy learning signal introduced by dropout. Raising the temperature diluted the focus on these harder examples, allowing clearer negatives to guide learning more effectively.
+
+In contrast, the supervised approach yielded a better balance between *In-Context* and general *STS-B* scores. Some models achieved *In-Context* scores comparable to the best unsupervised ones, while even approaching the *STS-B* performance expected from fine-tuning specifically for the *STS-B* with datasets like *[extraglue](https://huggingface.co/datasets/PORTULAN/extraglue)*. These supervised models did not consistently benefit from increased temperature, likely because their learning signal was more stable and well-defined. In this case, hard negatives helped strengthen semantic representations, especially visible in the improved *vanilla STS-B* and comparable *In-Context STS-B* to the previous method at higher temperatures.
+
+#### *Albertina*
+
+We now turn to *Albertina*, a more recent encoder. It was selected because it's expected to offer a more generalized semantic space for sentence embeddings. While we're working with the base version due to hardware limitations, it's worth noting that the large version achieves a *Pearson correlation* of around 0.90 on *STS-B* (fine-tuned on [extraglue](https://huggingface.co/datasets/PORTULAN/extraglue)), slightly outperforming *BERTimbau Large*, which typically reaches around 0.88 under the same conditions.
+
+This base version of *Albertina* is also *transformer-based* and built upon [*DeBERTa V1*](https://huggingface.co/microsoft/deberta-base), with 12 encoder layers, 12 attention heads, a hidden size of 768, and approximately 100M parameters, very much comparable in architecture to *BERTimbau*. For the Brazilian-Portuguese variant, training was conducted on a curated subset of *OSCAR* (Common Crawl) filtered to ".br" pages, totaling around 3.7B tokens. It uses the original *DeBERTa tokenizer*, dynamic padding, truncation at 128 tokens, and *self-supervised masked language modeling with random token-level masking* (15% per sequence).
+
+As with the previous model, all experiments were run for 8 to 16 epochs depending on convergence behavior. *Unsupervised SimCSE* training was again faster to converge than *InfoNCE*, partly due to batch size differences. Here, hardware constraints limited us to a batch size of 16 for *unsupervised SimCSE* (effectively 32 examples per batch) and only 4 for *InfoNCE*. The smaller batch size not only slowed training but also made optimization less stable probably because of too much stochasticity hence we observed more variance in the training curves. Despite these challenges, we were able to train to convergence in all cases.
+
+The rest of the training setup mirrors what was done for *BERTimbau*. We had the same proportions of data splits, tracked *training and validation losses*, as well as *STS-B* and *In-Context STS-B* scores on validation sets. *Early stopping* with a patience of 2 was used, triggered only when scores differed negatively by at least 2%. As before, the average of *STS-B* and *In-Context STS-B* was used as the main validation metric to balance contextual performance with general semantic robustness.
+
+We also experimented with various learning rates and temperatures, though only the most effective values are shown in the results table. The temperature progression reflects the influence of this parameter across training regimes, so less useful values were omitted again.
+
 | Learning Method | Learning Rate | Temperature | Test STS-B (Pearson Corr.) | Test In-Context STS-B (Pearson Corr.) |
 |-|-|-|-|-|
 | Vanilla | - | - | 0.69 ± 0.01 | 0.68 ± 0.03 |
 | Uns. SimCSE | 1e-6 | 0.05 | 0.70 ± 0.01 | 0.85 ± 0.01 |
-| Uns. SimCSE | 1e-6 | 0.1 | 0.72 ± 0.01 | <ins>0.86 ± 0.00</ins> |
+| Uns. SimCSE | 1e-6 | 0.1 | <ins>0.72 ± 0.01</ins> | <ins>0.86 ± 0.00</ins> |
 | Uns. SimCSE | 1e-6 | 0.2 | 0.69 ± 0.00 | 0.83 ± 0.00 |
 | InfoNCE | 1e-6 | 0.05 | **0.74 ± 0.01** | **0.87 ± 0.01** |
 | InfoNCE | 1e-6 | 0.1 | **0.74 ± 0.01** | 0.84 ± 0.01 |
-| InfoNCE | 1e-6 | 0.2 | 0.72 ± 0.01 | 0.78 ± 0.01 |
+| InfoNCE | 1e-6 | 0.2 | <ins>0.72 ± 0.01</ins> | 0.78 ± 0.01 |
 <p align="center" style="margin-bottom: 25px;">
   Parameters and results for <i>Albertina</i> models.
 </p>
+
+The overall training behavior and conclusions here follow the same pattern observed with *BERTimbau*. Training significantly improved the model’s representations, with *Pearson correlation* rising across all configurations compared to the untrained baseline. However, results with *Albertina* were consistently lower than those of *BERTimbau*, suggesting slightly inferior performance in this setting. This was somewhat unexpected, given *Albertina*'s better results in large-scale evaluations, but likely attributable to the fact that we used the base version. The larger variant would probably outperform any *BERTimbau* variant if used under the same conditions.
+
+Regarding temperature behavior, we observed that *unsupervised SimCSE* benefited from a moderate increase in temperature, peaking at 0.1 before dropping again at 0.2, indicating that while some dilution of hard negatives helped, pushing it further degraded performance. This contrasts slightly with *BERTimbau*, where increasing temperature until 0.2 continued to improve results in the unsupervised case.
+
+The *InfoNCE* experiments again offered a better trade-off between general and contextual understanding, similar to *BERTimbau*. These models reached strong *In-Context* scores and respectable *STS-B* performance, being better with lower temperatures. The learning signal here was stable enough that hard negatives continued to be beneficial (up to a point), so the overall trends and behaviors remained closely aligned with what we observed for the previous model.
+
+#### Qualitative Results EDIT THIS GUY
+
+After analyzing all results, we decided to move forward with the *BERTimbau* model fine-tuned using *InfoNCE* with the lowest temperature for the visualization tool. This setup struck the best balance between performance and stability, and became the foundation for our textual semantic similarity pipeline.
+
+Focusing now on the intuitive and visual outputs, an essential part of the project given its exploratory use case, we observed particularly compelling patterns during projection. For this model, we used the *TriMap* dimensionality reduction method, which provided the most informative visualizations, allowing us to identify emerging semantic clusters in the embedded space. In contrast, the *UMAP* projection used for the imagetic pipeline tended to distribute the data more uniformly and failed to produce visually meaningful groupings.
+
+One striking structure that emerged was a distinct cluster of weapon-related items, especially arrows and bows. These items represent a large portion of the collection but were previously underrepresented in the imagetic pipeline due to missing images. Now that textual descriptions are the driving signal, we can clearly see their prominence.
+
+**SHOW IMAGE OF THE WEAPON BRANCH**
+
+We also see the model behaving as expected: items with similar or overlapping descriptions are embedded closely together. Although it’s harder to see kind of a manifold progression for text as we clearly saw on some regions for the imagetic pipeline, there are still local patterns and semantic neighborhoods that emerge in certain regions of the space.
+
+Additional cluster formations were observed for other item types, reminiscent of the `categoria`-based grouping we saw in the imagetic pipeline. What makes this even more interesting is that the current model was not trained with category supervision. Instead, it learned purely from textual semantic similarity. The resulting clusters are shaped not just by item type, but by recurring materials, colors, shapes, and other textual features. This distinction shows how language-specific representations highlight different latent dimensions of the data than visual approaches.
+
+**SHOW IMAGE OF THE OTHER CLUSTERS**
+
+That said, the representation is far from perfect. A large portion of the dataset is densely collapsed into the center of the projection, forming a tight cluster with no meaningful internal structure. Zooming into this region reveals a lack of semantic organization, suggesting that many items were projected generically into the same area. This reflects limitations in our learned representation.
+
+Interpreting this issue is not straightforward. It could stem from multiple sources: our contrastive learning setup, the architecture and depth of the fine-tuning layers, the batch sizes or number of positive/negative pairs, the inherent capacity of the (small) base models used, or simply the limited size and diversity of our training data. Without more time and computational resources, it’s difficult to pinpoint the exact cause or how best to address it.
+
+**SHOW IMAGE OF BIG COLLAPSE**
+
+Still, these shortcomings don’t invalidate the model. While the dense center limits the representation's ability to separate subtle semantic differences across the whole dataset, the meaningful clusters we do observe demonstrate the method's value for exploring semantic similarity within focused regions of the collection.
+
+Just to comment a little bit on the other model too, since we also implemented it and fine-tuned it, we can see a sligthly different pattern for it. Using the albertina trained with infonce and lowest temperature, we can see the formation of two branches on the point cloud.
+
+SHOW IMAGE OF TWO BRANCHES ON ALBERTINA FINE-TUNED MODEL
