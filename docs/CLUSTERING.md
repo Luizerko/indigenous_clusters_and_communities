@@ -471,11 +471,39 @@ Regarding temperature behavior, we observed that *unsupervised SimCSE* benefited
 
 The *InfoNCE* experiments again offered a better trade-off between general and contextual understanding, similar to *BERTimbau*. These models reached strong *In-Context* scores and respectable *STS-B* performance, being better with lower temperatures. The learning signal here was stable enough that hard negatives continued to be beneficial (up to a point), so the overall trends and behaviors remained closely aligned with what we observed for the previous model.
 
-#### Qualitative Results EDIT THIS GUY
+#### Qualitative Results
 
 After analyzing all results, we decided to move forward with the *BERTimbau* model fine-tuned using *InfoNCE* with the lowest temperature for the visualization tool. This setup struck the best balance between performance and stability, and became the foundation for our textual semantic similarity pipeline.
 
-Focusing now on the intuitive and visual outputs, an essential part of the project given its exploratory use case, we observed particularly compelling patterns during projection. For this model, we used the *TriMap* dimensionality reduction method, which provided the most informative visualizations, allowing us to identify emerging semantic clusters in the embedded space. In contrast, the *UMAP* projection used for the imagetic pipeline tended to distribute the data more uniformly and failed to produce visually meaningful groupings.
+Focusing now on the intuitive and visual outputs, an essential part of the project given its exploratory use case, we observed particularly compelling patterns during projection. For this model, we once again used the *UMAP* dimensionality reduction method, which provided the most informative visualizations, allowing us to identify local emerging semantic clusters in the embedded space.
+
+One can notice, particularly especially in the images below, that the clusters formed here are quite different from those found in the imagetic pipeline. This is expected, since we’re now working with a broader dataset that includes all items with textual descriptions, regardless of whether they have associated images. When images are available, you’ll see that items within the same cluster often share a common semantic category but can look quite different visually.
+
+<p align="center">
+  <br>
+  <img src="../assets/text_local_clusters_1.png" alt="First zoom-in on a UMAP projection of BERTimbau InfoNCE" width="40%" style="margin-right: 20px;">
+  <img src="../assets/text_local_clusters_2.png" alt="Second zoom-in on a UMAP projection of BERTimbau InfoNCE" width="40%">
+  <p align="center" style="margin-top: 10px; margin-bottom: 5px;">
+    (Available) images of items in zoomed-in regions of a <i>UMAP</i> projection of <i>BERTimbau</i> trained in a supervised setting using <i>InfoNCE</i>. In both views, we can see distinct and coherent local clusters.
+  </p>
+  <br>
+</p>
+
+This behavior aligns with our expectations: we’re now optimizing for the textual descriptions rather than the images. For instance, in the left image above, there's a clear region containing various vases that are likely grouped together because their descriptions reference similar shapes or functions. However, visually, they differ significantly - they may have different colors, patterns, or materials. This suggests that such visual details weren’t captured or emphasized in the descriptions, so the model grouped them based on higher-level textual similarities (e.g., “vase-shaped”).
+
+To further illustrate this point, we highlight two items from the basket cluster shown in the right-hand image above. These items have very similar textual descriptions, and even the differing words between them, like “quadrangular” and “geometrizantes”, don’t fall into different semantic domains. Both refer to form and structure: one denotes a square shape, and the other implies a geometric design. While not identical, these terms align conceptually, and this alignment likely influenced the model to place both items close together in the embedding space, reflecting a shared geometric emphasis in the descriptions.
+
+<p align="center">
+  <br>
+  <img src="../assets/similar_description_1.png" alt="First similar description on a local cluster" width="30%" style="margin-right: 20px;">
+  <img src="../assets/similar_description_2.png" alt="Second similar description on a local cluster" width="30%">
+  <p align="center" style="margin-top: 10px; margin-bottom: 5px;">
+    Two items from the same cluster with closely aligned semantic descriptions.
+  </p>
+  <br>
+</p>
+
+This time, however, we also found some interesting visualizationsIn contrast, the *UMAP* projection used for the imagetic pipeline tended to distribute the data more uniformly and failed to produce visually meaningful groupings.
 
 One striking structure that emerged was a distinct cluster of weapon-related items, especially arrows and bows. These items represent a large portion of the collection but were previously underrepresented in the imagetic pipeline due to missing images. Now that textual descriptions are the driving signal, we can clearly see their prominence.
 
