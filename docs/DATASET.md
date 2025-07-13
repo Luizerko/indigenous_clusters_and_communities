@@ -6,7 +6,7 @@ This page provides an overview of how we utilized the [Tainacan collection](http
 
 The first step in our workflow is data collection. We accomplish this through a two-stage process:
 
-1. Scraping the data: A [`Bash` script](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection/scrapping_data.sh) is used to extract data from the Tainacan platform.
+1. Scraping the data: A [`Bash` script](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection/mining_tainacan.sh) is used to extract data from the Tainacan platform.
 
 2. Processing and structuring: A [`Python` script](https://github.com/Luizerko/indigenous_clusters_and_communities/tree/main/tainacan_collection/creating_dataset.py) then processes the raw data and organizes it into a structured CSV format.
 
