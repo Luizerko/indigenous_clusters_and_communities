@@ -503,26 +503,20 @@ To further illustrate this point, we highlight two items from the basket cluster
   <br>
 </p>
 
-This time, however, we also found some interesting visualizationsIn contrast, the *UMAP* projection used for the imagetic pipeline tended to distribute the data more uniformly and failed to produce visually meaningful groupings.
+This time, however, we also uncovered some interesting visualizations using *TriMap*. In contrast to the imagetic pipeline, where *TriMap* produced overly condensed plots with little to no discernible structure, here it revealed some compelling global patterns. One particularly striking example comes from the supervised model trained on *Albertina* using *InfoNCE*. There's a clearly defined branch-like cluster of weapon-related items, especially arrows and bows. These objects represent a significant portion of the overall collection but were previously underrepresented in the imagetic pipeline due to the absence of images. Now that we’re relying on textual descriptions, their prominence becomes much more visible.
 
-One striking structure that emerged was a distinct cluster of weapon-related items, especially arrows and bows. These items represent a large portion of the collection but were previously underrepresented in the imagetic pipeline due to missing images. Now that textual descriptions are the driving signal, we can clearly see their prominence.
+Beyond that, we also observe other emerging clusters that resemble the `categoria`-based groupings previously seen in the imagetic pipeline. What makes this especially interesting is that the current model wasn’t trained with any explicit category supervision. Instead, these groupings emerged naturally from the model’s understanding of textual semantic similarity, a strong indication that the model learned meaningful structure from the data.
 
-**SHOW IMAGE OF THE WEAPON BRANCH**
+While it’s harder to spot manifold-like progressions in this *TriMap* projection - as we could in some regions of the *UMAP* projections, both in the textual and imagetic pipelines - we still find local patterns and semantic neighborhoods emerging in specific regions of the embedding space.
 
-We also see the model behaving as expected: items with similar or overlapping descriptions are embedded closely together. Although it’s harder to see kind of a manifold progression for text as we clearly saw on some regions for the imagetic pipeline, there are still local patterns and semantic neighborhoods that emerge in certain regions of the space.
+<p align="center">
+  <br>
+  <img src="../assets/weapon_branch.png" alt="Weapon branch found in textual clustering with TriMap projection" width="40%" style="margin-right: 20px;">
+  <img src="../assets/textual_trimap.png" alt="Category clusters found in textual clustering with TriMap projection" width="40%">
+  <p align="center" style="margin-top: 10px; margin-bottom: 5px;">
+    Clusters emerging from a <i>TriMap</i> projection of the textual embedding space. On the left, a distinctive "weapon branch" dominated by arrows and bows. On the right, broader category clusters formed without supervision.
+  </p>
+  <br>
+</p>
 
-Additional cluster formations were observed for other item types, reminiscent of the `categoria`-based grouping we saw in the imagetic pipeline. What makes this even more interesting is that the current model was not trained with category supervision. Instead, it learned purely from textual semantic similarity. The resulting clusters are shaped not just by item type, but by recurring materials, colors, shapes, and other textual features. This distinction shows how language-specific representations highlight different latent dimensions of the data than visual approaches.
-
-**SHOW IMAGE OF THE OTHER CLUSTERS**
-
-That said, the representation is far from perfect. A large portion of the dataset is densely collapsed into the center of the projection, forming a tight cluster with no meaningful internal structure. Zooming into this region reveals a lack of semantic organization, suggesting that many items were projected generically into the same area. This reflects limitations in our learned representation.
-
-Interpreting this issue is not straightforward. It could stem from multiple sources: our contrastive learning setup, the architecture and depth of the fine-tuning layers, the batch sizes or number of positive/negative pairs, the inherent capacity of the (small) base models used, or simply the limited size and diversity of our training data. Without more time and computational resources, it’s difficult to pinpoint the exact cause or how best to address it.
-
-**SHOW IMAGE OF BIG COLLAPSE**
-
-Still, these shortcomings don’t invalidate the model. While the dense center limits the representation's ability to separate subtle semantic differences across the whole dataset, the meaningful clusters we do observe demonstrate the method's value for exploring semantic similarity within focused regions of the collection.
-
-Just to comment a little bit on the other model too, since we also implemented it and fine-tuned it, we can see a sligthly different pattern for it. Using the albertina trained with infonce and lowest temperature, we can see the formation of two branches on the point cloud.
-
-SHOW IMAGE OF TWO BRANCHES ON ALBERTINA FINE-TUNED MODEL
+That said, the representation is far from perfect. A significant portion of the dataset (around 19K items) still collapses into a dense central cluster with little or no internal structure. When zoomed in, this region lacks clear semantic organization, suggesting that many items were projected into the same generic space. This limitation ultimately led us to return to our original *UMAP* representation, which preserved much more interpretable local structures.
