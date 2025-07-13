@@ -475,6 +475,15 @@ The *InfoNCE* experiments again offered a better trade-off between general and c
 
 After analyzing all results, we decided to move forward with the *BERTimbau* model fine-tuned using *InfoNCE* with the lowest temperature for the visualization tool. This setup struck the best balance between performance and stability, and became the foundation for our textual semantic similarity pipeline.
 
+<p align="center">
+  <br>
+  <img src="../assets/textual_global_structure.png" alt="Point-cloud overview of chosen model" width="50%">
+  <p align="center" style="margin-top: 10px; margin-bottom: 5px;">
+    Overview of the point-cloud structure of our chosen model <i>BERTimbau</i> trained with <i>InfoNCE</i> and projected using <i>UMAP</i>.
+  </p>
+  <br>
+</p>
+
 Focusing now on the intuitive and visual outputs, an essential part of the project given its exploratory use case, we observed particularly compelling patterns during projection. For this model, we once again used the *UMAP* dimensionality reduction method, which provided the most informative visualizations, allowing us to identify local emerging semantic clusters in the embedded space.
 
 One can notice, particularly especially in the images below, that the clusters formed here are quite different from those found in the imagetic pipeline. This is expected, since we’re now working with a broader dataset that includes all items with textual descriptions, regardless of whether they have associated images. When images are available, you’ll see that items within the same cluster often share a common semantic category but can look quite different visually.
