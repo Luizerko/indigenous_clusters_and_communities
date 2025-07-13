@@ -109,7 +109,7 @@ Actually, during training, we could still experiment with slightly longer descri
 
 #### Semantic Density and Description Overload
 
-Another issue wasn’t just length, but semantic overload. Encoding a long sequence into a single embedding dilutes semantic clarity. Sentence embeddings are not like predicting tokens, they aim to summarize a whole description in one vector. As the length grows and multiple concepts are included, the embedding loses focus. This is also consistent with established benchmarks. Most descriptions in datasets like [GLUE](https://huggingface.co/datasets/nyu-mll/glue) and [extraglue](https://huggingface.co/datasets/PORTULAN/extraglue) (PT-BR translated version of GLUE), for example, stay under 100 tokens, reinforcing that shorter inputs are better for semantic representation.
+Another issue wasn’t just length, but semantic overload. Encoding a long sequence into a single embedding dilutes semantic clarity. Sentence embeddings are not like predicting tokens, they aim to summarize a whole description in one vector. As the length grows and multiple concepts are included, the embedding loses focus. This is also consistent with established benchmarks. Most descriptions in datasets like [*GLUE*](https://huggingface.co/datasets/nyu-mll/glue) and [*extraglue*](https://huggingface.co/datasets/PORTULAN/extraglue) (PT-BR translated version of *GLUE*), for example, stay under 100 tokens, reinforcing that shorter inputs are better for semantic representation.
 
 #### Mixed and Noisy Descriptions
 
